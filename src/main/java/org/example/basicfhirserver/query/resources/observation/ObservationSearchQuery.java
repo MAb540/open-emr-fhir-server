@@ -1,6 +1,5 @@
 package org.example.basicfhirserver.query.resources.observation;
 
-import ca.uhn.fhir.rest.param.DateParam;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

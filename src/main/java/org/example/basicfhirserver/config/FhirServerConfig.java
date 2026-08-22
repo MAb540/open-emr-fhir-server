@@ -7,6 +7,7 @@ import org.example.basicfhirserver.interceptor.CustomSecurityInterceptor;
 import org.example.basicfhirserver.provider.EncounterResourceProvider;
 import org.example.basicfhirserver.provider.ObservationResourceProvider;
 import org.example.basicfhirserver.provider.PatientResourceProvider;
+import org.example.basicfhirserver.provider.PractitionerResourceProvider;
 import org.hl7.fhir.r4.model.CanonicalType;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -21,13 +22,23 @@ import java.util.List;
 public class FhirServerConfig {
 
     @Bean
-    public ServletRegistrationBean<RestfulServer> fhirServerServlet(PatientResourceProvider patientResourceProvider, ObservationResourceProvider observationResourceProvider, EncounterResourceProvider encounterResourceProvider, FhirContextConfig fhirContextConfig, RequestValidatingInterceptor validatingInterceptor) {
+    public ServletRegistrationBean<RestfulServer> fhirServerServlet(
+            PatientResourceProvider patientResourceProvider,
+            ObservationResourceProvider observationResourceProvider,
+            EncounterResourceProvider encounterResourceProvider,
+            PractitionerResourceProvider practitionerResourceProvider,
+            FhirContextConfig fhirContextConfig,
+            RequestValidatingInterceptor validatingInterceptor) {
 
         FhirContext ctx = fhirContextConfig.fhirContext();
         RestfulServer servlet = new RestfulServer(ctx);
 
-        servlet.setResourceProviders(List.of(patientResourceProvider, observationResourceProvider, encounterResourceProvider));
-
+        servlet.setResourceProviders(List.of(
+                patientResourceProvider,
+                observationResourceProvider,
+                encounterResourceProvider,
+                practitionerResourceProvider
+        ));
 
 //      RequestValidatingInterceptor valInterceptor = getValInterceptor(ctx);
         CustomSecurityInterceptor customSecurityInterceptor = new CustomSecurityInterceptor();

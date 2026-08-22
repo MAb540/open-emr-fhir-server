@@ -81,7 +81,7 @@ public class PatientResourceProvider implements IResourceProvider {
                 .offset(offset)
                 .build();
 
-        var  patientSearchQuery = patientSearchTranslator.translate(criteria);
+        var patientSearchQuery = patientSearchTranslator.translate(criteria);
         Page<LegacyPatientEntity> legacyPatientEntities = patientService.find(patientSearchQuery);
 
         List<IBaseResource> resources =

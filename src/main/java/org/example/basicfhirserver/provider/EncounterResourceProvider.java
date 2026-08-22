@@ -1,23 +1,15 @@
 package org.example.basicfhirserver.provider;
 
-import ca.uhn.fhir.rest.annotation.*;
-import ca.uhn.fhir.rest.api.server.IBundleProvider;
-import ca.uhn.fhir.rest.param.DateParam;
-import ca.uhn.fhir.rest.param.StringParam;
-import ca.uhn.fhir.rest.param.TokenParam;
+import ca.uhn.fhir.rest.annotation.IdParam;
+import ca.uhn.fhir.rest.annotation.Read;
+import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.server.IResourceProvider;
-import ca.uhn.fhir.rest.server.SimpleBundleProvider;
-import org.example.basicfhirserver.domain.entities.FormEncounterEntity;
-import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.EncounterMapper;
 import org.example.basicfhirserver.model.FormEncounter;
-import org.example.basicfhirserver.query.resources.patient.PatientSearchCriteria;
 import org.example.basicfhirserver.service.EncounterService;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.IdType;
-import org.hl7.fhir.r4.model.Patient;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

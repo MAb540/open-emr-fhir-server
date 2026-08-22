@@ -16,11 +16,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-public class LegacyPatientDBServiceImpl implements PatientService {
+public class PatientServiceImpl implements PatientService {
 
     private final PatientRepository patientRepository;
 
-    public LegacyPatientDBServiceImpl(PatientRepository patientRepository) {
+    public PatientServiceImpl(PatientRepository patientRepository) {
         this.patientRepository = patientRepository;
     }
 

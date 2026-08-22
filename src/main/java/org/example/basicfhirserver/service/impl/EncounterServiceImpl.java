@@ -12,12 +12,12 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-public class LegacyEncounterDbServiceImpl implements EncounterService {
+public class EncounterServiceImpl implements EncounterService {
 
     private final FormEncounterAssembler formEncounterAssembler;
     private final FormEncounterService formEncounterService;
 
-    public LegacyEncounterDbServiceImpl(
+    public EncounterServiceImpl(
             FormEncounterService formEncounterService,
             FormEncounterAssembler formEncounterAssembler
     ) {

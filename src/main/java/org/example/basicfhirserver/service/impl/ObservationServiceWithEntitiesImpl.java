@@ -33,7 +33,14 @@ public class ObservationServiceWithEntitiesImpl implements ObservationService {
     private final FormEncounterRepository formEncounterRepository;
     private final UserRepository userRepository;
 
-    public ObservationServiceWithEntitiesImpl(FormRepository formRepository, FormVitalsRepository formVitalsRepository, VitalObservationAssembler vitalObservationAssembler, UuidMappingRepository uuidMappingRepository, ObservationUuidUtil observationUuidMapper, PatientRepository patientRepository, FormEncounterRepository formEncounterRepository, UserRepository userRepository) {
+    public ObservationServiceWithEntitiesImpl(
+            FormRepository formRepository,
+            FormVitalsRepository formVitalsRepository,
+            VitalObservationAssembler vitalObservationAssembler,
+            UuidMappingRepository uuidMappingRepository,
+            PatientRepository patientRepository,
+            FormEncounterRepository formEncounterRepository,
+            UserRepository userRepository) {
         this.formRepository = formRepository;
         this.formVitalsRepository = formVitalsRepository;
         this.vitalObservationAssembler = vitalObservationAssembler;
