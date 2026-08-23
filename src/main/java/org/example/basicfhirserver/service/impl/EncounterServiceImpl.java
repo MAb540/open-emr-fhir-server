@@ -2,6 +2,7 @@ package org.example.basicfhirserver.service.impl;
 
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import org.example.basicfhirserver.model.FormEncounter;
+import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
 import org.example.basicfhirserver.repository.jdbc.formencounter.FormEncounterDBRecord;
 import org.example.basicfhirserver.repository.jdbc.formencounter.FormEncounterService;
 import org.example.basicfhirserver.service.EncounterService;
@@ -37,8 +38,8 @@ public class EncounterServiceImpl implements EncounterService {
     }
 
     @Override
-    public List<FormEncounter> find() {
-        List<FormEncounterDBRecord> formEncountersDBRecords = formEncounterService.find();
+    public List<FormEncounter> find(EncounterSearchQuery encounterSearchQuery) {
+        List<FormEncounterDBRecord> formEncountersDBRecords = formEncounterService.find(encounterSearchQuery);
         return formEncountersDBRecords.stream().map(formEncounterAssembler::toCanonical).toList();
     }
 }

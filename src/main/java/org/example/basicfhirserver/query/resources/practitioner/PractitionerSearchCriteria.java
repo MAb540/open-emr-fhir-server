@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class PractitionerSearchCriteria {
 
+    private TokenParam id;
     private StringParam name;
     private TokenParam identifier;
 

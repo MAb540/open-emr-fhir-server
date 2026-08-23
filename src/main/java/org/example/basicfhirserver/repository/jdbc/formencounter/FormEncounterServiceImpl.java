@@ -1,10 +1,12 @@
 package org.example.basicfhirserver.repository.jdbc.formencounter;
 
+import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,7 +27,7 @@ public class FormEncounterServiceImpl implements FormEncounterService {
     public List<FormEncounterDBRecord> findById(UUID uuid) {
         StringBuilder sql = formEncounterQuery();
 
-        sql.append(" WHERE fe.euuid = :uuid");
+        sql.append(" AND fe.euuid = :uuid");
         byte[] binaryUuid = toBytes(uuid);
 
         MapSqlParameterSource parameters = new MapSqlParameterSource();
@@ -37,9 +39,11 @@ public class FormEncounterServiceImpl implements FormEncounterService {
     }
 
     @Override
-    public List<FormEncounterDBRecord> find() {
+    public List<FormEncounterDBRecord> find(EncounterSearchQuery encounterSearchQuery) {
         StringBuilder sql = formEncounterQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
+
+        addFilter(sql, params, encounterSearchQuery);
 
         return namedParameterJdbcTemplate.query(sql.toString(),
                 params,
@@ -175,7 +179,85 @@ public class FormEncounterServiceImpl implements FormEncounterService {
                         ,title AS discharge_disposition_text
                         FROM list_options
                         WHERE list_id = 'discharge-disposition'
-                    ) discharge_list ON fe.discharge_disposition = discharge_list.discharge_option_id""");
+                    ) discharge_list ON fe.discharge_disposition = discharge_list.discharge_option_id WHERE 1=1 
+                """);
+    }
+
+    private void addFilter(
+            StringBuilder sql,
+            MapSqlParameterSource params,
+            EncounterSearchQuery encounterSearchQuery
+    ) {
+        if (encounterSearchQuery.getEncounterId() != null) {
+            String uuid = encounterSearchQuery.getEncounterId();
+            byte[] binaryUuid = toBytes(UUID.fromString(uuid));
+            sql.append("""
+                    AND (fe.euuid = :encounterUuid)
+                    """);
+            params.addValue("encounterUuid", binaryUuid);
+        }
+
+        if (encounterSearchQuery.getPatientId() != null) {
+            String uuid = encounterSearchQuery.getPatientId();
+            byte[] binaryUuid = toBytes(UUID.fromString(uuid));
+            sql.append(" AND (patient.puuid = :patientUuid) ");
+            params.addValue("patientUuid", binaryUuid);
+        }
+
+
+        addDateFilter(sql,
+                params,
+                encounterSearchQuery);
+
+
+    }
+
+    private void addDateFilter(
+            StringBuilder sql,
+            MapSqlParameterSource params,
+            EncounterSearchQuery encounterSearchQuery
+    ) {
+        if (encounterSearchQuery.getDate() == null ||
+                encounterSearchQuery.getDate().getValue() == null) {
+            return;
+        }
+
+        LocalDateTime date =
+                encounterSearchQuery.getDate().getValue();
+
+        if (encounterSearchQuery.getDate().getPrefix() == null) {
+            sql.append(" AND fe.encounter_date = :date");
+            params.addValue("date", date);
+            return;
+        }
+
+        switch (encounterSearchQuery.getDate().getPrefix()) {
+            case GREATERTHAN:
+                sql.append(" AND fe.encounter_date > :encounterDate");
+                break;
+            case GREATERTHAN_OR_EQUALS:
+                sql.append(" AND fe.encounter_date >= :encounterDate");
+                break;
+            case LESSTHAN:
+            case ENDS_BEFORE: // Handled logically
+                sql.append(" AND fe.encounter_date < :encounterDate");
+                break;
+            case LESSTHAN_OR_EQUALS:
+                sql.append(" AND fe.encounter_date <= :encounterDate");
+                break;
+            case NOT_EQUAL:
+                sql.append(" AND fe.encounter_date <> :encounterDate");
+                break;
+            case STARTS_AFTER: // Handled logically
+                sql.append(" AND fe.encounter_date > :encounterDate");
+                break;
+            case EQUAL:
+            case APPROXIMATE:
+            default:
+                sql.append(" AND fe.encounter_date = :encounterDate");
+                break;
+        }
+        params.addValue("encounterDate", date);
     }
 
     private RowMapper<FormEncounterDBRecord> formEncounterRowMapper() {

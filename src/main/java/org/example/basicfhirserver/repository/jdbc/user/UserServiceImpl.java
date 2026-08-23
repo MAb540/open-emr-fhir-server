@@ -141,6 +141,15 @@ public class UserServiceImpl implements UserService {
             PractitionerSearchQuery practitionerSearchQuery
     ) {
 
+        if (practitionerSearchQuery.getPractitionerId() != null) {
+            String rawSearchValue = practitionerSearchQuery.getPractitionerId();
+
+            sql.append(""" 
+                    AND users.uuid = :uuid""");
+            byte[] binaryUuid = toBytes(UUID.fromString(rawSearchValue));
+            params.addValue("uuid", binaryUuid);
+        }
+
         if (practitionerSearchQuery.getName() != null) {
             String rawSearchValue = practitionerSearchQuery.getName().getValue();
             if (practitionerSearchQuery.getName().isContains()) {
@@ -168,6 +177,7 @@ public class UserServiceImpl implements UserService {
                     """);
             params.addValue("npi", rawSearchValue);
         }
+
 
     }
 

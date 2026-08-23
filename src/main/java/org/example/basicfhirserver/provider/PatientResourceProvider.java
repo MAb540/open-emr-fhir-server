@@ -1,7 +1,6 @@
 package org.example.basicfhirserver.provider;
 
 import ca.uhn.fhir.rest.annotation.*;
-import ca.uhn.fhir.rest.annotation.Count;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.DateParam;
@@ -9,15 +8,16 @@ import ca.uhn.fhir.rest.param.StringParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.SimpleBundleProvider;
-import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.provider.validator.FhirResponseValidationService;
 import org.example.basicfhirserver.query.resources.patient.PatientSearchCriteria;
-import org.example.basicfhirserver.service.*;
 import org.example.basicfhirserver.query.translator.impl.PatientSearchTranslator;
+import org.example.basicfhirserver.service.PatientService;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.CanonicalType;
+import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.Patient;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
@@ -35,11 +35,11 @@ public class PatientResourceProvider implements IResourceProvider {
     private final PatientService patientService;
 
     public PatientResourceProvider(
-                       LegacyPatientMapper legacyPatientMapper,
-                       PatientSearchTranslator patientSearchTranslator,
-                       FhirResponseValidationService validationService,
-                       PatientService patientService
-                       ) {
+            LegacyPatientMapper legacyPatientMapper,
+            PatientSearchTranslator patientSearchTranslator,
+            FhirResponseValidationService validationService,
+            PatientService patientService
+    ) {
         this.legacyPatientMapper = legacyPatientMapper;
         this.patientSearchTranslator = patientSearchTranslator;
         this.validationService = validationService;
@@ -63,7 +63,7 @@ public class PatientResourceProvider implements IResourceProvider {
             @OptionalParam(name = Patient.SP_IDENTIFIER) TokenParam identifier,
             @OptionalParam(name = Patient.SP_FAMILY) StringParam family,
             @OptionalParam(name = Patient.SP_GIVEN) StringParam given,
-            @OptionalParam(name = Patient.SP_NAME)  StringParam name,
+            @OptionalParam(name = Patient.SP_NAME) StringParam name,
             @OptionalParam(name = Patient.SP_BIRTHDATE) DateParam birthDate,
             @OptionalParam(name = Patient.SP_DEATH_DATE) DateParam deathDate,
             @Count Integer count,
@@ -114,7 +114,7 @@ public class PatientResourceProvider implements IResourceProvider {
 
         List<CanonicalType> profiles = incomingPatient.getMeta().getProfile();
 
-        for( CanonicalType p : profiles ){
+        for (CanonicalType p : profiles) {
             System.out.println("profile value " + p.getValueAsString());
         }
 

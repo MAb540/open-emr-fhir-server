@@ -16,6 +16,7 @@ public class PractitionerSearchTranslator implements SearchTranslator<Practition
     public PractitionerSearchQuery translate(PractitionerSearchCriteria criteria) {
 
         return PractitionerSearchQuery.builder()
+                .practitionerId(token(criteria.getId()))
                 .name(stringMatch(criteria.getName()))
                 .identifier(token(criteria.getIdentifier()))
                 .build();

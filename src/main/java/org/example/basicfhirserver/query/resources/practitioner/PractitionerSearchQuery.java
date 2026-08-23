@@ -12,6 +12,7 @@ import org.example.basicfhirserver.query.resources.SearchValue;
 @Builder
 public class PractitionerSearchQuery {
 
+    private String practitionerId;
     private SearchValue<String> name;
     private String identifier;
 
