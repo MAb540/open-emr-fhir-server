@@ -4,10 +4,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.RequestValidatingInterceptor;
 import org.example.basicfhirserver.interceptor.CustomSecurityInterceptor;
-import org.example.basicfhirserver.provider.EncounterResourceProvider;
-import org.example.basicfhirserver.provider.ObservationResourceProvider;
-import org.example.basicfhirserver.provider.PatientResourceProvider;
-import org.example.basicfhirserver.provider.PractitionerResourceProvider;
+import org.example.basicfhirserver.provider.*;
 import org.hl7.fhir.r4.model.CanonicalType;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -26,6 +23,8 @@ public class FhirServerConfig {
             ObservationResourceProvider observationResourceProvider,
             EncounterResourceProvider encounterResourceProvider,
             PractitionerResourceProvider practitionerResourceProvider,
+            MedicationRequestResourceProvider medicationRequestResourceProvider,
+            MedicationProvider medicationProvider,
             FhirContextConfig fhirContextConfig,
             RequestValidatingInterceptor validatingInterceptor) {
 
@@ -36,7 +35,9 @@ public class FhirServerConfig {
                 patientResourceProvider,
                 observationResourceProvider,
                 encounterResourceProvider,
-                practitionerResourceProvider
+                practitionerResourceProvider,
+                medicationProvider,
+                medicationRequestResourceProvider
         ));
 
 //      RequestValidatingInterceptor valInterceptor = getValInterceptor(ctx);

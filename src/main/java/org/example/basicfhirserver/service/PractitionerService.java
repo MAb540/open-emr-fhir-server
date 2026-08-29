@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public interface PractitionerService {
 
-    Practitioner findById(UUID id);
+    Practitioner findById(UUID uuid);
 
     List<Practitioner> find(PractitionerSearchQuery practitionerSearchQuery);
 }

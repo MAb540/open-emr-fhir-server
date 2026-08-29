@@ -56,7 +56,8 @@ public class ObservationResourceProvider implements IResourceProvider {
             @OptionalParam(name = Observation.SP_DATE) DateParam date,
             @OptionalParam(name = Observation.SP_RES_LAST_UPDATED) DateParam lastUpdated) {
 
-        ObservationSearchCriteria criteria = ObservationSearchCriteria.builder().patient(patient).category(category).codes(codes).date(date).lastUpdated(lastUpdated).build();
+        ObservationSearchCriteria criteria = ObservationSearchCriteria.builder().patient(patient).category(category)
+                .codes(codes).date(date).lastUpdated(lastUpdated).build();
 
         var observationSearchQuery = observationSearchTranslator.translate(criteria);
 

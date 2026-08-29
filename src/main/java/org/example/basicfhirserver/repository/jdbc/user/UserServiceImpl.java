@@ -177,8 +177,6 @@ public class UserServiceImpl implements UserService {
                     """);
             params.addValue("npi", rawSearchValue);
         }
-
-
     }
 
 

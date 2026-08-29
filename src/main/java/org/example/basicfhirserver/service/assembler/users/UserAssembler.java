@@ -26,7 +26,7 @@ public class UserAssembler {
         practitioner.setFirstName(userDBRecord.getFname());
         practitioner.setMiddleName(userDBRecord.getMname());
         practitioner.setLastName(userDBRecord.getLname());
-        practitioner.setPrefix(userDBRecord.getTitle()); // E.g., Dr., Sr.
+        practitioner.setPrefix(userDBRecord.getTitle());
         practitioner.setSuffix(userDBRecord.getSuffix());
 
         practitioner.setNpi(userDBRecord.getNpi());
@@ -70,7 +70,6 @@ public class UserAssembler {
         }
         practitioner.setTelecoms(telecoms);
 
-        // 2. Build and Populate Address Items
         if (userDBRecord.getStreet() != null && !userDBRecord.getStreet().isBlank()) {
             addresses.add(Practitioner.AddressItem.builder()
                     .line1(userDBRecord.getStreet())

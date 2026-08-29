@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public interface EncounterService  {
 
-    FormEncounter findById(UUID id);
+    FormEncounter findById(UUID uuid);
 
     List<FormEncounter> find(EncounterSearchQuery encounterSearchQuery);
 
