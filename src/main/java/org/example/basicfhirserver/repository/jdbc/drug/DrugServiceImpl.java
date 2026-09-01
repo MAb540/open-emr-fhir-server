@@ -5,15 +5,10 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.toBytes;
-import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.toUuid;
+import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
 
 @Repository
 public class DrugServiceImpl implements DrugService {
@@ -45,7 +40,6 @@ public class DrugServiceImpl implements DrugService {
 
         StringBuilder sql = drugQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
-//        addFilter(sql, params, medicationRequestSearchQuery);
 
         return namedParameterJdbcTemplate.query(sql.toString(), params, drugDBRecordRowMapper());
 
@@ -131,18 +125,10 @@ public class DrugServiceImpl implements DrugService {
                 .rxnormDrugcode(rs.getString("rxnorm_drugcode"))
                 .manufacturer(rs.getString("manufacturer"))
                 .lotNumber(rs.getString("lot_number"))
-                .expiration(getLocalDateTime(rs, "expiration"))
-                .drugLastUpdated(getLocalDateTime(rs, "drug_last_updated"))
-                .drugDateCreated(getLocalDateTime(rs, "drug_date_created"))
+                .expiration(toLocalDateTime(rs.getTimestamp("expiration")))
+                .drugLastUpdated(toLocalDateTime(rs.getTimestamp("drug_last_updated")))
+                .drugDateCreated(toLocalDateTime(rs.getTimestamp("drug_date_created")))
                 .build();
-
     }
-
-
-    private LocalDateTime getLocalDateTime(ResultSet rs, String columnName) throws SQLException {
-        Timestamp timestamp = rs.getTimestamp(columnName);
-        return timestamp != null ? timestamp.toLocalDateTime() : null;
-    }
-
 
 }

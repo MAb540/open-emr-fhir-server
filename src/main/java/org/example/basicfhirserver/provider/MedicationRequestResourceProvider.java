@@ -56,7 +56,6 @@ public class MedicationRequestResourceProvider implements IResourceProvider {
             @OptionalParam(name = MedicationRequest.SP_PATIENT) ReferenceParam patient,
             @OptionalParam(name = MedicationRequest.SP_INTENT) TokenOrListParam intent,
             @OptionalParam(name = MedicationRequest.SP_STATUS) StringParam status
-
     ) {
 
         MedicationRequestSearchCriteria criteria = MedicationRequestSearchCriteria.builder()
