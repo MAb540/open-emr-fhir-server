@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 
 @Data
@@ -17,33 +16,19 @@ import java.util.Map;
 public class VitalObservation {
 
     String id;
-
     String patientId;
-
     String encounterId;
-
     LocalDateTime effectiveDateTime;
-
     BigDecimal value;
-
     String unit;
-
     String code;
-
     String display;
-
     String status;
-
     String profile;
-
     String practitionerId;
-
     LocalDateTime lastUpdated;
-
     String version;
-
     Map<String, VitalObservationComponent> components;
-
 
     public record VitalObservationComponent(
             BigDecimal value

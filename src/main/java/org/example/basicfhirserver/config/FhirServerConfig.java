@@ -26,6 +26,8 @@ public class FhirServerConfig {
             MedicationProvider medicationProvider,
             MedicationRequestResourceProvider medicationRequestResourceProvider,
             AllergyIntoleranceProvider allergyIntoleranceProvider,
+            ConditionResourceProvider conditionResourceProvider,
+            DiagnosticReportProvider diagnosticReportProvider,
             FhirContextConfig fhirContextConfig,
             RequestValidatingInterceptor validatingInterceptor) {
 
@@ -39,7 +41,9 @@ public class FhirServerConfig {
                 practitionerResourceProvider,
                 medicationProvider,
                 medicationRequestResourceProvider,
-                allergyIntoleranceProvider
+                allergyIntoleranceProvider,
+                diagnosticReportProvider,
+                conditionResourceProvider
         ));
 
 //      RequestValidatingInterceptor valInterceptor = getValInterceptor(ctx);
