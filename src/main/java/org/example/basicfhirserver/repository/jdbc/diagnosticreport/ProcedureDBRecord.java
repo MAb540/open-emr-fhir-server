@@ -1,11 +1,9 @@
 package org.example.basicfhirserver.repository.jdbc.diagnosticreport;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -13,9 +11,11 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder()
 public class ProcedureDBRecord {
-
-    UUID orderUuid;
+    // 1. Parent Order/Procedure Fields
+    String procedureName;
+    String procedureCode;
     UUID uuid;
+    UUID orderUuid;
     Long procedureOrderId;
     Long orderProviderId;
     Integer orderActivity;
@@ -39,48 +39,118 @@ public class ProcedureDBRecord {
     String orderIntent;
     Long locationId;
     Integer specimenFasting;
-    LocalDateTime reportDate;
-    Long procedureReportId;
-    UUID reportUuid;
-    String reportNotes;
-    Integer procedureOrderSeq;
-    Long procedureResultId;
-    UUID resultUuid;
-    String resultCode;
-    String resultText;
-    String resultUnits;
-    String resultResult;
-    String resultRange;
-    String resultAbnormal;
-    String resultAbnormalTitle;
-    String resultAbnormalCodes;
-    String resultComments;
-    String resultStatus;
-    String procedureName;
-    String procedureCode;
-    String procedureType;
-    Integer orderCodeSeq;
+
     String diagnoses;
     String standardCode;
-    Long labId;
-    UUID labUuid;
-    String labNpi;
-    String labName;
-    UUID labDirectorUuid;
-    String labDirectorNpi;
+
     UUID puuid;
-    Long pid;
-    Long patientId;
-    Long eid;
     UUID euuid;
-    LocalDateTime encounterDate;
-    Long docId;
-    UUID docUuid;
-    UUID providerUuid;
-    String providerFname;
-    String providerMname;
-    String providerLname;
-    String providerNpi;
-    UUID locationUuid;
-    String locationName;
+    // Attributed References (Flattened / Embedded Structures)
+    ProviderInfo provider;
+    FacilityInfo location;
+    LabMetadataInfo lab;
+    PatientReferenceInfo patient;
+    EncounterReferenceInfo encounter;
+
+    // 2. The Hierarchical Tree Nesting Target
+    List<ReportBlock> reports;
+
+    // --- Embedded Component Definitions ---
+    @Value
+    @Builder
+    public static class ProviderInfo {
+        Long id;
+        UUID uuid;
+        String fname;
+        String mname;
+        String lname;
+        String npi;
+    }
+
+    @Value
+    @Builder
+    public static class FacilityInfo {
+        Long id;
+        UUID uuid;
+        String name;
+    }
+
+    @Value
+    @Builder
+    public static class LabMetadataInfo {
+        Long id;
+        UUID uuid;
+        String name;
+        String npi;
+        UUID directorUuid;
+        String directorNpi;
+    }
+
+    @Value
+    @Builder
+    public static class PatientReferenceInfo {
+        Long pid;
+        UUID uuid;
+    }
+
+    @Value
+    @Builder
+    public static class EncounterReferenceInfo {
+        Long id;
+        UUID uuid;
+        LocalDateTime date;
+    }
+
+    @Value
+    @Builder(toBuilder = true)
+    public static class ReportBlock {
+        Long id;
+        UUID uuid;
+        LocalDateTime date;
+        String notes;
+        Integer orderSeq;
+        List<ResultBlock> results;
+        List<SpecimenBlock> specimens;
+    }
+
+    @Value
+    @Builder
+    public static class ResultBlock {
+        Long id;
+        UUID uuid;
+        String code;
+        String text;
+        String units;
+        String result;
+        String range;
+        String abnormal;
+        String resultAbnormalTitle;
+        String resultAbnormalCodes;
+        String comments;
+        Long documentId;
+        String status;
+    }
+
+    @Value
+    @Builder
+    public static class SpecimenBlock {
+        UUID uuid;
+        String identifier;
+        String accession;
+        String typeCode;
+        String type;
+        String methodCode;
+        String method;
+        String locationCode;
+        String location;
+        LocalDateTime collectedDate;
+        LocalDateTime collectionStart;
+        LocalDateTime collectionEnd;
+        Double volume;
+        String volumeUnit;
+        String conditionCode;
+        String specimenCondition;
+        String comments;
+        Integer deleted;
+    }
 }

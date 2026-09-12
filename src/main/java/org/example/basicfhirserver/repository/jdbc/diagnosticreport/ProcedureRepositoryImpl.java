@@ -5,8 +5,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.toLocalDateTime;
 import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.toUuid;
@@ -30,7 +29,11 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
         StringBuilder sql = procedureOrderListItemQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
 
-        return namedParameterJdbcTemplate.query(sql.toString(), params, proceduresListDBRecordRowMapper());
+        List<RawProcedureRecord> rawProcedureRecords =
+                namedParameterJdbcTemplate.query(sql.toString(), params, proceduresListDBRecordRowMapper());
+
+
+        return hydrateSearchResults(rawProcedureRecords);
     }
 
 
@@ -250,8 +253,8 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
     }
 
 
-    private RowMapper<ProcedureDBRecord> proceduresListDBRecordRowMapper() {
-        return (rs, rowNum) -> ProcedureDBRecord.builder()
+    private RowMapper<RawProcedureRecord> proceduresListDBRecordRowMapper() {
+        return (rs, rowNum) -> RawProcedureRecord.builder()
                 .orderUuid(toUuid(rs.getBytes("order_uuid")))
                 .uuid(toUuid(rs.getBytes("uuid")))
                 .procedureOrderId(rs.getObject("procedure_order_id") != null ? rs.getLong("procedure_order_id") : null)
@@ -324,5 +327,206 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
                 .locationName(rs.getString("location_name"))
                 .build();
     }
+
+    public List<ProcedureDBRecord> hydrateSearchResults(List<RawProcedureRecord> rawRows) {
+        if (rawRows == null || rawRows.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Tracks the insertion order of unique orders (replicates PHP array sorting)
+        List<String> procedureOrderUuuids = new ArrayList<>();
+
+        // Maps to track and reduce duplicate parent structures and report nodes
+        Map<String, ProcedureDBRecord> procedureByUuid = new HashMap<>();
+        Map<String, ProcedureDBRecord.ReportBlock> reportsByUuid = new HashMap<>();
+
+        // =========================================================================
+        // PASS 1: Build the tree structure and collect relational nodes
+        // =========================================================================
+        for (RawProcedureRecord row : rawRows) {
+            // Safe assignment preventing NullPointerException if orderUuid is null
+            String procedureUuid = row.getOrderUuid() != null ? row.getOrderUuid().toString() : null;
+            if (procedureUuid == null) {
+                continue;
+            }
+
+            // Create the parent root record container if we haven't seen this order yet
+            if (!procedureByUuid.containsKey(procedureUuid)) {
+                procedureOrderUuuids.add(procedureUuid);
+                ProcedureDBRecord parentRecord = ProcedureDBRecord.builder()
+                        .orderUuid(row.getOrderUuid())
+                        .uuid(row.getUuid())
+                        .procedureOrderId(row.getProcedureOrderId())
+                        .orderProviderId(row.getOrderProviderId())
+                        .orderActivity(row.getOrderActivity())
+                        .activity(row.getActivity())
+                        .orderDiagnosis(row.getOrderDiagnosis())
+                        .orderEncounterId(row.getOrderEncounterId())
+                        .orderLabId(row.getOrderLabId())
+                        .orderPatientId(row.getOrderPatientId())
+                        .providerId(row.getProviderId())
+                        .dateOrdered(row.getDateOrdered())
+                        .dateCollected(row.getDateCollected())
+                        .orderStatus(row.getOrderStatus())
+                        .orderPriority(row.getOrderPriority())
+                        .patientInstructions(row.getPatientInstructions())
+                        .clinicalHx(row.getClinicalHx())
+                        .procedureOrderType(row.getProcedureOrderType())
+                        .scheduledDate(row.getScheduledDate())
+                        .scheduledStart(row.getScheduledStart())
+                        .scheduledEnd(row.getScheduledEnd())
+                        .performerType(row.getPerformerType())
+                        .orderIntent(row.getOrderIntent())
+                        .locationId(row.getLocationId())
+                        .specimenFasting(row.getSpecimenFasting())
+                        .procedureName(row.getProcedureName())
+                        .procedureCode(row.getProcedureCode())
+                        .diagnoses(row.getDiagnoses())
+                        .standardCode(row.getStandardCode())
+                        .puuid(row.getPuuid())
+                        .euuid(row.getEuuid())
+                        // Map nested attributed reference block objects
+                        .provider(row.getProviderId() != null ? ProcedureDBRecord.ProviderInfo.builder()
+                                .id(row.getProviderId()).uuid(row.getProviderUuid())
+                                .fname(row.getProviderFname()).mname(row.getProviderMname()).lname(row.getProviderLname())
+                                .npi(row.getProviderNpi()).build() : null)
+                        .lab(row.getLabId() != null ? ProcedureDBRecord.LabMetadataInfo.builder()
+                                .id(row.getLabId()).uuid(row.getLabUuid()).name(row.getLabName()).npi(row.getLabNpi())
+                                .directorUuid(row.getLabDirectorUuid()).directorNpi(row.getLabDirectorNpi()).build() : null)
+                        .patient(row.getPid() != null ? ProcedureDBRecord.PatientReferenceInfo.builder()
+                                .pid(row.getPid()).uuid(row.getPuuid()).build() : null)
+                        .encounter(row.getEid() != null ? ProcedureDBRecord.EncounterReferenceInfo.builder()
+                                .id(row.getEid()).uuid(row.getEuuid()).date(row.getEncounterDate()).build() : null)
+                        .location(row.getLocationId() != null && row.getLocationUuid() != null ? ProcedureDBRecord.FacilityInfo.builder()
+                                .id(row.getLocationId()).uuid(row.getLocationUuid()).name(row.getLocationName()).build() : null)
+                        .reports(new ArrayList<>())
+                        .build();
+
+                procedureByUuid.put(procedureUuid, parentRecord);
+            }
+
+            // Fetch the parent pointer to append nested elements
+            ProcedureDBRecord currentProcedure = procedureByUuid.get(procedureUuid);
+
+            // Safe assignment preventing NullPointerException if reportUuid is null
+            String reportUuid = row.getReportUuid() != null ? row.getReportUuid().toString() : null;
+
+            if (reportUuid != null && !reportUuid.isEmpty()) {
+                // If we haven't seen this report yet, create it
+                if (!reportsByUuid.containsKey(reportUuid)) {
+                    ProcedureDBRecord.ReportBlock newReport = ProcedureDBRecord.ReportBlock.builder()
+                            .id(row.getProcedureReportId())
+                            .uuid(row.getReportUuid())
+                            .date(row.getReportDate())
+                            .notes(row.getReportNotes())
+                            .orderSeq(row.getProcedureOrderSeq())
+                            .results(new ArrayList<>())
+                            .specimens(new ArrayList<>())
+                            .build();
+
+                    reportsByUuid.put(reportUuid, newReport);
+
+                    // Link this report block straight to the parent procedure's reports list
+                    currentProcedure.getReports().add(newReport);
+                }
+
+                ProcedureDBRecord.ReportBlock currentReport = reportsByUuid.get(reportUuid);
+
+                // Add individual test result to the report if it exists on this row row
+                if (row.getProcedureResultId() != null) {
+                    ProcedureDBRecord.ResultBlock result = ProcedureDBRecord.ResultBlock.builder()
+                            .id(row.getProcedureResultId())
+                            .uuid(row.getResultUuid())
+                            .code(row.getResultCode())
+                            .text(row.getResultText())
+                            .units(row.getResultUnits())
+                            .result(row.getResultResult())
+                            .range(row.getResultRange())
+                            .abnormal(row.getResultAbnormal())
+                            .comments(row.getResultComments())
+                            .build();
+
+                    currentReport.getResults().add(result);
+                }
+            }
+        } // End of PASS 1 Loop
+
+        // =========================================================================
+        // PASS 2: Fetch dependent specimens for accumulated report nodes
+        // =========================================================================
+        String orderIdSql = "SELECT procedure_order_id FROM procedure_report WHERE uuid = :reportUuid";
+
+        String specimenSql = """
+                SELECT uuid AS specimen_uuid, specimen_identifier, accession_identifier,
+                       specimen_type_code, specimen_type, collection_method_code, collection_method,
+                       specimen_location_code, specimen_location, collected_date, collection_date_low,
+                       collection_date_high, volume_value, volume_unit, condition_code, specimen_condition,
+                       comments AS specimen_comments, deleted
+                FROM procedure_specimen
+                WHERE procedure_order_id = :orderId AND procedure_order_seq = :orderSeq
+                ORDER BY procedure_specimen_id
+                """;
+
+        for (Map.Entry<String, ProcedureDBRecord.ReportBlock> entry : reportsByUuid.entrySet()) {
+            String reportUuid = entry.getKey();
+            ProcedureDBRecord.ReportBlock report = entry.getValue();
+
+            // Only look up specimens if an order sequence is available
+            if (report.getOrderSeq() != null) {
+                MapSqlParameterSource orderParams = new MapSqlParameterSource("reportUuid", reportUuid);
+
+                // Find the internal procedure_order_id key
+                List<Long> orderIdList = namedParameterJdbcTemplate.query(orderIdSql, orderParams,
+                        (rs, rowNum) -> rs.getLong("procedure_order_id"));
+
+                if (!orderIdList.isEmpty() && orderIdList.get(0) != null) {
+                    Long orderId = orderIdList.get(0);
+
+                    // Set up parameters for the specimen lookup
+                    MapSqlParameterSource specimenParams = new MapSqlParameterSource()
+                            .addValue("orderId", orderId)
+                            .addValue("orderSeq", report.getOrderSeq());
+
+                    // Query and map individual specimen records
+                    List<ProcedureDBRecord.SpecimenBlock> specimens = namedParameterJdbcTemplate.query(specimenSql, specimenParams, (rs, rowNum) ->
+                            ProcedureDBRecord.SpecimenBlock.builder()
+                                    .uuid(toUuid(rs.getBytes("specimen_uuid")))
+                                    .identifier(rs.getString("specimen_identifier"))
+                                    .accession(rs.getString("accession_identifier"))
+                                    .typeCode(rs.getString("specimen_type_code"))
+                                    .type(rs.getString("specimen_type"))
+                                    .methodCode(rs.getString("collection_method_code"))
+                                    .method(rs.getString("collection_method"))
+                                    .locationCode(rs.getString("specimen_location_code"))
+                                    .location(rs.getString("specimen_location"))
+                                    .collectedDate(toLocalDateTime(rs.getTimestamp("collected_date")))
+                                    .collectionStart(toLocalDateTime(rs.getTimestamp("collection_date_low")))
+                                    .collectionEnd(toLocalDateTime(rs.getTimestamp("collection_date_high")))
+                                    .volume(rs.getObject("volume_value") != null ? rs.getDouble("volume_value") : null)
+                                    .volumeUnit(rs.getString("volume_unit"))
+                                    .conditionCode(rs.getString("condition_code"))
+                                    .specimenCondition(rs.getString("specimen_condition"))
+                                    .comments(rs.getString("specimen_comments"))
+                                    .deleted(rs.getObject("deleted") != null ? rs.getInt("deleted") : null)
+                                    .build()
+                    );
+
+                    // Add all recovered specimen blocks into this report block's mutable collection
+                    if (!specimens.isEmpty()) {
+                        report.getSpecimens().addAll(specimens);
+                    }
+                }
+            }
+        } // End of PASS 2 Loop
+
+        // Assemble the ordered list of reduced records to match insertion keys
+        List<ProcedureDBRecord> finalRecords = new ArrayList<>();
+        for (String uuid : procedureOrderUuuids) {
+            finalRecords.add(procedureByUuid.get(uuid));
+        }
+
+        return finalRecords;
+    }
+
 
 }

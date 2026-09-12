@@ -19,6 +19,9 @@ public class DiagnosticReportClinicalNotesMapperImpl implements DiagnosticReport
         diagnosticReport.setMeta(populateMeta(clinicalNotesDBRecord));
         diagnosticReport.setId(clinicalNotesDBRecord.getId().toString());
 
+
+
+
         return null;
     }
 

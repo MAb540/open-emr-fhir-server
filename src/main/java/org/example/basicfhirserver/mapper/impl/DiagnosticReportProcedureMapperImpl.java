@@ -3,10 +3,14 @@ package org.example.basicfhirserver.mapper.impl;
 import org.example.basicfhirserver.mapper.DiagnosticReportProcedureMapper;
 import org.example.basicfhirserver.repository.jdbc.diagnosticreport.ProcedureDBRecord;
 import org.hl7.fhir.r4.model.DiagnosticReport;
+import org.hl7.fhir.r4.model.Extension;
 import org.springframework.stereotype.Component;
 
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.List;
+
+import static org.example.basicfhirserver.mapper.utils.MapperHelper.getUnknownCodeableConcept;
 
 
 @Component
@@ -18,24 +22,19 @@ public class DiagnosticReportProcedureMapperImpl implements DiagnosticReportProc
         diagnosticReport.setMeta(populateMeta());
         diagnosticReport.setId(procedureDBRecord.getUuid().toString());
 
-        if(diagnosticReport.getEffectiveDateTimeType()){
+        if (procedureDBRecord.getEncounter().getDate() != null) {
             diagnosticReport.getEffectiveDateTimeType()
-                            .setValue(Date.from(procedureDBRecord.getDate.atZone(ZoneId.systemDefault()).toInstant()));
-            procedureDBRecord.setIssued();
-        }else{
+                    .setValue(Date.from(procedureDBRecord.getEncounter().getDate().atZone(ZoneId.systemDefault()).toInstant()));
+            diagnosticReport.setIssued(
+                    Date.from(procedureDBRecord.getEncounter().getDate().atZone(ZoneId.systemDefault()).toInstant())
+            );
+        } else {
+            diagnosticReport.getEffectiveDateTimeType()
+                    .setExtension(
+                            List.of(new Extension().setValue(getUnknownCodeableConcept()))
+                    );
 
         }
-
-//
-//        if (!empty($dataRecordReport['date'])) {
-//            $utcDate = UtilsService::getLocalDateAsUTC($dataRecordReport['date']);
-//            $report->setEffectiveDateTime(new FHIRDateTime($utcDate));
-//            $report->setIssued(new FHIRInstant($utcDate));
-//        } else {
-//            $report->setEffectiveDateTime(UtilsService::createDataMissingExtension());
-//        }
-
-
 
         return diagnosticReport;
     }
