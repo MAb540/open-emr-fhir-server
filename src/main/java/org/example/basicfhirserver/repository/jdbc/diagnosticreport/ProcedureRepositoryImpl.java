@@ -383,8 +383,6 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
                         .procedureCode(row.getProcedureCode())
                         .diagnoses(row.getDiagnoses())
                         .standardCode(row.getStandardCode())
-                        .puuid(row.getPuuid())
-                        .euuid(row.getEuuid())
                         // Map nested attributed reference block objects
                         .provider(row.getProviderId() != null ? ProcedureDBRecord.ProviderInfo.builder()
                                 .id(row.getProviderId()).uuid(row.getProviderUuid())
@@ -432,7 +430,7 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
 
                 ProcedureDBRecord.ReportBlock currentReport = reportsByUuid.get(reportUuid);
 
-                // Add individual test result to the report if it exists on this row row
+                // Add individual test result to the report if it exists on this row
                 if (row.getProcedureResultId() != null) {
                     ProcedureDBRecord.ResultBlock result = ProcedureDBRecord.ResultBlock.builder()
                             .id(row.getProcedureResultId())

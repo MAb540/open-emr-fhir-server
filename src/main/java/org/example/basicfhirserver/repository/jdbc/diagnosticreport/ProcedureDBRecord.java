@@ -43,8 +43,6 @@ public class ProcedureDBRecord {
     String diagnoses;
     String standardCode;
 
-    UUID puuid;
-    UUID euuid;
     // Attributed References (Flattened / Embedded Structures)
     ProviderInfo provider;
     FacilityInfo location;

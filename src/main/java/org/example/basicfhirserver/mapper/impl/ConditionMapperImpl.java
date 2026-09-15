@@ -106,9 +106,7 @@ public class ConditionMapperImpl implements ConditionMapper {
     }
 
     private List<CodeableConcept> populateCategory(ConditionCanonical conditionCanonical) {
-
         CodeableConcept codeableConcept = new CodeableConcept();
-
         if (Objects.equals(conditionCanonical.getCategory(), ConditionAssembler.CATEGORY_PROBLEM_LIST)) {
             Coding coding = new Coding();
             coding.setSystem(FhirCodeSystemConstants.HL7_CONDITION_CATEGORY);
@@ -142,12 +140,8 @@ public class ConditionMapperImpl implements ConditionMapper {
                 codeableConcept.setText(conditionCanonical.getHealthConcernSubtypeTitle());
                 codeableConcept.addCoding(healthConcern);
             }
-
-
         }
-
         return List.of(codeableConcept);
-
     }
 
     private @NonNull String getSystem(ConditionCanonical conditionCanonical) {
