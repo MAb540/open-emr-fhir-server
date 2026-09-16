@@ -1,6 +1,7 @@
 package org.example.basicfhirserver.service.impl;
 
 import org.example.basicfhirserver.model.DiagnosticReportCanonical;
+import org.example.basicfhirserver.query.resources.diagnosticreport.DiagnosticReportSearchQuery;
 import org.example.basicfhirserver.repository.jdbc.diagnosticreport.ClinicalNotesDBRecord;
 import org.example.basicfhirserver.repository.jdbc.diagnosticreport.ClinicalNotesRepository;
 import org.example.basicfhirserver.repository.jdbc.diagnosticreport.ProcedureDBRecord;
@@ -30,10 +31,10 @@ public class DiagnosticServiceImpl implements DiagnosticReportService {
     }
 
     @Override
-    public DiagnosticReportCanonical findClinicalNotes() {
+    public DiagnosticReportCanonical findClinicalNotes(DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
 
-        List<ClinicalNotesDBRecord> clinicalNotesDBRecords = clinicalNotesRepository.findClinicalNotes();
-        List<ProcedureDBRecord> procedureDBRecords = procedureRepository.findProcedures();
+        List<ClinicalNotesDBRecord> clinicalNotesDBRecords = clinicalNotesRepository.findClinicalNotes(diagnosticReportSearchQuery);
+        List<ProcedureDBRecord> procedureDBRecords = procedureRepository.findProcedures(diagnosticReportSearchQuery);
 
         return new
                 DiagnosticReportCanonical(

@@ -204,12 +204,7 @@ public class FormEncounterServiceImpl implements FormEncounterService {
             params.addValue("patientUuid", binaryUuid);
         }
 
-
-        addDateFilter(sql,
-                params,
-                encounterSearchQuery);
-
-
+        addDateFilter(sql, params, encounterSearchQuery);
     }
 
     private void addDateFilter(

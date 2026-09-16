@@ -20,8 +20,8 @@ public class DiagnosticReportProcedureMapperImpl implements DiagnosticReportProc
     public DiagnosticReport toR4(ProcedureDBRecord procedureDBRecord) {
         DiagnosticReport diagnosticReport = new DiagnosticReport();
 
-        diagnosticReport.setMeta(populateMeta());
-        diagnosticReport.setId(procedureDBRecord.getUuid().toString());
+        diagnosticReport.setMeta(populateMeta(procedureDBRecord));
+        diagnosticReport.setId(procedureDBRecord.getOrderUuid().toString());
 
         if (procedureDBRecord.getEncounter().getDate() != null) {
             diagnosticReport.getEffectiveDateTimeType()
@@ -48,10 +48,15 @@ public class DiagnosticReportProcedureMapperImpl implements DiagnosticReportProc
         return diagnosticReport;
     }
 
-    private org.hl7.fhir.r4.model.Meta populateMeta() {
+    private org.hl7.fhir.r4.model.Meta populateMeta(ProcedureDBRecord procedureDBRecord) {
         org.hl7.fhir.r4.model.Meta meta = new org.hl7.fhir.r4.model.Meta();
         meta.setVersionId("1");
         meta.addProfile("http://hl7.org/fhir/us/core/StructureDefinition/us-core-diagnosticreport-lab");
+
+        if (procedureDBRecord.getEncounter().getDate() != null) {
+            meta.setLastUpdated(Date.from(procedureDBRecord.getEncounter().getDate().atZone(ZoneId.systemDefault()).toInstant()));
+        }
+
         return meta;
     }
 
@@ -161,7 +166,7 @@ public class DiagnosticReportProcedureMapperImpl implements DiagnosticReportProc
     private CodeableConcept populateCode(ProcedureDBRecord procedureDBRecord) {
 
         CodeableConcept codeableConcept = new CodeableConcept();
-        if (procedureDBRecord.getStandardCode() != null) {
+        if (procedureDBRecord.getStandardCode() != null && !procedureDBRecord.getStandardCode().isEmpty()) {
             Coding coding = new Coding();
 
             coding.setCode(procedureDBRecord.getStandardCode());
@@ -171,10 +176,10 @@ public class DiagnosticReportProcedureMapperImpl implements DiagnosticReportProc
             codeableConcept.setText(procedureDBRecord.getProcedureName());
             codeableConcept.addCoding(coding);
         } else {
-            String UNKNOWNABLE_CODE_NULL_FLAVOR = "UNK";
+            String UNKNOWABLE_CODE_NULL_FLAVOR = "UNK";
             Coding coding = new Coding();
             coding.setSystem(FhirCodeSystemConstants.HL7_NULL_FLAVOR);
-            coding.setCode(UNKNOWNABLE_CODE_NULL_FLAVOR);
+            coding.setCode(UNKNOWABLE_CODE_NULL_FLAVOR);
             coding.setDisplay("unknown");
             codeableConcept.setText("unknown");
             codeableConcept.addCoding(coding);

@@ -1,14 +1,16 @@
 package org.example.basicfhirserver.repository.jdbc.diagnosticreport;
 
+import org.example.basicfhirserver.query.resources.SearchValue;
+import org.example.basicfhirserver.query.resources.diagnosticreport.DiagnosticReportSearchQuery;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
-import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.toLocalDateTime;
-import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.toUuid;
+import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
 
 @Repository
 public class ProcedureRepositoryImpl implements ProcedureRepository {
@@ -25,17 +27,17 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
     }
 
     @Override
-    public List<ProcedureDBRecord> findProcedures() {
+    public List<ProcedureDBRecord> findProcedures(DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
         StringBuilder sql = procedureOrderListItemQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
+
+        addFilter(sql, params, diagnosticReportSearchQuery);
 
         List<RawProcedureRecord> rawProcedureRecords =
                 namedParameterJdbcTemplate.query(sql.toString(), params, proceduresListDBRecordRowMapper());
 
-
         return hydrateSearchResults(rawProcedureRecords);
     }
-
 
     private StringBuilder procedureOrderListItemQuery() {
         return new StringBuilder("""
@@ -249,9 +251,88 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
                     FROM facility
                 ) location ON location.location_id = porder.location_id WHERE 1=1
                 """);
-
     }
 
+    private void addFilter(
+            StringBuilder sql,
+            MapSqlParameterSource params,
+            DiagnosticReportSearchQuery diagnosticReportSearchQuery
+    ) {
+        if (diagnosticReportSearchQuery.getDiagnosticReportId() != null) {
+            String uuid = diagnosticReportSearchQuery.getDiagnosticReportId();
+            byte[] binaryUuid = toBytes(UUID.fromString(uuid));
+            sql.append("""
+                    AND porder.order_uuid = :order_uuid
+                    """);
+            params.addValue("order_uuid", binaryUuid);
+        }
+
+        if (diagnosticReportSearchQuery.getPatientId() != null) {
+            String uuid = diagnosticReportSearchQuery.getPatientId();
+            byte[] binaryUuid = toBytes(UUID.fromString(uuid));
+            sql.append(" AND patients.puuid = :patientUuid ");
+            params.addValue("patientUuid", binaryUuid);
+        }
+
+        if (diagnosticReportSearchQuery.getCodes() != null && !diagnosticReportSearchQuery.getCodes().isEmpty()) {
+            List<String> codes = diagnosticReportSearchQuery.getCodes().stream()
+                    .map(SearchValue::getValue)
+                    .toList();
+            sql.append("""
+                    AND pcode_types.standard_code IN (:standard_codes)
+                    """);
+            params.addValue("standard_codes", codes);
+        }
+        addDateFilter(sql, params, diagnosticReportSearchQuery);
+    }
+
+    private void addDateFilter(
+            StringBuilder sql,
+            MapSqlParameterSource params,
+            DiagnosticReportSearchQuery diagnosticReportSearchQuery
+    ) {
+        if (diagnosticReportSearchQuery.getDate() == null ||
+                diagnosticReportSearchQuery.getDate().getValue() == null) {
+            return;
+        }
+
+        LocalDateTime date =
+                diagnosticReportSearchQuery.getDate().getValue();
+
+        if (diagnosticReportSearchQuery.getDate().getPrefix() == null) {
+            sql.append(" AND preport.report_date = :date");
+            params.addValue("date", date);
+            return;
+        }
+
+        switch (diagnosticReportSearchQuery.getDate().getPrefix()) {
+            case GREATERTHAN:
+                sql.append(" AND preport.report_date > :date");
+                break;
+            case GREATERTHAN_OR_EQUALS:
+                sql.append(" AND preport.report_date >= :date");
+                break;
+            case LESSTHAN:
+            case ENDS_BEFORE: // Handled logically
+                sql.append(" AND preport.report_date < :date");
+                break;
+            case LESSTHAN_OR_EQUALS:
+                sql.append(" AND preport.report_date <= :date");
+                break;
+            case NOT_EQUAL:
+                sql.append(" AND preport.report_date <> :date");
+                break;
+            case STARTS_AFTER: // Handled logically
+                sql.append(" AND preport.report_date > :date");
+                break;
+            case EQUAL:
+            case APPROXIMATE:
+            default:
+                sql.append(" AND preport.report_date = :date");
+                break;
+        }
+        params.addValue("date", date);
+    }
 
     private RowMapper<RawProcedureRecord> proceduresListDBRecordRowMapper() {
         return (rs, rowNum) -> RawProcedureRecord.builder()
@@ -333,7 +414,6 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
             return Collections.emptyList();
         }
 
-        // Tracks the insertion order of unique orders (replicates PHP array sorting)
         List<String> procedureOrderUuuids = new ArrayList<>();
 
         // Maps to track and reduce duplicate parent structures and report nodes
@@ -383,7 +463,7 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
                         .procedureCode(row.getProcedureCode())
                         .diagnoses(row.getDiagnoses())
                         .standardCode(row.getStandardCode())
-                        // Map nested attributed reference block objects
+
                         .provider(row.getProviderId() != null ? ProcedureDBRecord.ProviderInfo.builder()
                                 .id(row.getProviderId()).uuid(row.getProviderUuid())
                                 .fname(row.getProviderFname()).mname(row.getProviderMname()).lname(row.getProviderLname())
@@ -403,14 +483,10 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
                 procedureByUuid.put(procedureUuid, parentRecord);
             }
 
-            // Fetch the parent pointer to append nested elements
             ProcedureDBRecord currentProcedure = procedureByUuid.get(procedureUuid);
-
-            // Safe assignment preventing NullPointerException if reportUuid is null
             String reportUuid = row.getReportUuid() != null ? row.getReportUuid().toString() : null;
 
             if (reportUuid != null && !reportUuid.isEmpty()) {
-                // If we haven't seen this report yet, create it
                 if (!reportsByUuid.containsKey(reportUuid)) {
                     ProcedureDBRecord.ReportBlock newReport = ProcedureDBRecord.ReportBlock.builder()
                             .id(row.getProcedureReportId())
@@ -421,16 +497,12 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
                             .results(new ArrayList<>())
                             .specimens(new ArrayList<>())
                             .build();
-
                     reportsByUuid.put(reportUuid, newReport);
-
-                    // Link this report block straight to the parent procedure's reports list
                     currentProcedure.getReports().add(newReport);
                 }
 
                 ProcedureDBRecord.ReportBlock currentReport = reportsByUuid.get(reportUuid);
 
-                // Add individual test result to the report if it exists on this row
                 if (row.getProcedureResultId() != null) {
                     ProcedureDBRecord.ResultBlock result = ProcedureDBRecord.ResultBlock.builder()
                             .id(row.getProcedureResultId())
@@ -447,7 +519,7 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
                     currentReport.getResults().add(result);
                 }
             }
-        } // End of PASS 1 Loop
+        }
 
         // =========================================================================
         // PASS 2: Fetch dependent specimens for accumulated report nodes
@@ -469,23 +541,19 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
             String reportUuid = entry.getKey();
             ProcedureDBRecord.ReportBlock report = entry.getValue();
 
-            // Only look up specimens if an order sequence is available
             if (report.getOrderSeq() != null) {
                 MapSqlParameterSource orderParams = new MapSqlParameterSource("reportUuid", reportUuid);
 
-                // Find the internal procedure_order_id key
                 List<Long> orderIdList = namedParameterJdbcTemplate.query(orderIdSql, orderParams,
                         (rs, rowNum) -> rs.getLong("procedure_order_id"));
 
                 if (!orderIdList.isEmpty() && orderIdList.get(0) != null) {
                     Long orderId = orderIdList.get(0);
 
-                    // Set up parameters for the specimen lookup
                     MapSqlParameterSource specimenParams = new MapSqlParameterSource()
                             .addValue("orderId", orderId)
                             .addValue("orderSeq", report.getOrderSeq());
 
-                    // Query and map individual specimen records
                     List<ProcedureDBRecord.SpecimenBlock> specimens = namedParameterJdbcTemplate.query(specimenSql, specimenParams, (rs, rowNum) ->
                             ProcedureDBRecord.SpecimenBlock.builder()
                                     .uuid(toUuid(rs.getBytes("specimen_uuid")))
@@ -509,15 +577,13 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
                                     .build()
                     );
 
-                    // Add all recovered specimen blocks into this report block's mutable collection
                     if (!specimens.isEmpty()) {
                         report.getSpecimens().addAll(specimens);
                     }
                 }
             }
-        } // End of PASS 2 Loop
+        }
 
-        // Assemble the ordered list of reduced records to match insertion keys
         List<ProcedureDBRecord> finalRecords = new ArrayList<>();
         for (String uuid : procedureOrderUuuids) {
             finalRecords.add(procedureByUuid.get(uuid));

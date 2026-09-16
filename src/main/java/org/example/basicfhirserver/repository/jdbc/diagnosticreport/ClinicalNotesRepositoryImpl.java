@@ -1,15 +1,17 @@
 package org.example.basicfhirserver.repository.jdbc.diagnosticreport;
 
+import org.example.basicfhirserver.query.resources.SearchValue;
+import org.example.basicfhirserver.query.resources.diagnosticreport.DiagnosticReportSearchQuery;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.toLocalDateTime;
-import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.toUuid;
+import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
 
 @Repository
 public class ClinicalNotesRepositoryImpl implements ClinicalNotesRepository {
@@ -26,9 +28,10 @@ public class ClinicalNotesRepositoryImpl implements ClinicalNotesRepository {
     }
 
     @Override
-    public List<ClinicalNotesDBRecord> findClinicalNotes() {
+    public List<ClinicalNotesDBRecord> findClinicalNotes(DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
         StringBuilder sql = clinicalNotesListItemQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
+        addFilter(sql, params, diagnosticReportSearchQuery);
 
         return namedParameterJdbcTemplate.query(sql.toString(), params, clinicalNotesListDBRecordRowMapper());
     }
@@ -133,6 +136,88 @@ public class ClinicalNotesRepositoryImpl implements ClinicalNotesRepository {
                 """);
     }
 
+    private void addFilter(
+            StringBuilder sql,
+            MapSqlParameterSource params,
+            DiagnosticReportSearchQuery diagnosticReportSearchQuery
+    ) {
+
+        if (diagnosticReportSearchQuery.getDiagnosticReportId() != null) {
+            String uuid = diagnosticReportSearchQuery.getDiagnosticReportId();
+            byte[] binaryUuid = toBytes(UUID.fromString(uuid));
+            sql.append("""
+                    AND notes.uuid = :uuid
+                    """);
+            params.addValue("uuid", binaryUuid);
+        }
+
+        if (diagnosticReportSearchQuery.getPatientId() != null) {
+            String uuid = diagnosticReportSearchQuery.getPatientId();
+            byte[] binaryUuid = toBytes(UUID.fromString(uuid));
+            sql.append(" AND patients.puuid = :patientUuid ");
+            params.addValue("patientUuid", binaryUuid);
+        }
+
+        if (diagnosticReportSearchQuery.getCodes() != null && !diagnosticReportSearchQuery.getCodes().isEmpty()) {
+            List<String> codes = diagnosticReportSearchQuery.getCodes().stream()
+                    .map(SearchValue::getValue)
+                    .toList();
+            sql.append("""
+                    AND notes.code IN (:codes)
+                    """);
+            params.addValue("codes", codes);
+        }
+
+        addDateFilter(sql, params, diagnosticReportSearchQuery);
+    }
+
+    private void addDateFilter(
+            StringBuilder sql,
+            MapSqlParameterSource params,
+            DiagnosticReportSearchQuery diagnosticReportSearchQuery
+    ) {
+        if (diagnosticReportSearchQuery.getDate() == null ||
+                diagnosticReportSearchQuery.getDate().getValue() == null) {
+            return;
+        }
+
+        LocalDateTime date =
+                diagnosticReportSearchQuery.getDate().getValue();
+
+        if (diagnosticReportSearchQuery.getDate().getPrefix() == null) {
+            sql.append(" AND notes.date = :date");
+            params.addValue("date", date);
+            return;
+        }
+
+        switch (diagnosticReportSearchQuery.getDate().getPrefix()) {
+            case GREATERTHAN:
+                sql.append(" AND notes.date > :date");
+                break;
+            case GREATERTHAN_OR_EQUALS:
+                sql.append(" AND notes.date >= :date");
+                break;
+            case LESSTHAN:
+            case ENDS_BEFORE: // Handled logically
+                sql.append(" AND notes.date < :date");
+                break;
+            case LESSTHAN_OR_EQUALS:
+                sql.append(" AND notes.date <= :date");
+                break;
+            case NOT_EQUAL:
+                sql.append(" AND notes.date <> :date");
+                break;
+            case STARTS_AFTER: // Handled logically
+                sql.append(" AND notes.date > :date");
+                break;
+            case EQUAL:
+            case APPROXIMATE:
+            default:
+                sql.append(" AND notes.date = :date");
+                break;
+        }
+        params.addValue("date", date);
+    }
 
     private RowMapper<ClinicalNotesDBRecord> clinicalNotesListDBRecordRowMapper() {
         return (rs, rowNum) -> ClinicalNotesDBRecord.builder()
