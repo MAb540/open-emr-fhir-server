@@ -7,6 +7,7 @@ import org.example.basicfhirserver.repository.jdbc.diagnosticreport.ClinicalNote
 import org.example.basicfhirserver.repository.jdbc.diagnosticreport.ProcedureDBRecord;
 import org.example.basicfhirserver.repository.jdbc.diagnosticreport.ProcedureRepository;
 import org.example.basicfhirserver.service.DiagnosticReportService;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -33,8 +34,9 @@ public class DiagnosticServiceImpl implements DiagnosticReportService {
     @Override
     public DiagnosticReportCanonical findClinicalNotes(DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
 
-        List<ClinicalNotesDBRecord> clinicalNotesDBRecords = clinicalNotesRepository.findClinicalNotes(diagnosticReportSearchQuery);
-        List<ProcedureDBRecord> procedureDBRecords = procedureRepository.findProcedures(diagnosticReportSearchQuery);
+        Page<ClinicalNotesDBRecord> clinicalNotesDBRecords = clinicalNotesRepository.findClinicalNotes(diagnosticReportSearchQuery);
+
+        Page<ProcedureDBRecord> procedureDBRecords = procedureRepository.findProcedures(diagnosticReportSearchQuery);
 
         return new
                 DiagnosticReportCanonical(

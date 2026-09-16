@@ -18,4 +18,6 @@ public class DiagnosticReportSearchQuery {
     private String patientId;
     private SearchValue<LocalDateTime> date;
     private List<SearchValue<String>> codes;
+    private Integer count;
+    private Integer offset;
 }

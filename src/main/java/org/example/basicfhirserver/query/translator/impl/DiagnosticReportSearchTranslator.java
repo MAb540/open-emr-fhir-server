@@ -30,6 +30,8 @@ public class DiagnosticReportSearchTranslator implements SearchTranslator<Diagno
                                 .map(TranslatorUtils::tokenWithSystem)
                                 .toList()
                 )
+                .count(criteria.getCount())
+                .offset(criteria.getOffset())
                 .build();
     }
 }

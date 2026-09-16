@@ -2,6 +2,10 @@ package org.example.basicfhirserver.repository.jdbc.diagnosticreport;
 
 import org.example.basicfhirserver.query.resources.SearchValue;
 import org.example.basicfhirserver.query.resources.diagnosticreport.DiagnosticReportSearchQuery;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -28,12 +32,29 @@ public class ClinicalNotesRepositoryImpl implements ClinicalNotesRepository {
     }
 
     @Override
-    public List<ClinicalNotesDBRecord> findClinicalNotes(DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
+    public Page<ClinicalNotesDBRecord> findClinicalNotes(DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
         StringBuilder sql = clinicalNotesListItemQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
         addFilter(sql, params, diagnosticReportSearchQuery);
 
-        return namedParameterJdbcTemplate.query(sql.toString(), params, clinicalNotesListDBRecordRowMapper());
+        String countSql = "SELECT COUNT(*) FROM (" + sql + ") as total_count";
+        Long total = namedParameterJdbcTemplate.queryForObject(countSql, params, Long.class);
+        total = (total != null) ? total : 0L;
+
+        int limit = (diagnosticReportSearchQuery.getCount() != null) ? diagnosticReportSearchQuery.getCount() : 5;
+        int offset = (diagnosticReportSearchQuery.getOffset() != null) ? diagnosticReportSearchQuery.getOffset() : 0;
+
+        sql.append(" LIMIT :limit OFFSET :offset ");
+        params.addValue("limit", limit);
+        params.addValue("offset", offset);
+
+        List<ClinicalNotesDBRecord> content = namedParameterJdbcTemplate.query(
+                sql.toString(),
+                params,
+                clinicalNotesListDBRecordRowMapper());
+
+        Pageable pageable = PageRequest.of(offset / limit, limit);
+        return new PageImpl<>(content, pageable, total);
     }
 
     private StringBuilder clinicalNotesListItemQuery() {

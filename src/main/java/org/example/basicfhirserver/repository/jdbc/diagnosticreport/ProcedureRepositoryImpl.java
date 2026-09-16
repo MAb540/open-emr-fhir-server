@@ -2,6 +2,10 @@ package org.example.basicfhirserver.repository.jdbc.diagnosticreport;
 
 import org.example.basicfhirserver.query.resources.SearchValue;
 import org.example.basicfhirserver.query.resources.diagnosticreport.DiagnosticReportSearchQuery;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -27,16 +31,30 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
     }
 
     @Override
-    public List<ProcedureDBRecord> findProcedures(DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
+    public Page<ProcedureDBRecord> findProcedures(DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
         StringBuilder sql = procedureOrderListItemQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
-
         addFilter(sql, params, diagnosticReportSearchQuery);
+        String countSql = """
+                        SELECT COUNT(*)
+                        FROM procedure_order porder
+                        WHERE porder.activity = 1
+                """;
+        Long total = namedParameterJdbcTemplate.queryForObject(countSql, params, Long.class);
+        total = (total != null) ? total : 0L;
+
+        int limit = (diagnosticReportSearchQuery.getCount() != null) ? diagnosticReportSearchQuery.getCount() : 5;
+        int offset = (diagnosticReportSearchQuery.getOffset() != null) ? diagnosticReportSearchQuery.getOffset() : 0;
+
+        sql.append(" LIMIT :limit OFFSET :offset ");
+        params.addValue("limit", limit);
+        params.addValue("offset", offset);
 
         List<RawProcedureRecord> rawProcedureRecords =
                 namedParameterJdbcTemplate.query(sql.toString(), params, proceduresListDBRecordRowMapper());
 
-        return hydrateSearchResults(rawProcedureRecords);
+        Pageable pageable = PageRequest.of(offset / limit, limit);
+        return new PageImpl<>(hydrateSearchResults(rawProcedureRecords), pageable, total);
     }
 
     private StringBuilder procedureOrderListItemQuery() {
