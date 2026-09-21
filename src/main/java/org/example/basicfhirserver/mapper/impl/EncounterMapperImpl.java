@@ -122,8 +122,6 @@ public class EncounterMapperImpl implements EncounterMapper {
                             )
             );
         }
-
-
         encounter.setServiceProvider(
                 new Reference("Organization/" + formEncounter.getServiceFacility().getUuid())
         );

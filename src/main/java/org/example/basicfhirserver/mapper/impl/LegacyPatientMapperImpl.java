@@ -18,13 +18,12 @@ public class LegacyPatientMapperImpl implements LegacyPatientMapper {
     public Patient toR4(LegacyPatientEntity legacyPatientEntity) {
         // 🛠️ REVERSE TRANSFORM: Map the generic legacy record back to clean FHIR R4 JSON
         Patient fhirPatient = new Patient();
-
         fhirPatient.getMeta().addProfile(
                 "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
         );
         fhirPatient.getMeta().setVersionId("1");
 
-        fhirPatient.setId(legacyPatientEntity.getId().toString());
+        fhirPatient.setId(legacyPatientEntity.getUuid().toString());
 
         Identifier identifier = new Identifier()
                 .setUse(Identifier.IdentifierUse.OFFICIAL)

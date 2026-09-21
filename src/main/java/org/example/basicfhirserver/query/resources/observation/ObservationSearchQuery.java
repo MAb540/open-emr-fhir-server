@@ -15,7 +15,7 @@ import java.util.List;
 @Builder
 public class ObservationSearchQuery {
 
-    private String patientId;
+    private List<String> patientId;
     private String category;
     private List<SearchValue<String>> codes;
     private SearchValue<LocalDateTime> date;

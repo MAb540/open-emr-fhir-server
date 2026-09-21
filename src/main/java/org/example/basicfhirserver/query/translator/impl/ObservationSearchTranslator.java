@@ -17,7 +17,7 @@ public class ObservationSearchTranslator implements SearchTranslator<Observation
     @Override
     public ObservationSearchQuery translate(ObservationSearchCriteria criteria) {
         return ObservationSearchQuery.builder()
-                .patientId(criteria.getPatient() == null ? null : criteria.getPatient().getIdPart())
+                .patientId(criteria.getPatient() == null ? null : List.of(criteria.getPatient().getIdPart()))
                 .category(criteria.getCategory() == null ? null : criteria.getCategory().getValue())
                 .codes(
                         criteria.getCodes() == null

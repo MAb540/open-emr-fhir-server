@@ -2,8 +2,8 @@ package org.example.basicfhirserver.repository.jpa.patient.specs;
 
 import jakarta.persistence.criteria.Predicate;
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
-import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
 import org.example.basicfhirserver.query.resources.SearchValue;
+import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 public class PatientSpecifications {
@@ -24,7 +25,7 @@ public class PatientSpecifications {
 
 
             if (query.getPatientId() != null) {
-                predicates.add(cb.equal(root.get("id"), query.getPatientId()));
+                predicates.add(cb.equal(root.get("uuid"), UUID.fromString(query.getPatientId())));
             }
 
             if (query.getIdentifier() != null) {

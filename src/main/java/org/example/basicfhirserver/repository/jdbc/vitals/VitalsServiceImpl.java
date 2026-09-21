@@ -2,14 +2,12 @@ package org.example.basicfhirserver.repository.jdbc.vitals;
 
 import org.example.basicfhirserver.query.resources.observation.ObservationSearchQuery;
 import org.example.basicfhirserver.repository.jdbc.utils.DBUtils;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,13 +16,9 @@ import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
 @Repository
 public class VitalsServiceImpl implements VitalsService {
 
-    private final JdbcTemplate jdbcTemplate;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-    public VitalsServiceImpl(JdbcTemplate jdbcTemplate,
-                             NamedParameterJdbcTemplate namedParameterJdbcTemplate
-    ) {
-        this.jdbcTemplate = jdbcTemplate;
+    public VitalsServiceImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
         this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
     }
 
@@ -33,23 +27,24 @@ public class VitalsServiceImpl implements VitalsService {
             ObservationSearchQuery searchQuery
     ) {
         StringBuilder sql = vitalsQuery();
-        List<Object> parameters = new ArrayList<>();
+        MapSqlParameterSource params = new MapSqlParameterSource();
+
         addPatientFilter(
                 sql,
-                parameters,
+                params,
                 searchQuery
         );
         addDateFilter(
                 sql,
-                parameters,
+                params,
                 searchQuery
         );
         sql.append("""
                 ORDER BY vitals.date DESC
                 """);
-        return jdbcTemplate.query(
+        return namedParameterJdbcTemplate.query(
                 sql.toString(),
-                parameters.toArray(),
+                params,
                 vitalObservationRowMapper()
         );
     }
@@ -158,25 +153,28 @@ public class VitalsServiceImpl implements VitalsService {
 
     private void addPatientFilter(
             StringBuilder sql,
-            List<Object> parameters,
+            MapSqlParameterSource parameters,
             ObservationSearchQuery searchQuery
     ) {
         if (searchQuery.getPatientId() == null) {
             return;
         }
-
         sql.append("""
-                AND vitals.pid = ?
+                AND patient.uuid IN (:patient_uuid)
                 """);
 
-        parameters.add(
-                Long.valueOf(searchQuery.getPatientId())
+        List<byte[]> binaryUuids = searchQuery.getPatientId().stream()
+                .map(idStr -> toBytes(UUID.fromString(idStr)))
+                .toList();
+
+        parameters.addValue("patient_uuid",
+                binaryUuids
         );
     }
 
     private void addDateFilter(
             StringBuilder sql,
-            List<Object> parameters,
+            MapSqlParameterSource parameters,
             ObservationSearchQuery searchQuery
     ) {
         if (searchQuery.getDate() == null ||
@@ -188,31 +186,31 @@ public class VitalsServiceImpl implements VitalsService {
                 searchQuery.getDate().getValue();
 
         if (searchQuery.getDate().getPrefix() == null) {
-            sql.append(" AND vitals.date = ?");
-            parameters.add(date);
+            sql.append(" AND vitals.date = :date ");
+            parameters.addValue("date", date);
             return;
         }
 
         switch (searchQuery.getDate().getPrefix()) {
 
             case GREATERTHAN:
-                sql.append(" AND vitals.date > ?");
+                sql.append(" AND vitals.date > :date");
                 break;
 
             case GREATERTHAN_OR_EQUALS:
-                sql.append(" AND vitals.date >= ?");
+                sql.append(" AND vitals.date >= :date");
                 break;
 
             case LESSTHAN:
-                sql.append(" AND vitals.date < ?");
+                sql.append(" AND vitals.date < :date");
                 break;
 
             case LESSTHAN_OR_EQUALS:
-                sql.append(" AND vitals.date <= ?");
+                sql.append(" AND vitals.date <= :date");
                 break;
 
             case NOT_EQUAL:
-                sql.append(" AND vitals.date <> ?");
+                sql.append(" AND vitals.date <> :date");
                 break;
 
             case EQUAL:
@@ -220,10 +218,10 @@ public class VitalsServiceImpl implements VitalsService {
             case STARTS_AFTER:
             case ENDS_BEFORE:
             default:
-                sql.append(" AND vitals.date = ?");
+                sql.append(" AND vitals.date = :date");
                 break;
         }
-        parameters.add(date);
+        parameters.addValue("date", date);
     }
 
     private RowMapper<VitalsDBRecord> vitalObservationRowMapper() {

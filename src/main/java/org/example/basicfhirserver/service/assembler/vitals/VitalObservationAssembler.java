@@ -155,7 +155,8 @@ public class VitalObservationAssembler {
                             .encounterId(row.getEncounterUuid().toString())
                             .effectiveDateTime(row.getEffectiveDateTime())
                             .profile(type.getProfile())
-                            .practitionerId(row.getPractitionerUuid().toString())
+                            .practitionerId(row.getPractitionerUuid() != null ? row.getPractitionerUuid().toString() : null
+                            )
                             .lastUpdated(row.getLastUpdated())
                             .version("1");
 

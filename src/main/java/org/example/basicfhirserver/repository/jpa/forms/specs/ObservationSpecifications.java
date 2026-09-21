@@ -25,7 +25,7 @@ public class ObservationSpecifications {
                 predicates.add(
                         cb.equal(
                                 root.get("pid"),
-                                Long.valueOf(query.getPatientId())
+                                Long.valueOf(query.getPatientId().get(0))
                         )
                 );
             }
