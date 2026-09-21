@@ -6,6 +6,7 @@ import org.example.basicfhirserver.query.translator.SearchTranslator;
 import org.springframework.stereotype.Component;
 
 import java.time.ZoneId;
+import java.util.List;
 
 import static org.example.basicfhirserver.query.translator.utils.TranslatorUtils.*;
 
@@ -16,7 +17,7 @@ public class EncounterSearchTranslator implements SearchTranslator<EncounterSear
     public EncounterSearchQuery translate(EncounterSearchCriteria criteria) {
         return EncounterSearchQuery.builder()
                 .encounterId(token(criteria.getId()))
-                .patientId(criteria.getPatient() == null ? null : criteria.getPatient().getIdPart())
+                .patientId(criteria.getPatient() == null ? null : List.of(criteria.getPatient().getIdPart()))
                 .date(date(criteria.getDate(), d -> d == null ? null :
                         d.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()))
                 .build();

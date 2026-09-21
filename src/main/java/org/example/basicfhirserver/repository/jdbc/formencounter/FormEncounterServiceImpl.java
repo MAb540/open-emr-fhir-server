@@ -198,12 +198,12 @@ public class FormEncounterServiceImpl implements FormEncounterService {
         }
 
         if (encounterSearchQuery.getPatientId() != null) {
-            String uuid = encounterSearchQuery.getPatientId();
-            byte[] binaryUuid = toBytes(UUID.fromString(uuid));
-            sql.append(" AND (patient.puuid = :patientUuid) ");
-            params.addValue("patientUuid", binaryUuid);
+            List<byte[]> binaryUuids = encounterSearchQuery.getPatientId().stream()
+                    .map(idStr -> toBytes(UUID.fromString(idStr)))
+                    .toList();
+            sql.append(" AND (patient.puuid IN (:patientUuid) ) ");
+            params.addValue("patientUuid", binaryUuids);
         }
-
         addDateFilter(sql, params, encounterSearchQuery);
     }
 

@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import org.example.basicfhirserver.query.resources.SearchValue;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -14,6 +15,6 @@ import java.time.LocalDateTime;
 @Builder
 public class EncounterSearchQuery {
     private String encounterId;
-    private String patientId;
+    private List<String> patientId;
     private SearchValue<LocalDateTime> date;
 }

@@ -122,16 +122,23 @@ public class EncounterMapperImpl implements EncounterMapper {
                             )
             );
         }
-        encounter.setServiceProvider(
-                new Reference("Organization/" + formEncounter.getServiceFacility().getUuid())
-        );
 
-        encounter.addLocation(
-                new Encounter.EncounterLocationComponent()
-                        .setLocation(
-                                new Reference("Location/" + formEncounter.getServiceFacility().getLocationUuid())
-                        )
-        );
+        if(formEncounter.getServiceFacility() != null){
+            encounter.setServiceProvider(
+                    new Reference("Organization/" + formEncounter.getServiceFacility().getUuid())
+            );
+        }
+
+        if(formEncounter.getServiceFacility() != null){
+            encounter.addLocation(
+                    new Encounter.EncounterLocationComponent()
+                            .setLocation(
+                                    new Reference("Location/" + formEncounter.getServiceFacility().getLocationUuid())
+                            )
+            );
+        }
+
+
 
         return encounter;
     }

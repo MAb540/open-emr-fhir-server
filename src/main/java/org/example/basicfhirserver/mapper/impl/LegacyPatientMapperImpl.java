@@ -2,6 +2,7 @@ package org.example.basicfhirserver.mapper.impl;
 
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
+import org.example.basicfhirserver.mapper.utils.FhirCodeSystemConstants;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.utilities.xhtml.NodeType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
@@ -11,59 +12,105 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 
-
 @Component
 public class LegacyPatientMapperImpl implements LegacyPatientMapper {
 
+    private static final String US_CORE_PATIENT_PROFILE =
+            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient";
+    private static final String US_SSN_IDENTIFIER_SYSTEM = "http://hl7.org/fhir/sid/us-ssn";
+    private static final String DEFAULT_LANGUAGE_CODE = "en";
+    private static final String NARRATIVE_TEMPLATE = "This patient is %s, born in %s, %s.";
+
+    private static final String SEX_MALE_ABBREVIATION = "M";
+    private static final String SEX_FEMALE_ABBREVIATION = "F";
+    private static final String SEX_UNKNOWN_ABBREVIATION = "U";
+
+    @Override
     public Patient toR4(LegacyPatientEntity legacyPatientEntity) {
-        // 🛠️ REVERSE TRANSFORM: Map the generic legacy record back to clean FHIR R4 JSON
-        Patient fhirPatient = new Patient();
-        fhirPatient.getMeta().addProfile(
-                "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+        Patient patient = new Patient();
+
+        patient.setMeta(populateMeta(legacyPatientEntity));
+        patient.setId(legacyPatientEntity.getUuid().toString());
+        patient.setIdentifier(populateIdentifier(legacyPatientEntity));
+        patient.setName(populateName(legacyPatientEntity));
+        patient.setTelecom(populateTelecom(legacyPatientEntity));
+        patient.setAddress(populateAddress(legacyPatientEntity));
+        patient.setCommunication(populateCommunication(legacyPatientEntity));
+        patient.setText(populateNarrative(legacyPatientEntity));
+        patient.setGender(populateGender(legacyPatientEntity));
+
+        if (legacyPatientEntity.getDob() != null) {
+            patient.setBirthDate(populateBirthDate(legacyPatientEntity));
+        }
+
+        if (legacyPatientEntity.getDeceasedDate() != null) {
+            patient.setDeceased(populateDeceasedDateTime(legacyPatientEntity));
+        }
+
+        return patient;
+    }
+
+    private org.hl7.fhir.r4.model.Meta populateMeta(LegacyPatientEntity legacyPatientEntity) {
+        org.hl7.fhir.r4.model.Meta meta = new org.hl7.fhir.r4.model.Meta();
+        meta.setVersionId("1");
+        meta.addProfile(US_CORE_PATIENT_PROFILE);
+
+        LocalDateTime lastUpdated = legacyPatientEntity.getLastUpdated() != null
+                ? legacyPatientEntity.getLastUpdated()
+                : LocalDateTime.now();
+        meta.setLastUpdated(
+                Date.from(lastUpdated.atZone(ZoneId.systemDefault()).toInstant())
         );
-        fhirPatient.getMeta().setVersionId("1");
+        return meta;
+    }
 
-        fhirPatient.setId(legacyPatientEntity.getUuid().toString());
-
+    private List<Identifier> populateIdentifier(LegacyPatientEntity legacyPatientEntity) {
         Identifier identifier = new Identifier()
                 .setUse(Identifier.IdentifierUse.OFFICIAL)
-                .setSystem("http://hl7.org/fhir/sid/us-ssn")
+                .setSystem(US_SSN_IDENTIFIER_SYSTEM)
                 .setValue(legacyPatientEntity.getSs());
-        fhirPatient.setIdentifier(Collections.singletonList(identifier));
 
+        return List.of(identifier);
+    }
+
+    private List<HumanName> populateName(LegacyPatientEntity legacyPatientEntity) {
         HumanName name = new HumanName()
                 .setFamily(legacyPatientEntity.getLname())
                 .addGiven(legacyPatientEntity.getFname())
                 .setText(legacyPatientEntity.getLname() + " " + legacyPatientEntity.getFname())
                 .setUse(HumanName.NameUse.OFFICIAL);
-        fhirPatient.setName(Collections.singletonList(name));
 
-        ContactPoint contactPointPhone1 = new ContactPoint();
-        contactPointPhone1.setSystem(ContactPoint.ContactPointSystem.PHONE)
-                .setValue(legacyPatientEntity.getPhoneContact())
-                .setUse(ContactPoint.ContactPointUse.MOBILE);
+        return List.of(name);
+    }
 
-        ContactPoint contactPointPhone2 = new ContactPoint();
-        contactPointPhone2.setSystem(ContactPoint.ContactPointSystem.PHONE)
-                .setValue(legacyPatientEntity.getPhoneHome())
-                .setUse(ContactPoint.ContactPointUse.HOME);
+    private List<ContactPoint> populateTelecom(LegacyPatientEntity legacyPatientEntity) {
+        return List.of(
+                newContactPoint(ContactPoint.ContactPointSystem.PHONE,
+                        ContactPoint.ContactPointUse.MOBILE, legacyPatientEntity.getPhoneContact()),
+                newContactPoint(ContactPoint.ContactPointSystem.PHONE,
+                        ContactPoint.ContactPointUse.HOME, legacyPatientEntity.getPhoneHome()),
+                newContactPoint(ContactPoint.ContactPointSystem.PHONE,
+                        ContactPoint.ContactPointUse.HOME, legacyPatientEntity.getPhoneBiz()),
+                newContactPoint(ContactPoint.ContactPointSystem.EMAIL,
+                        ContactPoint.ContactPointUse.HOME, legacyPatientEntity.getEmail())
+        );
+    }
 
-        ContactPoint contactPointPhone3 = new ContactPoint();
-        contactPointPhone3.setSystem(ContactPoint.ContactPointSystem.PHONE)
-                .setValue(legacyPatientEntity.getPhoneBiz())
-                .setUse(ContactPoint.ContactPointUse.HOME);
+    private ContactPoint newContactPoint(ContactPoint.ContactPointSystem system,
+                                         ContactPoint.ContactPointUse use,
+                                         String value) {
+        ContactPoint contactPoint = new ContactPoint();
+        contactPoint.setSystem(system)
+                .setValue(value)
+                .setUse(use);
+        return contactPoint;
+    }
 
-        ContactPoint contactPointEmail = new ContactPoint();
-        contactPointEmail.setSystem(ContactPoint.ContactPointSystem.EMAIL)
-                .setValue(legacyPatientEntity.getEmail())
-                .setUse(ContactPoint.ContactPointUse.HOME);
+    private Date populateBirthDate(LegacyPatientEntity legacyPatientEntity) {
+        return Date.from(legacyPatientEntity.getDob().atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
 
-        fhirPatient.setTelecom(List.of(contactPointPhone1, contactPointPhone2, contactPointPhone3, contactPointEmail));
-
-        if (legacyPatientEntity.getDob() != null) {
-            fhirPatient.setBirthDate(Date.from(legacyPatientEntity.getDob().atStartOfDay(ZoneId.systemDefault()).toInstant()));
-        }
-
+    private List<Address> populateAddress(LegacyPatientEntity legacyPatientEntity) {
         Address address = new Address();
         address.setUse(Address.AddressUse.HOME)
                 .setType(Address.AddressType.BOTH)
@@ -74,40 +121,51 @@ public class LegacyPatientMapperImpl implements LegacyPatientMapper {
                 .setPostalCode(legacyPatientEntity.getPostalCode())
                 .setCountry(legacyPatientEntity.getCountryCode());
 
-        fhirPatient.setAddress(List.of(address));
-        fhirPatient.addCommunication()
-                .setLanguage(new CodeableConcept().addCoding(
-                        new Coding().setSystem("urn:ietf:bcp:47")
-                                .setCode("en")
-                                .setDisplay(legacyPatientEntity.getLanguage())
-                )).setPreferred(true);
+        return List.of(address);
+    }
 
+    private List<Patient.PatientCommunicationComponent> populateCommunication(
+            LegacyPatientEntity legacyPatientEntity) {
+        Patient.PatientCommunicationComponent communication = new Patient.PatientCommunicationComponent();
+        communication.setPreferred(true);
+        communication.setLanguage(new CodeableConcept().addCoding(
+                new Coding().setSystem(FhirCodeSystemConstants.LANGUAGE_BCP_47)
+                        .setCode(DEFAULT_LANGUAGE_CODE)
+                        .setDisplay(legacyPatientEntity.getLanguage())
+        ));
+
+        return List.of(communication);
+    }
+
+    private Narrative populateNarrative(LegacyPatientEntity legacyPatientEntity) {
         Narrative narrative = new Narrative()
                 .setStatus(Narrative.NarrativeStatus.GENERATED)
                 .setDiv(new XhtmlNode(NodeType.Element, "div")
-                        .setValue(String.format("This patient is %s, born in %s , $s.", legacyPatientEntity.getFname(),
-                                legacyPatientEntity.getCity() + legacyPatientEntity.getState()
-                                , legacyPatientEntity.getCountryCode())));
-        fhirPatient.setText(narrative);
+                        .setValue(String.format(
+                                NARRATIVE_TEMPLATE,
+                                legacyPatientEntity.getFname(),
+                                legacyPatientEntity.getCity() + legacyPatientEntity.getState(),
+                                legacyPatientEntity.getCountryCode())));
 
-        fhirPatient.setGender(mapGender(legacyPatientEntity.getSex()));
-
-        LocalDateTime localDateTime = legacyPatientEntity.getDeceasedDate();
-        if (localDateTime != null) {
-            fhirPatient.setDeceased(new DateTimeType(Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant())));
-        }
-
-        return fhirPatient;
+        return narrative;
     }
 
-    private Enumerations.AdministrativeGender mapGender(String gender) {
-        if (Objects.equals(gender, "M") || Objects.equals(gender, "Male")) {
+    private Type populateDeceasedDateTime(LegacyPatientEntity legacyPatientEntity) {
+        return new DateTimeType(
+                Date.from(legacyPatientEntity.getDeceasedDate().atZone(ZoneId.systemDefault()).toInstant())
+        );
+    }
+
+    private Enumerations.AdministrativeGender populateGender(LegacyPatientEntity legacyPatientEntity) {
+        String sex = legacyPatientEntity.getSex();
+
+        if (Objects.equals(sex, SEX_MALE_ABBREVIATION) || Objects.equals(sex, "Male")) {
             return Enumerations.AdministrativeGender.MALE;
         }
-        if (Objects.equals(gender, "F") || Objects.equals(gender, "Female")) {
+        if (Objects.equals(sex, SEX_FEMALE_ABBREVIATION) || Objects.equals(sex, "Female")) {
             return Enumerations.AdministrativeGender.FEMALE;
         }
-        if (Objects.equals(gender, "U") || Objects.equals(gender, "Unknown")) {
+        if (Objects.equals(sex, SEX_UNKNOWN_ABBREVIATION) || Objects.equals(sex, "Unknown")) {
             return Enumerations.AdministrativeGender.UNKNOWN;
         }
 

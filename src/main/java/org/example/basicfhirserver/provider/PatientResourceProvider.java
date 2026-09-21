@@ -9,14 +9,18 @@ import ca.uhn.fhir.rest.param.StringParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
+import org.example.basicfhirserver.mapper.EncounterMapper;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.mapper.ObservationMapper;
+import org.example.basicfhirserver.model.FormEncounter;
 import org.example.basicfhirserver.model.VitalObservation;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.provider.validator.FhirResponseValidationService;
+import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
 import org.example.basicfhirserver.query.resources.observation.ObservationSearchQuery;
 import org.example.basicfhirserver.query.resources.patient.PatientSearchCriteria;
 import org.example.basicfhirserver.query.translator.impl.PatientSearchTranslator;
+import org.example.basicfhirserver.service.EncounterService;
 import org.example.basicfhirserver.service.ObservationService;
 import org.example.basicfhirserver.service.PatientService;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -43,6 +47,8 @@ public class PatientResourceProvider implements IResourceProvider {
     private final PatientService patientService;
     private final ObservationService observationService;
     private final ObservationMapper observationMapper;
+    private final EncounterService encounterService;
+    private final EncounterMapper encounterMapper;
 
     public PatientResourceProvider(
             LegacyPatientMapper legacyPatientMapper,
@@ -50,7 +56,9 @@ public class PatientResourceProvider implements IResourceProvider {
             FhirResponseValidationService validationService,
             PatientService patientService,
             @Qualifier("ObservationServiceImpl") ObservationService observationService,
-            ObservationMapper observationMapper
+            ObservationMapper observationMapper,
+            EncounterService encounterService,
+            EncounterMapper encounterMapper
     ) {
         this.legacyPatientMapper = legacyPatientMapper;
         this.patientSearchTranslator = patientSearchTranslator;
@@ -58,6 +66,8 @@ public class PatientResourceProvider implements IResourceProvider {
         this.patientService = patientService;
         this.observationService = observationService;
         this.observationMapper = observationMapper;
+        this.encounterService = encounterService;
+        this.encounterMapper = encounterMapper;
     }
 
     @Override
@@ -114,24 +124,39 @@ public class PatientResourceProvider implements IResourceProvider {
                 .<IBaseResource>map(legacyPatientMapper::toR4)
                 .toList();
 
-
-        List<IBaseResource> includedObservations = new ArrayList<>();
         boolean includeObservations = theRevIncludes != null && theRevIncludes.stream()
                 .anyMatch(inc -> "Observation:patient".equals(inc.getValue()) || "Observation:subject".equals(inc.getValue()));
 
-        if (includeObservations && !legacyPatientEntities.isEmpty()) {
+        boolean includeEncounters = theRevIncludes != null && theRevIncludes.stream()
+                .anyMatch(inc -> "Encounter:patient".equals(inc.getValue()));
+
+        List<IBaseResource> includedObservations = new ArrayList<>();
+
+        if ( !legacyPatientEntities.isEmpty()) {
             List<String> patientUuids = legacyPatientEntities.getContent().stream()
                     .map(lp -> lp.getUuid().toString())
                     .toList();
 
-            ObservationSearchQuery query = ObservationSearchQuery.builder()
-                    .patientId(patientUuids)
-                    .build();
+            if(includeObservations){
+                ObservationSearchQuery query = ObservationSearchQuery.builder()
+                        .patientId(patientUuids)
+                        .build();
 
-            List<VitalObservation> observations = observationService.find(query);
-            observations.stream()
-                    .map(observationMapper::toR4)
-                    .forEach(includedObservations::add);
+                List<VitalObservation> observations = observationService.find(query);
+                observations.stream()
+                        .map(observationMapper::toR4)
+                        .forEach(includedObservations::add);
+            }
+
+            if(includeEncounters){
+                EncounterSearchQuery query = EncounterSearchQuery.builder()
+                        .patientId(patientUuids)
+                        .build();
+                List<FormEncounter> formEncounters = encounterService.find(query);
+                formEncounters.stream()
+                        .map(encounterMapper::toR4)
+                        .forEach(includedObservations::add);
+            }
         }
 
         int currentOffset = offset != null ? offset : 0;
