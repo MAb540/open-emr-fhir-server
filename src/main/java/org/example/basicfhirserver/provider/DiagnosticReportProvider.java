@@ -52,7 +52,6 @@ public class DiagnosticReportProvider implements IResourceProvider {
         this.diagnosticReportSearchTranslator = diagnosticReportSearchTranslator;
     }
 
-
     @Search()
     public IBundleProvider searchDiagnosticReport(
             @OptionalParam(name = DiagnosticReport.SP_RES_ID) TokenParam id,
