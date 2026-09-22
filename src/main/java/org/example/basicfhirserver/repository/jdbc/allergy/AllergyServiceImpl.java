@@ -105,6 +105,13 @@ public class AllergyServiceImpl implements AllergyService {
             AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery
     ) {
 
+        if (allergyIntoleranceSearchQuery.getId() != null) {
+            String uuid = allergyIntoleranceSearchQuery.getId();
+            byte[] binaryUuid = toBytes(UUID.fromString(uuid));
+            sql.append(" AND allergy_ids.allergy_uuid = :allergyUuid ");
+            params.addValue("allergyUuid", binaryUuid);
+        }
+
         if (allergyIntoleranceSearchQuery.getPatientId() != null) {
             String uuid = allergyIntoleranceSearchQuery.getPatientId();
             byte[] binaryUuid = toBytes(UUID.fromString(uuid));

@@ -5,6 +5,7 @@ import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.param.ReferenceParam;
+import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.example.basicfhirserver.mapper.AllergyIntoleranceMapper;
 import org.example.basicfhirserver.query.resources.allergyintolerance.AllergyIntoleranceSearchCriteria;
@@ -50,17 +51,17 @@ public class AllergyIntoleranceProvider implements IResourceProvider {
     }
 
     @Search()
-    public List<AllergyIntolerance> searchEncounters(
+    public List<AllergyIntolerance> searchAllergyIntolerance(
+            @OptionalParam(name = AllergyIntolerance.SP_RES_ID) TokenParam id,
             @OptionalParam(name = MedicationRequest.SP_PATIENT) ReferenceParam patient
     ) {
-
         AllergyIntoleranceSearchCriteria criteria = AllergyIntoleranceSearchCriteria.builder()
+                .id(id)
                 .patient(patient)
                 .build();
 
         var allergyIntoleranceSearchQuery = allergyIntoleranceSearchTranslator.translate(criteria);
         List<AllergyDBRecord> allergyDBRecords = allergyIntoleranceService.find(allergyIntoleranceSearchQuery);
-
 
         return allergyDBRecords.stream()
                 .map(allergyIntoleranceMapper::toR4)

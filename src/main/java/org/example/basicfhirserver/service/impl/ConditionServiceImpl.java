@@ -53,7 +53,6 @@ public class ConditionServiceImpl implements ConditionService {
 
         List<ConditionCanonical> canonicalConditions = new ArrayList<>();
 
-
         if (conditionSearchQuery.getCategory() != null && conditionSearchQuery.getCategory().equals(ConditionAssembler.CATEGORY_PROBLEM_LIST)) {
             List<ConditionProblemListItemDBRecord> problemLists = conditionRepository.findConditionProblemListItem(conditionSearchQuery);
             problemLists.forEach(row -> canonicalConditions.add(conditionAssembler.toCanonical(row)));

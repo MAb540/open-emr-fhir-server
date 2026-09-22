@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class AllergyIntoleranceSearchQuery {
+    private String id;
     private String patientId;
 }
 

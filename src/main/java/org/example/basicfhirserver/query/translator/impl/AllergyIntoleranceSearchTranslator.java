@@ -5,6 +5,8 @@ import org.example.basicfhirserver.query.resources.allergyintolerance.AllergyInt
 import org.example.basicfhirserver.query.translator.SearchTranslator;
 import org.springframework.stereotype.Component;
 
+import static org.example.basicfhirserver.query.translator.utils.TranslatorUtils.token;
+
 @Component
 public class AllergyIntoleranceSearchTranslator implements SearchTranslator<AllergyIntoleranceSearchQuery,
         AllergyIntoleranceSearchCriteria> {
@@ -12,6 +14,7 @@ public class AllergyIntoleranceSearchTranslator implements SearchTranslator<Alle
     @Override
     public AllergyIntoleranceSearchQuery translate(AllergyIntoleranceSearchCriteria criteria) {
         return AllergyIntoleranceSearchQuery.builder()
+                .id(token(criteria.getId()))
                 .patientId(criteria.getPatient() == null ? null : criteria.getPatient().getIdPart())
                 .build();
     }
