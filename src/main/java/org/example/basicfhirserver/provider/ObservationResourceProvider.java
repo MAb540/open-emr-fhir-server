@@ -74,7 +74,6 @@ public class ObservationResourceProvider implements IResourceProvider {
     }
 
     @Search()
-//    public List<Observation> searchObservations(
     public IBundleProvider searchObservations(
             @OptionalParam(name = Observation.SP_PATIENT) ReferenceParam patient,
             @OptionalParam(name = Observation.SP_CATEGORY) TokenParam category,

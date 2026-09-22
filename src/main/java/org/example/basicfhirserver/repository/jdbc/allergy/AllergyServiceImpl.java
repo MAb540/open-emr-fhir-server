@@ -42,6 +42,16 @@ public class AllergyServiceImpl implements AllergyService {
         MapSqlParameterSource params = new MapSqlParameterSource();
         addFilter(sql, params, allergyIntoleranceSearchQuery);
 
+        int limit = (allergyIntoleranceSearchQuery.getCount() != null) ? allergyIntoleranceSearchQuery.getCount() : 5;
+        int offset = (allergyIntoleranceSearchQuery.getOffset() != null) ? allergyIntoleranceSearchQuery.getOffset() : 0;
+
+        sql.append("""
+                ORDER BY lists.date DESC limit :limit offset :offset
+                """);
+
+        params.addValue("limit", limit);
+        params.addValue("offset", offset);
+
         return namedParameterJdbcTemplate.query(sql.toString(), params, allergyDBRecordRowMapper());
 
     }

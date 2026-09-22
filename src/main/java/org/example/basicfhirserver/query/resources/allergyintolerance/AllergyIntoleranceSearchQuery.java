@@ -12,5 +12,7 @@ import lombok.NoArgsConstructor;
 public class AllergyIntoleranceSearchQuery {
     private String id;
     private String patientId;
+    private Integer count;
+    private Integer offset;
 }
 

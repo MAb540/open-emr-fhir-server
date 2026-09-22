@@ -16,6 +16,8 @@ public class AllergyIntoleranceSearchTranslator implements SearchTranslator<Alle
         return AllergyIntoleranceSearchQuery.builder()
                 .id(token(criteria.getId()))
                 .patientId(criteria.getPatient() == null ? null : criteria.getPatient().getIdPart())
+                .count(criteria.getCount())
+                .offset(criteria.getOffset())
                 .build();
     }
 

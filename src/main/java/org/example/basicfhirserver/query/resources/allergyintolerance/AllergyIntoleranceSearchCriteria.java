@@ -15,5 +15,7 @@ import lombok.NoArgsConstructor;
 public class AllergyIntoleranceSearchCriteria {
     private TokenParam id;
     private ReferenceParam patient;
+    private Integer count;
+    private Integer offset;
 }
 
