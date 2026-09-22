@@ -39,9 +39,17 @@ public class VitalsServiceImpl implements VitalsService {
                 params,
                 searchQuery
         );
+
+        int limit = (searchQuery.getCount() != null) ? searchQuery.getCount() : 5;
+        int offset = (searchQuery.getOffset() != null) ? searchQuery.getOffset() : 0;
+
         sql.append("""
-                ORDER BY vitals.date DESC
+                ORDER BY vitals.date DESC limit :limit offset :offset
                 """);
+
+        params.addValue("limit", limit);
+        params.addValue("offset", offset);
+
         return namedParameterJdbcTemplate.query(
                 sql.toString(),
                 params,

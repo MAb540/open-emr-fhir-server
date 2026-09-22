@@ -31,6 +31,8 @@ public class ObservationSearchTranslator implements SearchTranslator<Observation
                         d.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()))
                 .lastUpdated(date(criteria.getLastUpdated(), d -> d == null ? null :
                         d.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()))
+                .count(criteria.getCount())
+                .offset(criteria.getOffset())
                 .build();
     }
 

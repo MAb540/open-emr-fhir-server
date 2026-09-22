@@ -1,5 +1,6 @@
 package org.example.basicfhirserver.repository.jpa.patient.specs;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Predicate;
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.query.resources.SearchValue;
@@ -24,8 +25,12 @@ public class PatientSpecifications {
             List<Predicate> predicates = new ArrayList<>();
 
 
-            if (query.getPatientId() != null) {
-                predicates.add(cb.equal(root.get("uuid"), UUID.fromString(query.getPatientId())));
+            if (query.getPatientId() != null && !query.getPatientId().isEmpty()) {
+//                predicates.add(cb.equal(root.get("uuid"), UUID.fromString(query.getPatientId())));
+                CriteriaBuilder.In<UUID> inClause = cb.in(root.get("uuid"));
+                query.getPatientId().stream().map(UUID::fromString)
+                                .forEach(inClause::value);
+                predicates.add(inClause);
             }
 
             if (query.getIdentifier() != null) {

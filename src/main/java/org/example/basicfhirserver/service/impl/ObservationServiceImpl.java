@@ -55,6 +55,7 @@ public class ObservationServiceImpl implements ObservationService {
     public List<VitalObservation> find(ObservationSearchQuery observationSearchQuery) {
 
         List<VitalsDBRecord> vitalRows = vitalService.findVitals(observationSearchQuery);
+
         if (vitalRows.isEmpty()) {
             return List.of();
         }
@@ -73,7 +74,8 @@ public class ObservationServiceImpl implements ObservationService {
             List<VitalsUuidMappingDBRecord> rowMappings = mappingsByVitalsUuid.getOrDefault(row.getVitalsUuid(), List.of());
 
             if (hasCodeFilter) {
-                rowMappings = rowMappings.stream().filter(mapping -> requestedCodes.contains(ObservationUuidUtil.getCode(mapping.getResourcePath()))).toList();
+                rowMappings = rowMappings.stream().filter(mapping ->
+                        requestedCodes.contains(ObservationUuidUtil.getCode(mapping.getResourcePath()))).toList();
             }
 
             return vitalObservationAssembler.toCanonical(row, rowMappings).stream();

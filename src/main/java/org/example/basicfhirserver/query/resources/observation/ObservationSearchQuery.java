@@ -20,5 +20,7 @@ public class ObservationSearchQuery {
     private List<SearchValue<String>> codes;
     private SearchValue<LocalDateTime> date;
     private SearchValue<LocalDateTime> lastUpdated;
+    private Integer count;
+    private Integer offset;
 
 }

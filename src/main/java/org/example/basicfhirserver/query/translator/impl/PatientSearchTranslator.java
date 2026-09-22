@@ -6,6 +6,7 @@ import org.example.basicfhirserver.query.translator.SearchTranslator;
 import org.springframework.stereotype.Component;
 
 import java.time.ZoneId;
+import java.util.List;
 
 import static org.example.basicfhirserver.query.translator.utils.TranslatorUtils.*;
 
@@ -16,7 +17,7 @@ public class PatientSearchTranslator implements SearchTranslator<PatientSearchQu
     public PatientSearchQuery translate(PatientSearchCriteria criteria) {
 
         return PatientSearchQuery.builder()
-                .patientId(token(criteria.getId()))
+                .patientId(List.of(token(criteria.getId())))
                 .identifier(token(criteria.getIdentifier()))
                 .firstName(stringMatch(criteria.getGiven()))
                 .lastName(stringMatch(criteria.getFamily()))

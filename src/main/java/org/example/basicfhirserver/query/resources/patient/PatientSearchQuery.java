@@ -8,6 +8,7 @@ import org.example.basicfhirserver.query.resources.SearchValue;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -15,7 +16,7 @@ import java.time.LocalDateTime;
 @Builder
 public class PatientSearchQuery {
 
-    private String patientId;
+    private List<String> patientId;
     private String identifier;
     private SearchValue<String> firstName;
     private SearchValue<String> lastName;
