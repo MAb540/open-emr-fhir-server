@@ -14,7 +14,7 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 public class EncounterSearchQuery {
-    private String encounterId;
+    private List<String> encounterId;
     private List<String> patientId;
     private SearchValue<LocalDateTime> date;
 }

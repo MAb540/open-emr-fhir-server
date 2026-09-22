@@ -267,6 +267,4 @@ public class VitalsServiceImpl implements VitalsService {
                 .resourcePath(rs.getString("resource_path"))
                 .build();
     }
-
-
 }

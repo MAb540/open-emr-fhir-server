@@ -130,7 +130,7 @@ public class PatientResourceProvider implements IResourceProvider {
         boolean includeEncounters = theRevIncludes != null && theRevIncludes.stream()
                 .anyMatch(inc -> "Encounter:patient".equals(inc.getValue()));
 
-        List<IBaseResource> includedObservations = new ArrayList<>();
+        List<IBaseResource> includedResources = new ArrayList<>();
 
         if ( !legacyPatientEntities.isEmpty()) {
             List<String> patientUuids = legacyPatientEntities.getContent().stream()
@@ -145,7 +145,7 @@ public class PatientResourceProvider implements IResourceProvider {
                 List<VitalObservation> observations = observationService.find(query);
                 observations.stream()
                         .map(observationMapper::toR4)
-                        .forEach(includedObservations::add);
+                        .forEach(includedResources::add);
             }
 
             if(includeEncounters){
@@ -155,7 +155,7 @@ public class PatientResourceProvider implements IResourceProvider {
                 List<FormEncounter> formEncounters = encounterService.find(query);
                 formEncounters.stream()
                         .map(encounterMapper::toR4)
-                        .forEach(includedObservations::add);
+                        .forEach(includedResources::add);
             }
         }
 
@@ -164,7 +164,7 @@ public class PatientResourceProvider implements IResourceProvider {
 
         return new BundleProvider(
                 primaryPatients,
-                includedObservations,
+                includedResources,
                 Math.toIntExact(legacyPatientEntities.getTotalElements()),
                 currentOffset,
                 currentPageSize
