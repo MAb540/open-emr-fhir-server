@@ -9,10 +9,10 @@ import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.AllergyIntoleranceMapper;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
+import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.allergyintolerance.AllergyIntoleranceSearchCriteria;
 import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
 import org.example.basicfhirserver.query.translator.impl.AllergyIntoleranceSearchTranslator;
-import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.repository.jdbc.allergy.AllergyDBRecord;
 import org.example.basicfhirserver.service.AllergyIntoleranceService;
 import org.example.basicfhirserver.service.PatientService;
@@ -30,7 +30,6 @@ import java.util.UUID;
 
 @Component
 public class AllergyIntoleranceProvider implements IResourceProvider {
-
 
     private final AllergyIntoleranceService allergyIntoleranceService;
     private final AllergyIntoleranceMapper allergyIntoleranceMapper;
@@ -50,7 +49,6 @@ public class AllergyIntoleranceProvider implements IResourceProvider {
         this.patientService = patientService;
         this.legacyPatientMapper = legacyPatientMapper;
     }
-
 
     @Override
     public Class<? extends IBaseResource> getResourceType() {
@@ -82,9 +80,9 @@ public class AllergyIntoleranceProvider implements IResourceProvider {
                 .build();
 
         var allergyIntoleranceSearchQuery = allergyIntoleranceSearchTranslator.translate(criteria);
-        List<AllergyDBRecord> allergyDBRecords = allergyIntoleranceService.find(allergyIntoleranceSearchQuery);
+        Page<AllergyDBRecord> allergyDBRecords = allergyIntoleranceService.find(allergyIntoleranceSearchQuery);
 
-        List<IBaseResource> primaryAllergyIntolerances = allergyDBRecords.stream()
+        List<IBaseResource> primaryAllergyIntolerances = allergyDBRecords.getContent().stream()
                 .<IBaseResource>map(allergyIntoleranceMapper::toR4)
                 .toList();
 
@@ -94,9 +92,8 @@ public class AllergyIntoleranceProvider implements IResourceProvider {
         List<IBaseResource> includedResources = new ArrayList<>();
 
         if (!allergyDBRecords.isEmpty()) {
-
             if (includePatients) {
-                List<String> patientUuids = allergyDBRecords.stream()
+                List<String> patientUuids = allergyDBRecords.getContent().stream()
                         .map(record -> record.getPatientUuid().toString())
                         .toList();
 
@@ -113,12 +110,12 @@ public class AllergyIntoleranceProvider implements IResourceProvider {
         }
 
         int currentOffset = offset != null ? offset : 0;
-        int currentPageSize = primaryAllergyIntolerances.size();
+        int currentPageSize = allergyDBRecords.getContent().size();
 
         return new BundleProvider(
                 primaryAllergyIntolerances,
                 includedResources,
-                currentPageSize,
+                Math.toIntExact(allergyDBRecords.getTotalElements()),
                 currentOffset,
                 currentPageSize
         );

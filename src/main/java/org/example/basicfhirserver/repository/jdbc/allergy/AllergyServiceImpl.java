@@ -1,6 +1,10 @@
 package org.example.basicfhirserver.repository.jdbc.allergy;
 
 import org.example.basicfhirserver.query.resources.allergyintolerance.AllergyIntoleranceSearchQuery;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -36,7 +40,7 @@ public class AllergyServiceImpl implements AllergyService {
     }
 
     @Override
-    public List<AllergyDBRecord> find(AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery) {
+    public Page<AllergyDBRecord> find(AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery) {
 
         StringBuilder sql = allergyQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
@@ -44,7 +48,6 @@ public class AllergyServiceImpl implements AllergyService {
 
         int limit = (allergyIntoleranceSearchQuery.getCount() != null) ? allergyIntoleranceSearchQuery.getCount() : 5;
         int offset = (allergyIntoleranceSearchQuery.getOffset() != null) ? allergyIntoleranceSearchQuery.getOffset() : 0;
-
         sql.append("""
                 ORDER BY lists.date DESC limit :limit offset :offset
                 """);
@@ -52,8 +55,17 @@ public class AllergyServiceImpl implements AllergyService {
         params.addValue("limit", limit);
         params.addValue("offset", offset);
 
-        return namedParameterJdbcTemplate.query(sql.toString(), params, allergyDBRecordRowMapper());
+        List<AllergyDBRecord> allergyDBRecords =
+        namedParameterJdbcTemplate.query(sql.toString(), params, allergyDBRecordRowMapper());
 
+        StringBuilder sqlCount = allergyCountQuery();
+        addFilter(sqlCount, params, allergyIntoleranceSearchQuery);
+        Long total = namedParameterJdbcTemplate.queryForObject(sqlCount.toString(), params, Long.class);
+        total = (total != null) ? total : 0L;
+
+        Pageable pageable = PageRequest.of(offset / limit, limit);
+
+        return new PageImpl<>(allergyDBRecords, pageable, total);
     }
 
 
@@ -106,6 +118,45 @@ public class AllergyServiceImpl implements AllergyService {
                                 ,facility.name
                                 FROM facility
                             ) organizations ON organizations.name = practitioners.organization WHERE 1=1
+                """);
+    }
+
+    private StringBuilder allergyCountQuery() {
+        return new StringBuilder("""
+                    SELECT COUNT(*)
+                        FROM (
+                                SELECT lists.*, lists.pid AS patient_id FROM lists
+                            ) lists
+                            INNER JOIN (
+                                SELECT lists.uuid AS allergy_uuid FROM lists
+                            ) allergy_ids ON lists.uuid = allergy_ids.allergy_uuid
+                            LEFT JOIN list_options as reaction ON (reaction.option_id = lists.reaction and reaction.list_id = 'reaction')
+                            LEFT JOIN list_options as verification ON verification.option_id = lists.verification
+                                and verification.list_id = 'allergyintolerance-verification'
+                            RIGHT JOIN (
+                                SELECT
+                                    patient_data.uuid AS puuid
+                                    ,patient_data.pid
+                                    ,patient_data.uuid AS patient_uuid
+                                FROM patient_data
+                            ) patient ON patient.pid = lists.pid
+                            LEFT JOIN (
+                                select
+                                users.uuid
+                                ,users.uuid AS practitioner_uuid
+                                ,users.npi AS practitioner_npi
+                                ,users.username
+                                ,users.facility AS organization
+                                FROM users
+                            ) practitioners ON practitioners.username = lists.user
+                            LEFT JOIN (
+                                select
+                                facility.uuid
+                                ,facility.uuid AS organization_uuid
+                                ,facility.name
+                                FROM facility
+                            ) organizations ON organizations.name = practitioners.organization 
+                        WHERE 1=1
                 """);
     }
 

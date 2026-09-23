@@ -5,6 +5,7 @@ import org.example.basicfhirserver.query.resources.allergyintolerance.AllergyInt
 import org.example.basicfhirserver.repository.jdbc.allergy.AllergyDBRecord;
 import org.example.basicfhirserver.repository.jdbc.allergy.AllergyService;
 import org.example.basicfhirserver.service.AllergyIntoleranceService;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,8 +30,7 @@ public class AllergyIntoleranceServiceImpl implements AllergyIntoleranceService 
     }
 
     @Override
-    public List<AllergyDBRecord> find(AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery) {
-
+    public Page<AllergyDBRecord> find(AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery) {
         return allergyService.find(allergyIntoleranceSearchQuery);
     }
 }
