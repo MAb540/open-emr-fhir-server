@@ -13,4 +13,6 @@ import lombok.NoArgsConstructor;
 public class ConditionSearchQuery {
     private String patientId;
     private String category;
+    private Integer count;
+    private Integer offset;
 }

@@ -1,6 +1,10 @@
 package org.example.basicfhirserver.repository.jdbc.condition;
 
 import org.example.basicfhirserver.query.resources.condition.ConditionSearchQuery;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -35,11 +39,37 @@ public class ConditionRepositoryImpl implements ConditionRepository {
     }
 
     @Override
-    public List<ConditionProblemListItemDBRecord> findConditionProblemListItem(ConditionSearchQuery conditionSearchQuery) {
+    public Page<ConditionProblemListItemDBRecord> findConditionProblemListItem(ConditionSearchQuery conditionSearchQuery) {
         StringBuilder sql = conditionProblemListItemQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
         addFilterInConditionProblemListItem(sql, params, conditionSearchQuery);
-        return namedParameterJdbcTemplate.query(sql.toString(), params, conditionProblemListDBRecordRowMapper());
+
+        long total = countTotal(sql, params);
+
+        Integer limit = conditionSearchQuery.getCount();
+        int offset = conditionSearchQuery.getOffset() != null ? conditionSearchQuery.getOffset() : 0;
+
+        if (limit == null) {
+            return new PageImpl<>(
+                    namedParameterJdbcTemplate.query(sql.toString(), params, conditionProblemListDBRecordRowMapper()),
+                    Pageable.unpaged(),
+                    total);
+        }
+
+        sql.append(" ORDER BY l.condition_date DESC limit :limit offset :offset ");
+        params.addValue("limit", limit);
+        params.addValue("offset", offset);
+
+        List<ConditionProblemListItemDBRecord> records =
+                namedParameterJdbcTemplate.query(sql.toString(), params, conditionProblemListDBRecordRowMapper());
+
+        return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
+    }
+
+    private long countTotal(StringBuilder filteredSql, MapSqlParameterSource params) {
+        String countSql = "SELECT COUNT(*) FROM (" + filteredSql + ") cnt";
+        Long total = namedParameterJdbcTemplate.queryForObject(countSql, params, Long.class);
+        return total != null ? total : 0L;
     }
 
     private void addFilterInConditionProblemListItem(
@@ -53,7 +83,6 @@ public class ConditionRepositoryImpl implements ConditionRepository {
             sql.append(" AND pd.puuid = :patientUuid ");
             params.addValue("patientUuid", binaryUuid);
         }
-
     }
 
     @Override
@@ -70,12 +99,31 @@ public class ConditionRepositoryImpl implements ConditionRepository {
     }
 
     @Override
-    public List<ConditionEncounterDiagnosisDBRecord> findConditionEncounterDiagnosis(ConditionSearchQuery conditionSearchQuery) {
+    public Page<ConditionEncounterDiagnosisDBRecord> findConditionEncounterDiagnosis(ConditionSearchQuery conditionSearchQuery) {
 
         StringBuilder sql = conditionEncounterDiagnosisQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
 
-        return namedParameterJdbcTemplate.query(sql.toString(), params, conditionEncounterDiagnosisDBRecordRowMapper());
+        long total = countTotal(sql, params);
+
+        Integer limit = conditionSearchQuery.getCount();
+        int offset = conditionSearchQuery.getOffset() != null ? conditionSearchQuery.getOffset() : 0;
+
+        if (limit == null) {
+            return new PageImpl<>(
+                    namedParameterJdbcTemplate.query(sql.toString(), params, conditionEncounterDiagnosisDBRecordRowMapper()),
+                    Pageable.unpaged(),
+                    total);
+        }
+
+        sql.append(" ORDER BY ie.date DESC limit :limit offset :offset ");
+        params.addValue("limit", limit);
+        params.addValue("offset", offset);
+
+        List<ConditionEncounterDiagnosisDBRecord> records =
+                namedParameterJdbcTemplate.query(sql.toString(), params, conditionEncounterDiagnosisDBRecordRowMapper());
+
+        return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
     }
 
     @Override
@@ -92,12 +140,31 @@ public class ConditionRepositoryImpl implements ConditionRepository {
     }
 
     @Override
-    public List<ConditionHealthConcernDBRecord> findConditionHealthConcernDiagnosis(ConditionSearchQuery conditionSearchQuery) {
+    public Page<ConditionHealthConcernDBRecord> findConditionHealthConcernDiagnosis(ConditionSearchQuery conditionSearchQuery) {
 
         StringBuilder sql = conditionHealthConcernQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
 
-        return namedParameterJdbcTemplate.query(sql.toString(), params, conditionHealthConcernDBRecordRowMapper());
+        long total = countTotal(sql, params);
+
+        Integer limit = conditionSearchQuery.getCount();
+        int offset = conditionSearchQuery.getOffset() != null ? conditionSearchQuery.getOffset() : 0;
+
+        if (limit == null) {
+            return new PageImpl<>(
+                    namedParameterJdbcTemplate.query(sql.toString(), params, conditionHealthConcernDBRecordRowMapper()),
+                    Pageable.unpaged(),
+                    total);
+        }
+
+        sql.append(" ORDER BY l.date DESC limit :limit offset :offset ");
+        params.addValue("limit", limit);
+        params.addValue("offset", offset);
+
+        List<ConditionHealthConcernDBRecord> records =
+                namedParameterJdbcTemplate.query(sql.toString(), params, conditionHealthConcernDBRecordRowMapper());
+
+        return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
     }
 
     private StringBuilder conditionProblemListItemQuery() {

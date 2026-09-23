@@ -1,14 +1,13 @@
 package org.example.basicfhirserver.provider;
 
-import ca.uhn.fhir.rest.annotation.IdParam;
-import ca.uhn.fhir.rest.annotation.OptionalParam;
-import ca.uhn.fhir.rest.annotation.Read;
-import ca.uhn.fhir.rest.annotation.Search;
+import ca.uhn.fhir.rest.annotation.*;
+import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.example.basicfhirserver.mapper.ConditionMapper;
 import org.example.basicfhirserver.model.ConditionCanonical;
+import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.condition.ConditionSearchCriteria;
 import org.example.basicfhirserver.query.translator.impl.ConditionTranslator;
 import org.example.basicfhirserver.service.ConditionService;
@@ -17,6 +16,7 @@ import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.Observation;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -49,21 +49,35 @@ public class ConditionResourceProvider implements IResourceProvider {
     }
 
     @Search()
-    public List<Condition> searchEncounters(
+    public IBundleProvider searchEncounters(
             @OptionalParam(name = MedicationRequest.SP_PATIENT) ReferenceParam patient,
-            @OptionalParam(name = Observation.SP_CATEGORY) TokenParam category
+            @OptionalParam(name = Observation.SP_CATEGORY) TokenParam category,
+            @Count Integer count,
+            @Offset Integer offset
     ) {
-
         ConditionSearchCriteria criteria = ConditionSearchCriteria.builder()
                 .patient(patient)
                 .category(category)
+                .count(count)
+                .offset(offset)
                 .build();
 
         var conditionSearchQuery = conditionTranslator.translate(criteria);
-        List<ConditionCanonical> conditionsCanonical = conditionService.find(conditionSearchQuery);
+        Page<ConditionCanonical> conditionsCanonical = conditionService.find(conditionSearchQuery);
 
-        return conditionsCanonical.stream()
-                .map(conditionMapper::toR4)
+        List<IBaseResource> primaryConditions = conditionsCanonical.getContent().stream()
+                .<IBaseResource>map(conditionMapper::toR4)
                 .toList();
+
+        int currentOffset = offset != null ? offset : 0;
+        int currentPageSize = conditionsCanonical.getContent().size();
+
+        return new BundleProvider(
+                primaryConditions,
+                List.of(),
+                Math.toIntExact(conditionsCanonical.getTotalElements()),
+                currentOffset,
+                currentPageSize
+        );
     }
 }

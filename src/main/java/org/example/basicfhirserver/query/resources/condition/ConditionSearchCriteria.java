@@ -14,4 +14,6 @@ import lombok.NoArgsConstructor;
 public class ConditionSearchCriteria {
     private ReferenceParam patient;
     private TokenParam category;
+    private Integer count;
+    private Integer offset;
 }

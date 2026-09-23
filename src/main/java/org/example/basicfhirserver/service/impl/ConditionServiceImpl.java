@@ -9,6 +9,10 @@ import org.example.basicfhirserver.repository.jdbc.condition.ConditionProblemLis
 import org.example.basicfhirserver.repository.jdbc.condition.ConditionRepository;
 import org.example.basicfhirserver.service.ConditionService;
 import org.example.basicfhirserver.service.assembler.condition.ConditionAssembler;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -17,6 +21,8 @@ import java.util.UUID;
 
 @Service
 public class ConditionServiceImpl implements ConditionService {
+
+    private static final int DEFAULT_PAGE_SIZE = 5;
 
     private final ConditionRepository conditionRepository;
     private final ConditionAssembler conditionAssembler;
@@ -49,31 +55,57 @@ public class ConditionServiceImpl implements ConditionService {
     }
 
     @Override
-    public List<ConditionCanonical> find(ConditionSearchQuery conditionSearchQuery) {
+    public Page<ConditionCanonical> find(ConditionSearchQuery conditionSearchQuery) {
 
-        List<ConditionCanonical> canonicalConditions = new ArrayList<>();
+        int limit = conditionSearchQuery.getCount() != null ? conditionSearchQuery.getCount() : DEFAULT_PAGE_SIZE;
+        int offset = conditionSearchQuery.getOffset() != null ? conditionSearchQuery.getOffset() : 0;
+        Pageable pageable = PageRequest.of(offset / limit, limit);
 
-        if (conditionSearchQuery.getCategory() != null && conditionSearchQuery.getCategory().equals(ConditionAssembler.CATEGORY_PROBLEM_LIST)) {
-            List<ConditionProblemListItemDBRecord> problemLists = conditionRepository.findConditionProblemListItem(conditionSearchQuery);
-            problemLists.forEach(row -> canonicalConditions.add(conditionAssembler.toCanonical(row)));
+        String category = conditionSearchQuery.getCategory();
+        ConditionSearchQuery pagedQuery = withPaging(conditionSearchQuery, limit, offset);
 
-        } else if (conditionSearchQuery.getCategory() != null && conditionSearchQuery.getCategory().equals(ConditionAssembler.CATEGORY_ENCOUNTER_DIAGNOSIS)) {
-            List<ConditionEncounterDiagnosisDBRecord> encounterDiag = conditionRepository.findConditionEncounterDiagnosis(conditionSearchQuery);
-            encounterDiag.forEach(row -> canonicalConditions.add(conditionAssembler.toCanonical(row)));
-
-        } else if (conditionSearchQuery.getCategory() != null && conditionSearchQuery.getCategory().equals(ConditionAssembler.CATEGORY_HEALTH_CONCERNS)) {
-            List<ConditionHealthConcernDBRecord> healthConcerns = conditionRepository.findConditionHealthConcernDiagnosis(conditionSearchQuery);
-            healthConcerns.forEach(row -> canonicalConditions.add(conditionAssembler.toCanonical(row)));
-        } else {
-            List<ConditionProblemListItemDBRecord> problemLists = conditionRepository.findConditionProblemListItem(conditionSearchQuery);
-            List<ConditionEncounterDiagnosisDBRecord> encounterDiag = conditionRepository.findConditionEncounterDiagnosis(conditionSearchQuery);
-            List<ConditionHealthConcernDBRecord> healthConcerns = conditionRepository.findConditionHealthConcernDiagnosis(conditionSearchQuery);
-
-            problemLists.forEach(row -> canonicalConditions.add(conditionAssembler.toCanonical(row)));
-            encounterDiag.forEach(row -> canonicalConditions.add(conditionAssembler.toCanonical(row)));
-            healthConcerns.forEach(row -> canonicalConditions.add(conditionAssembler.toCanonical(row)));
+        if (category != null && category.equals(ConditionAssembler.CATEGORY_PROBLEM_LIST)) {
+            Page<ConditionProblemListItemDBRecord> page = conditionRepository.findConditionProblemListItem(pagedQuery);
+            return toCanonicalPage(page.getContent().stream().map(conditionAssembler::toCanonical).toList(), pageable, page.getTotalElements());
         }
 
-        return canonicalConditions;
+        if (category != null && category.equals(ConditionAssembler.CATEGORY_ENCOUNTER_DIAGNOSIS)) {
+            Page<ConditionEncounterDiagnosisDBRecord> page = conditionRepository.findConditionEncounterDiagnosis(pagedQuery);
+            return toCanonicalPage(page.getContent().stream().map(conditionAssembler::toCanonical).toList(), pageable, page.getTotalElements());
+        }
+
+        if (category != null && category.equals(ConditionAssembler.CATEGORY_HEALTH_CONCERNS)) {
+            Page<ConditionHealthConcernDBRecord> page = conditionRepository.findConditionHealthConcernDiagnosis(pagedQuery);
+            return toCanonicalPage(page.getContent().stream().map(conditionAssembler::toCanonical).toList(), pageable, page.getTotalElements());
+        }
+
+        ConditionSearchQuery unpagedQuery = withPaging(conditionSearchQuery, null, offset);
+        List<ConditionCanonical> canonicalConditions = new ArrayList<>();
+
+        conditionRepository.findConditionProblemListItem(unpagedQuery).getContent()
+                .forEach(row -> canonicalConditions.add(conditionAssembler.toCanonical(row)));
+        conditionRepository.findConditionEncounterDiagnosis(unpagedQuery).getContent()
+                .forEach(row -> canonicalConditions.add(conditionAssembler.toCanonical(row)));
+        conditionRepository.findConditionHealthConcernDiagnosis(unpagedQuery).getContent()
+                .forEach(row -> canonicalConditions.add(conditionAssembler.toCanonical(row)));
+
+        long total = canonicalConditions.size();
+        int fromIndex = Math.min(offset, canonicalConditions.size());
+        int toIndex = Math.min(fromIndex + limit, canonicalConditions.size());
+
+        return toCanonicalPage(new ArrayList<>(canonicalConditions.subList(fromIndex, toIndex)), pageable, total);
+    }
+
+    private Page<ConditionCanonical> toCanonicalPage(List<ConditionCanonical> content, Pageable pageable, long total) {
+        return new PageImpl<>(content, pageable, total);
+    }
+
+    private ConditionSearchQuery withPaging(ConditionSearchQuery query, Integer count, Integer offset) {
+        return ConditionSearchQuery.builder()
+                .patientId(query.getPatientId())
+                .category(query.getCategory())
+                .count(count)
+                .offset(offset)
+                .build();
     }
 }

@@ -13,6 +13,8 @@ public class ConditionTranslator implements SearchTranslator<ConditionSearchQuer
         return ConditionSearchQuery.builder()
                 .patientId(criteria.getPatient() == null ? null : criteria.getPatient().getIdPart())
                 .category(criteria.getCategory() == null ? null : criteria.getCategory().getValue())
+                .count(criteria.getCount())
+                .offset(criteria.getOffset())
                 .build();
     }
 }
