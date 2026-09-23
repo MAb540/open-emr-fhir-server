@@ -152,7 +152,7 @@ public class PatientResourceProvider implements IResourceProvider {
                 EncounterSearchQuery query = EncounterSearchQuery.builder()
                         .patientId(patientUuids)
                         .build();
-                List<FormEncounter> formEncounters = encounterService.find(query);
+                List<FormEncounter> formEncounters = encounterService.find(query).getContent();
                 formEncounters.stream()
                         .map(encounterMapper::toR4)
                         .forEach(includedResources::add);

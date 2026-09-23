@@ -18,6 +18,8 @@ import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
 @Repository
 public class AllergyServiceImpl implements AllergyService {
 
+    private static final int DEFAULT_PAGE_SIZE = 5;
+    private static final int DEFAULT_PAGE_OFFSET = 0;
 
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
@@ -46,8 +48,8 @@ public class AllergyServiceImpl implements AllergyService {
         MapSqlParameterSource params = new MapSqlParameterSource();
         addFilter(sql, params, allergyIntoleranceSearchQuery);
 
-        int limit = (allergyIntoleranceSearchQuery.getCount() != null) ? allergyIntoleranceSearchQuery.getCount() : 5;
-        int offset = (allergyIntoleranceSearchQuery.getOffset() != null) ? allergyIntoleranceSearchQuery.getOffset() : 0;
+        int limit = (allergyIntoleranceSearchQuery.getCount() != null) ? allergyIntoleranceSearchQuery.getCount() : DEFAULT_PAGE_SIZE;
+        int offset = (allergyIntoleranceSearchQuery.getOffset() != null) ? allergyIntoleranceSearchQuery.getOffset() : DEFAULT_PAGE_OFFSET;
         sql.append("""
                 ORDER BY lists.date DESC limit :limit offset :offset
                 """);
@@ -56,18 +58,20 @@ public class AllergyServiceImpl implements AllergyService {
         params.addValue("offset", offset);
 
         List<AllergyDBRecord> allergyDBRecords =
-        namedParameterJdbcTemplate.query(sql.toString(), params, allergyDBRecordRowMapper());
+                namedParameterJdbcTemplate.query(sql.toString(), params, allergyDBRecordRowMapper());
 
+        long total = countTotal(allergyIntoleranceSearchQuery, params);
+
+        return new PageImpl<>(allergyDBRecords, PageRequest.of(offset / limit, limit), total);
+    }
+
+
+    private long countTotal(AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery, MapSqlParameterSource params) {
         StringBuilder sqlCount = allergyCountQuery();
         addFilter(sqlCount, params, allergyIntoleranceSearchQuery);
         Long total = namedParameterJdbcTemplate.queryForObject(sqlCount.toString(), params, Long.class);
-        total = (total != null) ? total : 0L;
-
-        Pageable pageable = PageRequest.of(offset / limit, limit);
-
-        return new PageImpl<>(allergyDBRecords, pageable, total);
+        return total != null ? total : 0L;
     }
-
 
     private StringBuilder allergyQuery() {
         return new StringBuilder("""

@@ -7,6 +7,8 @@ import org.example.basicfhirserver.repository.jdbc.formencounter.FormEncounterDB
 import org.example.basicfhirserver.repository.jdbc.formencounter.FormEncounterService;
 import org.example.basicfhirserver.service.EncounterService;
 import org.example.basicfhirserver.service.assembler.formencounter.FormEncounterAssembler;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -38,8 +40,11 @@ public class EncounterServiceImpl implements EncounterService {
     }
 
     @Override
-    public List<FormEncounter> find(EncounterSearchQuery encounterSearchQuery) {
-        List<FormEncounterDBRecord> formEncountersDBRecords = formEncounterService.find(encounterSearchQuery);
-        return formEncountersDBRecords.stream().map(formEncounterAssembler::toCanonical).toList();
+    public Page<FormEncounter> find(EncounterSearchQuery encounterSearchQuery) {
+        Page<FormEncounterDBRecord> formEncountersDBRecords = formEncounterService.find(encounterSearchQuery);
+        List<FormEncounter> canonical = formEncountersDBRecords.getContent().stream()
+                .map(formEncounterAssembler::toCanonical)
+                .toList();
+        return new PageImpl<>(canonical, formEncountersDBRecords.getPageable(), formEncountersDBRecords.getTotalElements());
     }
 }

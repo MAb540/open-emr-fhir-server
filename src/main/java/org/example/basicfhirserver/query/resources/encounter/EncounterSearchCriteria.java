@@ -16,4 +16,6 @@ public class EncounterSearchCriteria {
     private TokenParam id;
     private ReferenceParam patient;
     private DateParam date;
+    private Integer count;
+    private Integer offset;
 }

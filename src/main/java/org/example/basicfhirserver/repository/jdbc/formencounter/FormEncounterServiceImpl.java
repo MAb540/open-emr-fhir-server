@@ -1,6 +1,9 @@
 package org.example.basicfhirserver.repository.jdbc.formencounter;
 
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -14,6 +17,9 @@ import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
 
 @Repository
 public class FormEncounterServiceImpl implements FormEncounterService {
+
+    private static final int DEFAULT_PAGE_SIZE = 5;
+    private static final int DEFAULT_PAGE_OFFSET = 0;
 
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
@@ -39,15 +45,29 @@ public class FormEncounterServiceImpl implements FormEncounterService {
     }
 
     @Override
-    public List<FormEncounterDBRecord> find(EncounterSearchQuery encounterSearchQuery) {
+    public Page<FormEncounterDBRecord> find(EncounterSearchQuery encounterSearchQuery) {
         StringBuilder sql = formEncounterQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
-
         addFilter(sql, params, encounterSearchQuery);
 
-        return namedParameterJdbcTemplate.query(sql.toString(),
-                params,
-                formEncounterRowMapper());
+        long total = countTotal(sql, params);
+        int offset = encounterSearchQuery.getOffset() != null ? encounterSearchQuery.getOffset() : DEFAULT_PAGE_OFFSET;
+        int limit = encounterSearchQuery.getCount() != null ? encounterSearchQuery.getCount() : DEFAULT_PAGE_SIZE;
+
+        sql.append(" ORDER BY fe.encounter_date DESC limit :limit offset :offset ");
+        params.addValue("offset", offset);
+        params.addValue("limit", limit);
+
+        List<FormEncounterDBRecord> records =
+                namedParameterJdbcTemplate.query(sql.toString(), params, formEncounterRowMapper());
+
+        return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
+    }
+
+    private long countTotal(StringBuilder filteredSql, MapSqlParameterSource params) {
+        String countSql = "SELECT COUNT(*) from ( %s ) as query_count";
+        Long total = namedParameterJdbcTemplate.queryForObject(countSql.formatted(filteredSql), params, Long.class);
+        return total != null ? total : 0L;
     }
 
     private StringBuilder formEncounterQuery() {
@@ -188,7 +208,7 @@ public class FormEncounterServiceImpl implements FormEncounterService {
             MapSqlParameterSource params,
             EncounterSearchQuery encounterSearchQuery
     ) {
-        if (encounterSearchQuery.getEncounterId() != null) {
+        if (encounterSearchQuery.getEncounterId() != null && !encounterSearchQuery.getEncounterId().isEmpty()) {
             List<byte[]> binaryUuids = encounterSearchQuery.getEncounterId().stream()
                     .map(idStr -> toBytes(UUID.fromString(idStr)))
                     .toList();

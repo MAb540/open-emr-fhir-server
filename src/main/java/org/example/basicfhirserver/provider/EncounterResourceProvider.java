@@ -1,21 +1,21 @@
 package org.example.basicfhirserver.provider;
 
-import ca.uhn.fhir.rest.annotation.IdParam;
-import ca.uhn.fhir.rest.annotation.OptionalParam;
-import ca.uhn.fhir.rest.annotation.Read;
-import ca.uhn.fhir.rest.annotation.Search;
+import ca.uhn.fhir.rest.annotation.*;
+import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.DateParam;
 import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.example.basicfhirserver.mapper.EncounterMapper;
 import org.example.basicfhirserver.model.FormEncounter;
+import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchCriteria;
 import org.example.basicfhirserver.query.translator.impl.EncounterSearchTranslator;
 import org.example.basicfhirserver.service.EncounterService;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.IdType;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -52,24 +52,38 @@ public class EncounterResourceProvider implements IResourceProvider {
     }
 
     @Search()
-    public List<Encounter> searchEncounters(
+    public IBundleProvider searchEncounters(
             @OptionalParam(name = Encounter.SP_RES_ID) TokenParam id,
             @OptionalParam(name = Encounter.SP_PATIENT) ReferenceParam patient,
-            @OptionalParam(name = Encounter.SP_DATE) DateParam date
+            @OptionalParam(name = Encounter.SP_DATE) DateParam date,
+            @Count Integer count,
+            @Offset Integer offset
     ) {
-
         EncounterSearchCriteria criteria = EncounterSearchCriteria.builder()
                 .id(id)
                 .patient(patient)
                 .date(date)
+                .count(count)
+                .offset(offset)
                 .build();
 
         var encounterSearchQuery = encounterSearchTranslator.translate(criteria);
-        List<FormEncounter> formEncounters = encounterService.find(encounterSearchQuery);
+        Page<FormEncounter> formEncounters = encounterService.find(encounterSearchQuery);
 
-        return formEncounters.stream()
-                .map(encounterMapper::toR4)
+        List<IBaseResource> primaryEncounters = formEncounters.getContent().stream()
+                .<IBaseResource>map(encounterMapper::toR4)
                 .toList();
+
+        int currentOffset = offset != null ? offset : 0;
+        int currentPageSize = formEncounters.getContent().size();
+
+        return new BundleProvider(
+                primaryEncounters,
+                List.of(),
+                Math.toIntExact(formEncounters.getTotalElements()),
+                currentOffset,
+                currentPageSize
+        );
     }
 
 

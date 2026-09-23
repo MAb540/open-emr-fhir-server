@@ -2,14 +2,14 @@ package org.example.basicfhirserver.service;
 
 import org.example.basicfhirserver.model.FormEncounter;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
+import org.springframework.data.domain.Page;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface EncounterService  {
 
     FormEncounter findById(UUID uuid);
 
-    List<FormEncounter> find(EncounterSearchQuery encounterSearchQuery);
+    Page<FormEncounter> find(EncounterSearchQuery encounterSearchQuery);
 
 }

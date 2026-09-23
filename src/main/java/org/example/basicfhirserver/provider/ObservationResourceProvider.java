@@ -133,7 +133,7 @@ public class ObservationResourceProvider implements IResourceProvider {
                 EncounterSearchQuery query = EncounterSearchQuery.builder()
                         .encounterId(encounterUuids)
                         .build();
-                List<FormEncounter> formEncounters = encounterService.find(query);
+                List<FormEncounter> formEncounters = encounterService.find(query).getContent();
                 formEncounters.stream()
                         .map(encounterMapper::toR4)
                         .forEach(includedResources::add);

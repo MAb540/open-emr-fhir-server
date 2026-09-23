@@ -17,4 +17,6 @@ public class EncounterSearchQuery {
     private List<String> encounterId;
     private List<String> patientId;
     private SearchValue<LocalDateTime> date;
+    private Integer count;
+    private Integer offset;
 }

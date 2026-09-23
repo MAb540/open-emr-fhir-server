@@ -16,10 +16,12 @@ public class EncounterSearchTranslator implements SearchTranslator<EncounterSear
     @Override
     public EncounterSearchQuery translate(EncounterSearchCriteria criteria) {
         return EncounterSearchQuery.builder()
-                .encounterId(List.of(token(criteria.getId())))
+                .encounterId(criteria.getId() != null ? List.of(token(criteria.getId()) ) : List.of())
                 .patientId(criteria.getPatient() == null ? null : List.of(criteria.getPatient().getIdPart()))
                 .date(date(criteria.getDate(), d -> d == null ? null :
                         d.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()))
+                .count(criteria.getCount())
+                .offset(criteria.getOffset())
                 .build();
     }
 }
