@@ -7,6 +7,8 @@ import org.example.basicfhirserver.repository.jdbc.user.UserDBRecord;
 import org.example.basicfhirserver.repository.jdbc.user.UserService;
 import org.example.basicfhirserver.service.PractitionerService;
 import org.example.basicfhirserver.service.assembler.users.UserAssembler;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -37,8 +39,12 @@ public class PractitionerServiceImpl implements PractitionerService {
     }
 
     @Override
-    public List<Practitioner> find(PractitionerSearchQuery practitionerSearchQuery) {
-        List<UserDBRecord> userDBRecords = userService.find(practitionerSearchQuery);
-        return userDBRecords.stream().map(userAssembler::toCanonical).toList();
+    public Page<Practitioner> find(PractitionerSearchQuery practitionerSearchQuery) {
+        Page<UserDBRecord> userDBRecords = userService.find(practitionerSearchQuery);
+        List<Practitioner> practitioners = userDBRecords.getContent().stream()
+                .map(userAssembler::toCanonical)
+                .toList();
+
+        return new PageImpl<>(practitioners, userDBRecords.getPageable(), userDBRecords.getTotalElements());
     }
 }

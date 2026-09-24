@@ -15,5 +15,7 @@ public class PractitionerSearchQuery {
     private String practitionerId;
     private SearchValue<String> name;
     private String identifier;
+    private Integer count;
+    private Integer offset;
 
 }

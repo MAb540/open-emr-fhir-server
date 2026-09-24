@@ -1,20 +1,24 @@
 package org.example.basicfhirserver.provider;
 
+import ca.uhn.fhir.rest.annotation.Count;
 import ca.uhn.fhir.rest.annotation.IdParam;
+import ca.uhn.fhir.rest.annotation.Offset;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.Search;
+import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.StringParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.example.basicfhirserver.mapper.PractitionerMapper;
+import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.practitioner.PractitionerSearchCriteria;
 import org.example.basicfhirserver.query.translator.impl.PractitionerSearchTranslator;
 import org.example.basicfhirserver.service.PractitionerService;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Practitioner;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -50,23 +54,38 @@ public class PractitionerResourceProvider implements IResourceProvider {
     }
 
     @Search()
-    public List<Practitioner> searchPractitioners(
-            @OptionalParam(name = Encounter.SP_RES_ID) TokenParam id,
+    public IBundleProvider searchPractitioners(
+            @OptionalParam(name = Practitioner.SP_RES_ID) TokenParam id,
             @OptionalParam(name = Practitioner.SP_NAME) StringParam name,
-            @OptionalParam(name = Practitioner.SP_IDENTIFIER) TokenParam identifier
+            @OptionalParam(name = Practitioner.SP_IDENTIFIER) TokenParam identifier,
+            @Count Integer count,
+            @Offset Integer offset
     ) {
         PractitionerSearchCriteria criteria = PractitionerSearchCriteria.builder()
                 .id(id)
                 .name(name)
                 .identifier(identifier)
+                .count(count)
+                .offset(offset)
                 .build();
 
         var practitionerSearchQuery = practitionerSearchTranslator.translate(criteria);
-        List<org.example.basicfhirserver.model.Practitioner> practitioners = practitionerService.find(practitionerSearchQuery);
+        Page<org.example.basicfhirserver.model.Practitioner> practitioners = practitionerService.find(practitionerSearchQuery);
 
-        return practitioners.stream()
-                .map(practitionerMapper::toR4)
+        List<IBaseResource> primaryPractitioners = practitioners.getContent().stream()
+                .<IBaseResource>map(practitionerMapper::toR4)
                 .toList();
+
+        int currentOffset = offset != null ? offset : 0;
+        int currentPageSize = practitioners.getContent().size();
+
+        return new BundleProvider(
+                primaryPractitioners,
+                List.of(),
+                Math.toIntExact(practitioners.getTotalElements()),
+                currentOffset,
+                currentPageSize
+        );
     }
 
 

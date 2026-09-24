@@ -1,6 +1,9 @@
 package org.example.basicfhirserver.repository.jdbc.user;
 
 import org.example.basicfhirserver.query.resources.practitioner.PractitionerSearchQuery;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -17,6 +20,9 @@ import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.toUuid;
 
 @Service
 public class UserServiceImpl implements UserService {
+
+    private static final int DEFAULT_PAGE_SIZE = 5;
+    private static final int DEFAULT_PAGE_OFFSET = 0;
 
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
@@ -42,15 +48,31 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserDBRecord> find(PractitionerSearchQuery practitionerSearchQuery) {
+    public Page<UserDBRecord> find(PractitionerSearchQuery practitionerSearchQuery) {
 
         StringBuilder sql = userQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
         addFilter(sql, params, practitionerSearchQuery);
 
-        return namedParameterJdbcTemplate.query(sql.toString(),
-                params,
-                userRowMapper());
+        long total = countTotal(sql, params);
+
+        int offset = practitionerSearchQuery.getOffset() != null ? practitionerSearchQuery.getOffset() : DEFAULT_PAGE_OFFSET;
+        int limit = practitionerSearchQuery.getCount() != null ? practitionerSearchQuery.getCount() : DEFAULT_PAGE_SIZE;
+
+        sql.append(" ORDER BY users.last_updated DESC limit :limit offset :offset ");
+        params.addValue("limit", limit);
+        params.addValue("offset", offset);
+
+        List<UserDBRecord> records =
+                namedParameterJdbcTemplate.query(sql.toString(), params, userRowMapper());
+
+        return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
+    }
+
+    private long countTotal(StringBuilder filteredSql, MapSqlParameterSource params) {
+        String countSql = "SELECT COUNT(*) from ( %s ) as query_count";
+        Long total = namedParameterJdbcTemplate.queryForObject(countSql.formatted(filteredSql), params, Long.class);
+        return total != null ? total : 0L;
     }
 
     private StringBuilder userQuery() {
@@ -124,11 +146,11 @@ public class UserServiceImpl implements UserService {
                     `users`.`country_code2`,
                     `abook`.`title` AS abook_title,
                     `physician`.`title` AS physician_title,
-                    `physician`.`codes` AS physician_code\s
+                    `physician`.`codes` AS physician_code
                 FROM `users`
-                LEFT JOIN `list_options` AS `abook`\s
-                    ON `users`.`abook_type` = `abook`.`option_id`\s
-                LEFT JOIN `list_options` AS `physician`\s
+                LEFT JOIN `list_options` AS `abook`
+                    ON `users`.`abook_type` = `abook`.`option_id`
+                LEFT JOIN `list_options` AS `physician`
                     ON `users`.`physician_type` = `physician`.`option_id`
                 WHERE 1=1
                 """

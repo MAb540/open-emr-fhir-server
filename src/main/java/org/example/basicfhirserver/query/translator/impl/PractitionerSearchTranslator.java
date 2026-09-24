@@ -19,6 +19,8 @@ public class PractitionerSearchTranslator implements SearchTranslator<Practition
                 .practitionerId(token(criteria.getId()))
                 .name(stringMatch(criteria.getName()))
                 .identifier(token(criteria.getIdentifier()))
+                .count(criteria.getCount())
+                .offset(criteria.getOffset())
                 .build();
     }
 
