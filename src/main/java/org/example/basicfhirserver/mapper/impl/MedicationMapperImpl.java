@@ -26,8 +26,7 @@ public class MedicationMapperImpl implements MedicationMapper {
         Medication medication = new Medication();
         medication.setMeta(populateMeta(drugDBRecord));
         medication.setText(populateNarrative());
-//        medication.setId(drugDBRecord.getUuid() != null ? drugDBRecord.getUuid().toString() : null);
-        medication.setId(drugDBRecord.getDrugId().toString());
+        medication.setId(drugDBRecord.getUuid() != null ? drugDBRecord.getUuid().toString() : drugDBRecord.getDrugId().toString());
         medication.setStatus(drugDBRecord.getActive() == 1 ? Medication.MedicationStatus.ACTIVE :
                 Medication.MedicationStatus.INACTIVE);
 
@@ -196,7 +195,6 @@ public class MedicationMapperImpl implements MedicationMapper {
         if (diagnosis == null || diagnosis.trim().isEmpty()) {
             return diagnosisMap;
         }
-
 
         String[] diags = diagnosis.split(";");
 

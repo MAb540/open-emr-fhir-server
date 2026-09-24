@@ -1,5 +1,10 @@
 package org.example.basicfhirserver.repository.jdbc.drug;
 
+import org.example.basicfhirserver.query.resources.medication.MedicationSearchQuery;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -12,6 +17,9 @@ import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
 
 @Repository
 public class DrugServiceImpl implements DrugService {
+
+    private static final int DEFAULT_PAGE_SIZE = 5;
+    private static final int DEFAULT_PAGE_OFFSET = 0;
 
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
@@ -36,13 +44,30 @@ public class DrugServiceImpl implements DrugService {
 
 
     @Override
-    public List<DrugDBRecord> find() {
+    public Page<DrugDBRecord> find(MedicationSearchQuery medicationSearchQuery) {
 
         StringBuilder sql = drugQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
 
-        return namedParameterJdbcTemplate.query(sql.toString(), params, drugDBRecordRowMapper());
+        long total = countTotal(sql, params);
 
+        int offset = medicationSearchQuery.getOffset() != null ? medicationSearchQuery.getOffset() : DEFAULT_PAGE_OFFSET;
+        int limit = medicationSearchQuery.getCount() != null ? medicationSearchQuery.getCount() : DEFAULT_PAGE_SIZE;
+
+        sql.append(" ORDER BY drug_table.drug_last_updated DESC, drug_table.drug_id DESC limit :limit offset :offset ");
+        params.addValue("limit", limit);
+        params.addValue("offset", offset);
+
+        List<DrugDBRecord> records =
+                namedParameterJdbcTemplate.query(sql.toString(), params, drugDBRecordRowMapper());
+
+        return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
+    }
+
+    private long countTotal(StringBuilder filteredSql, MapSqlParameterSource params) {
+        String countSql = "SELECT COUNT(*) from ( %s ) as query_count";
+        Long total = namedParameterJdbcTemplate.queryForObject(countSql.formatted(filteredSql), params, Long.class);
+        return total != null ? total : 0L;
     }
 
 

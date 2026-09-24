@@ -1,9 +1,11 @@
 package org.example.basicfhirserver.service.impl;
 
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import org.example.basicfhirserver.query.resources.medication.MedicationSearchQuery;
 import org.example.basicfhirserver.repository.jdbc.drug.DrugDBRecord;
 import org.example.basicfhirserver.repository.jdbc.drug.DrugService;
 import org.example.basicfhirserver.service.MedicationService;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -30,8 +32,8 @@ public class MedicationServiceImpl implements MedicationService {
     }
 
     @Override
-    public List<DrugDBRecord> find() {
+    public Page<DrugDBRecord> find(MedicationSearchQuery medicationSearchQuery) {
 
-        return drugService.find();
+        return drugService.find(medicationSearchQuery);
     }
 }
