@@ -17,5 +17,7 @@ public class MedicationRequestSearchQuery {
     private String patientId;
     private List<SearchValue<String>> intent;
     private String status;
+    private Integer count;
+    private Integer offset;
 }
 

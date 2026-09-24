@@ -20,6 +20,8 @@ public class MedicationRequestSearchTranslator implements SearchTranslator<Medic
                         criteria.getIntent().getValuesAsQueryTokens()
                                 .stream().map(TranslatorUtils::tokenWithSystem).toList())
                 .status(criteria.getStatus() == null ? null : criteria.getStatus().toString())
+                .count(criteria.getCount())
+                .offset(criteria.getOffset())
                 .build();
 
     }

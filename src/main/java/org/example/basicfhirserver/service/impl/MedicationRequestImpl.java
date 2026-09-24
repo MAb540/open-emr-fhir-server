@@ -6,6 +6,7 @@ import org.example.basicfhirserver.repository.jdbc.prescription.FacilityDBRecord
 import org.example.basicfhirserver.repository.jdbc.prescription.PrescriptionDBRecord;
 import org.example.basicfhirserver.repository.jdbc.prescription.PrescriptionService;
 import org.example.basicfhirserver.service.MedicationRequestService;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -31,13 +32,13 @@ public class MedicationRequestImpl implements MedicationRequestService {
     }
 
     @Override
-    public List<PrescriptionDBRecord> find(MedicationRequestSearchQuery medicationRequestSearchQuery) {
-        List<PrescriptionDBRecord> prescriptionDBRecords = prescriptionService.find(medicationRequestSearchQuery);
+    public Page<PrescriptionDBRecord> find(MedicationRequestSearchQuery medicationRequestSearchQuery) {
+        Page<PrescriptionDBRecord> prescriptionDBRecords = prescriptionService.find(medicationRequestSearchQuery);
 
         List<FacilityDBRecord> facilityDBRecords = prescriptionService.findFacility();
         if(!facilityDBRecords.isEmpty()){
             FacilityDBRecord facilityDBRecord = facilityDBRecords.get(0);
-            prescriptionDBRecords
+            prescriptionDBRecords.getContent()
                     .forEach(prescription -> prescription.setOrganizationUuid(facilityDBRecord.getUuid()));
         }
 

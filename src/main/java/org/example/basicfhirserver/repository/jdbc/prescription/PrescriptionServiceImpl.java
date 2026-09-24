@@ -2,6 +2,9 @@ package org.example.basicfhirserver.repository.jdbc.prescription;
 
 import org.example.basicfhirserver.query.resources.SearchValue;
 import org.example.basicfhirserver.query.resources.medicationrequest.MedicationRequestSearchQuery;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -21,6 +24,9 @@ import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.toUuid;
 
 @Repository
 public class PrescriptionServiceImpl implements PrescriptionService {
+
+    private static final int DEFAULT_PAGE_SIZE = 5;
+    private static final int DEFAULT_PAGE_OFFSET = 0;
 
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
@@ -45,13 +51,31 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     }
 
     @Override
-    public List<PrescriptionDBRecord> find(MedicationRequestSearchQuery medicationRequestSearchQuery) {
+    public Page<PrescriptionDBRecord> find(MedicationRequestSearchQuery medicationRequestSearchQuery) {
 
         StringBuilder sql = prescriptionQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
         addFilter(sql, params, medicationRequestSearchQuery);
 
-        return namedParameterJdbcTemplate.query(sql.toString(), params, prescriptionDBRecordRowMapper());
+        long total = countTotal(sql, params);
+
+        int offset = medicationRequestSearchQuery.getOffset() != null ? medicationRequestSearchQuery.getOffset() : DEFAULT_PAGE_OFFSET;
+        int limit = medicationRequestSearchQuery.getCount() != null ? medicationRequestSearchQuery.getCount() : DEFAULT_PAGE_SIZE;
+
+        sql.append(" ORDER BY combined_prescriptions.date_added DESC limit :limit offset :offset ");
+        params.addValue("limit", limit);
+        params.addValue("offset", offset);
+
+        List<PrescriptionDBRecord> records =
+                namedParameterJdbcTemplate.query(sql.toString(), params, prescriptionDBRecordRowMapper());
+
+        return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
+    }
+
+    private long countTotal(StringBuilder filteredSql, MapSqlParameterSource params) {
+        String countSql = "SELECT COUNT(*) from ( %s ) as query_count";
+        Long total = namedParameterJdbcTemplate.queryForObject(countSql.formatted(filteredSql), params, Long.class);
+        return total != null ? total : 0L;
     }
 
 
@@ -73,7 +97,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 
     private StringBuilder prescriptionQuery() {
         return new StringBuilder("""
-                SELECT
+                 SELECT
                     combined_prescriptions.uuid
                     ,combined_prescriptions.source_table
                     ,combined_prescriptions.drug
@@ -82,7 +106,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                     ,combined_prescriptions.category
                     ,combined_prescriptions.intent_title
                     ,combined_prescriptions.category_title
-                    ,'Community' AS category_text
+                    ,CONCAT('Community', '') AS category_text
                     ,combined_prescriptions.rxnorm_drugcode
                     ,combined_prescriptions.date_added
                     ,combined_prescriptions.unit
@@ -92,7 +116,6 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                     ,combined_prescriptions.status
                     ,combined_prescriptions.dosage
                     ,combined_prescriptions.drug_dosage_instructions
-                    ,combined_prescriptions.date_added
                     ,combined_prescriptions.date_modified
                     ,combined_prescriptions.medication_adherence_date_asserted
                     ,combined_prescriptions.prescription_drug_size
@@ -163,7 +186,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                                     WHEN prescriptions.end_date IS NOT NULL AND prescriptions.active = '1' THEN 'completed'
                                     WHEN prescriptions.active = '1' THEN 'active'
                                     ELSE 'stopped'
-                                END as 'status'
+                                END as status
                                 ,prescriptions.dosage
                                 ,diagnosis
                                 ,meds.is_primary_record
@@ -216,7 +239,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                                     WHEN lists.enddate IS NOT NULL AND lists.activity = 1 THEN 'completed'
                                     WHEN lists.activity = 1 THEN 'active'
                                     ELSE 'stopped'
-                            END as 'status'
+                            END as status
                             ,NULL as dosage
                             ,diagnosis
                             ,is_primary_record
@@ -315,8 +338,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                         ,abook_type AS reporting_source_abook_type
                         FROM users
                         WHERE npi IS NOT NULL AND npi != ''
-                    ) reporting_source ON reporting_source.reporting_source_user_id = combined_prescriptions.reporting_source_record_id
-                    WHERE 1 = 1
+                    ) reporting_source ON reporting_source.reporting_source_user_id = combined_prescriptions.reporting_source_record_id WHERE 1 = 1
                 """);
     }
 

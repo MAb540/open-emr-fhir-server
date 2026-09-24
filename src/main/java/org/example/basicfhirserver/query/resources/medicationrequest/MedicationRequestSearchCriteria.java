@@ -17,5 +17,7 @@ public class MedicationRequestSearchCriteria {
     private TokenOrListParam intent;
     private ReferenceParam patient;
     private StringParam status;
+    private Integer count;
+    private Integer offset;
 }
 
