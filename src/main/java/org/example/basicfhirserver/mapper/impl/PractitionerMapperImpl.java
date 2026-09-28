@@ -1,6 +1,7 @@
 package org.example.basicfhirserver.mapper.impl;
 
 import org.example.basicfhirserver.mapper.PractitionerMapper;
+import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.utilities.xhtml.NodeType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
@@ -19,7 +20,7 @@ public class PractitionerMapperImpl implements PractitionerMapper {
         Practitioner practitioner = new Practitioner();
 
         practitioner.getMeta()
-                .addProfile("http://hl7.org/fhir/us/core/StructureDefinition/us-core-practitioner")
+                .addProfile(ProfilesConstants.HL7_US_CORE_PRACTITIONER)
                 .setVersionId("1")
                 .setLastUpdated(
                         Date.from(userPractitioner.getLastUpdated().atZone(ZoneId.systemDefault()).toInstant())

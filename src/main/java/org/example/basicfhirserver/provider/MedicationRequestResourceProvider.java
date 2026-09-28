@@ -1,17 +1,13 @@
 package org.example.basicfhirserver.provider;
 
-import ca.uhn.fhir.rest.annotation.Count;
-import ca.uhn.fhir.rest.annotation.IdParam;
-import ca.uhn.fhir.rest.annotation.Offset;
-import ca.uhn.fhir.rest.annotation.OptionalParam;
-import ca.uhn.fhir.rest.annotation.Read;
-import ca.uhn.fhir.rest.annotation.Search;
+import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.StringParam;
 import ca.uhn.fhir.rest.param.TokenOrListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.example.basicfhirserver.mapper.MedicationRequestMapper;
+import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.medicationrequest.MedicationRequestSearchCriteria;
 import org.example.basicfhirserver.query.translator.impl.MedicationRequestSearchTranslator;
@@ -27,6 +23,10 @@ import java.util.List;
 import java.util.UUID;
 
 @Component
+@SupportedProfiles(
+        profile = ProfilesConstants.HL7_US_CORE_MEDICATIONREQUEST,
+        supported = {ProfilesConstants.HL7_US_CORE_MEDICATIONREQUEST}
+)
 public class MedicationRequestResourceProvider implements IResourceProvider {
 
     private final MedicationRequestService medicationRequestService;

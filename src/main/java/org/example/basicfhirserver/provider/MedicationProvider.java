@@ -1,13 +1,10 @@
 package org.example.basicfhirserver.provider;
 
-import ca.uhn.fhir.rest.annotation.Count;
-import ca.uhn.fhir.rest.annotation.IdParam;
-import ca.uhn.fhir.rest.annotation.Offset;
-import ca.uhn.fhir.rest.annotation.Read;
-import ca.uhn.fhir.rest.annotation.Search;
+import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.example.basicfhirserver.mapper.MedicationMapper;
+import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.medication.MedicationSearchCriteria;
 import org.example.basicfhirserver.query.translator.impl.MedicationSearchTranslator;
@@ -23,6 +20,10 @@ import java.util.List;
 import java.util.UUID;
 
 @Component
+@SupportedProfiles(
+        profile = ProfilesConstants.HL7_MEDICATION,
+        supported = {ProfilesConstants.HL7_MEDICATION}
+)
 public class MedicationProvider implements IResourceProvider {
 
     private final MedicationService medicationService;
@@ -31,7 +32,7 @@ public class MedicationProvider implements IResourceProvider {
 
     public MedicationProvider(MedicationService medicationService,
                               MedicationMapper medicationMapper,
-                              MedicationSearchTranslator medicationSearchTranslator){
+                              MedicationSearchTranslator medicationSearchTranslator) {
         this.medicationService = medicationService;
         this.medicationMapper = medicationMapper;
         this.medicationSearchTranslator = medicationSearchTranslator;

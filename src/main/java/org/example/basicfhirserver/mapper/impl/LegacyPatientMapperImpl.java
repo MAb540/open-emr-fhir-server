@@ -3,6 +3,7 @@ package org.example.basicfhirserver.mapper.impl;
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.mapper.utils.FhirCodeSystemConstants;
+import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.utilities.xhtml.NodeType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
@@ -10,13 +11,13 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.*;
+import java.util.Date;
+import java.util.List;
+import java.util.Objects;
 
 @Component
 public class LegacyPatientMapperImpl implements LegacyPatientMapper {
 
-    private static final String US_CORE_PATIENT_PROFILE =
-            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient";
     private static final String US_SSN_IDENTIFIER_SYSTEM = "http://hl7.org/fhir/sid/us-ssn";
     private static final String DEFAULT_LANGUAGE_CODE = "en";
     private static final String NARRATIVE_TEMPLATE = "This patient is %s, born in %s, %s.";
@@ -50,10 +51,11 @@ public class LegacyPatientMapperImpl implements LegacyPatientMapper {
         return patient;
     }
 
+
     private org.hl7.fhir.r4.model.Meta populateMeta(LegacyPatientEntity legacyPatientEntity) {
         org.hl7.fhir.r4.model.Meta meta = new org.hl7.fhir.r4.model.Meta();
         meta.setVersionId("1");
-        meta.addProfile(US_CORE_PATIENT_PROFILE);
+        meta.addProfile(ProfilesConstants.HL7_US_CORE_PATIENT);
 
         LocalDateTime lastUpdated = legacyPatientEntity.getLastUpdated() != null
                 ? legacyPatientEntity.getLastUpdated()

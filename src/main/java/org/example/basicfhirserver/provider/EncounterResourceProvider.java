@@ -7,6 +7,7 @@ import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.example.basicfhirserver.mapper.EncounterMapper;
+import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.model.FormEncounter;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchCriteria;
@@ -22,6 +23,10 @@ import java.util.List;
 import java.util.UUID;
 
 @Component
+@SupportedProfiles(
+        profile = ProfilesConstants.HL7_US_CORE_ENCOUNTER,
+        supported = {ProfilesConstants.HL7_US_CORE_ENCOUNTER}
+)
 public class EncounterResourceProvider implements IResourceProvider {
 
     private final EncounterService encounterService;

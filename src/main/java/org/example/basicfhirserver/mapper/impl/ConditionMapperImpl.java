@@ -3,6 +3,7 @@ package org.example.basicfhirserver.mapper.impl;
 import org.example.basicfhirserver.mapper.ConditionMapper;
 import org.example.basicfhirserver.mapper.utils.CodeTypes;
 import org.example.basicfhirserver.mapper.utils.FhirCodeSystemConstants;
+import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.model.ConditionCanonical;
 import org.example.basicfhirserver.service.assembler.condition.ConditionAssembler;
 import org.hl7.fhir.r4.model.*;
@@ -23,12 +24,6 @@ import static org.example.basicfhirserver.mapper.utils.MapperHelper.getUnknownCo
 @Component
 public class ConditionMapperImpl implements ConditionMapper {
 
-    private static final String US_CORE_CONDITION_ENCOUNTER_DIAGNOSIS_PROFILE =
-            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition-encounter-diagnosis";
-    private static final String US_CORE_CONDITION_PROFILE =
-            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition";
-    private static final String US_CORE_CONDITION_PROBLEMS_HEALTH_CONCERNS_PROFILE =
-            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition-problems-health-concerns";
     private static final String HL7_CONDITION_CLINICAL_SYSTEM =
             "http://terminology.hl7.org/CodeSystem/condition-clinical";
     private static final String HL7_CONDITION_ASSERTED_DATE_EXTENSION =
@@ -82,13 +77,13 @@ public class ConditionMapperImpl implements ConditionMapper {
         meta.setVersionId("1");
 
         if (Objects.equals(conditionCanonical.getCategory(), "encounter-diagnosis")) {
-            meta.addProfile(US_CORE_CONDITION_ENCOUNTER_DIAGNOSIS_PROFILE);
+            meta.addProfile(ProfilesConstants.HL7_US_CORE_CONDITION_ENCOUNTER_DIAGNOSIS);
         } else {
             CanonicalType profile1 = new CanonicalType();
-            profile1.setValue(US_CORE_CONDITION_PROFILE);
+            profile1.setValue(ProfilesConstants.HL7_US_CORE_CONDITION);
 
             CanonicalType profile2 = new CanonicalType();
-            profile2.setValue(US_CORE_CONDITION_PROBLEMS_HEALTH_CONCERNS_PROFILE);
+            profile2.setValue(ProfilesConstants.HL7_US_CORE_CONDITION_PROBLEMS_HEALTH_CONCERNS);
 
             meta.setProfile(List.of(profile1, profile2));
         }

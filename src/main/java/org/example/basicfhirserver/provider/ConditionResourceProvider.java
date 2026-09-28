@@ -10,6 +10,7 @@ import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.ConditionMapper;
 import org.example.basicfhirserver.mapper.EncounterMapper;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
+import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.model.ConditionCanonical;
 import org.example.basicfhirserver.model.FormEncounter;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
@@ -34,6 +35,13 @@ import java.util.Set;
 import java.util.UUID;
 
 @Component
+@SupportedProfiles(
+        profile = ProfilesConstants.HL7_US_CORE_CONDITION,
+        supported = {
+                ProfilesConstants.HL7_US_CORE_CONDITION_ENCOUNTER_DIAGNOSIS,
+                ProfilesConstants.HL7_US_CORE_CONDITION_PROBLEMS_HEALTH_CONCERNS
+        }
+)
 public class ConditionResourceProvider implements IResourceProvider {
 
     private final ConditionService conditionService;

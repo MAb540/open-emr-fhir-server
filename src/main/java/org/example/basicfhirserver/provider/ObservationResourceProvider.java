@@ -1,6 +1,7 @@
 package org.example.basicfhirserver.provider;
 
 import ca.uhn.fhir.model.api.Include;
+import ca.uhn.fhir.model.api.annotation.Description;
 import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.DateParam;
@@ -12,6 +13,7 @@ import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.EncounterMapper;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.mapper.ObservationMapper;
+import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.model.FormEncounter;
 import org.example.basicfhirserver.model.VitalObservation;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
@@ -35,6 +37,16 @@ import java.util.Set;
 import java.util.UUID;
 
 @Component
+@SupportedProfiles(
+        profile = ProfilesConstants.HL7_US_CORE_BODY_WEIGHT,
+        supported = {
+                ProfilesConstants.HL7_US_CORE_BODY_WEIGHT,
+                ProfilesConstants.HL7_US_CORE_BODY_HEIGHT,
+                ProfilesConstants.HL7_US_CORE_BODY_TEMPERATURE,
+                ProfilesConstants.HL7_US_CORE_BMI,
+                ProfilesConstants.HL7_US_CORE_BLOOD_PRESSURE
+        }
+)
 public class ObservationResourceProvider implements IResourceProvider {
 
     private final ObservationService observationService;

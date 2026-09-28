@@ -12,6 +12,7 @@ import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.EncounterMapper;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.mapper.ObservationMapper;
+import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.model.FormEncounter;
 import org.example.basicfhirserver.model.VitalObservation;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
@@ -39,6 +40,10 @@ import java.util.Set;
 import java.util.UUID;
 
 @Component
+@SupportedProfiles(
+        profile = ProfilesConstants.HL7_US_CORE_PATIENT,
+        supported = {ProfilesConstants.HL7_US_CORE_PATIENT}
+)
 public class PatientResourceProvider implements IResourceProvider {
 
     private final LegacyPatientMapper legacyPatientMapper;
@@ -132,12 +137,12 @@ public class PatientResourceProvider implements IResourceProvider {
 
         List<IBaseResource> includedResources = new ArrayList<>();
 
-        if ( !legacyPatientEntities.isEmpty()) {
+        if (!legacyPatientEntities.isEmpty()) {
             List<String> patientUuids = legacyPatientEntities.getContent().stream()
                     .map(lp -> lp.getUuid().toString())
                     .toList();
 
-            if(includeObservations){
+            if (includeObservations) {
                 ObservationSearchQuery query = ObservationSearchQuery.builder()
                         .patientId(patientUuids)
                         .build();
@@ -148,7 +153,7 @@ public class PatientResourceProvider implements IResourceProvider {
                         .forEach(includedResources::add);
             }
 
-            if(includeEncounters){
+            if (includeEncounters) {
                 EncounterSearchQuery query = EncounterSearchQuery.builder()
                         .patientId(patientUuids)
                         .build();

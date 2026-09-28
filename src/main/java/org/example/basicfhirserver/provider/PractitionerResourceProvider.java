@@ -1,16 +1,12 @@
 package org.example.basicfhirserver.provider;
 
-import ca.uhn.fhir.rest.annotation.Count;
-import ca.uhn.fhir.rest.annotation.IdParam;
-import ca.uhn.fhir.rest.annotation.Offset;
-import ca.uhn.fhir.rest.annotation.OptionalParam;
-import ca.uhn.fhir.rest.annotation.Read;
-import ca.uhn.fhir.rest.annotation.Search;
+import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.StringParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.example.basicfhirserver.mapper.PractitionerMapper;
+import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.practitioner.PractitionerSearchCriteria;
 import org.example.basicfhirserver.query.translator.impl.PractitionerSearchTranslator;
@@ -25,6 +21,10 @@ import java.util.List;
 import java.util.UUID;
 
 @Component
+@SupportedProfiles(
+        profile = ProfilesConstants.HL7_US_CORE_PRACTITIONER,
+        supported = {ProfilesConstants.HL7_US_CORE_PRACTITIONER}
+)
 public class PractitionerResourceProvider implements IResourceProvider {
 
     private final PractitionerService practitionerService;

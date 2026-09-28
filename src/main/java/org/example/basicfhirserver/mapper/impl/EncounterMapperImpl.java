@@ -1,6 +1,7 @@
 package org.example.basicfhirserver.mapper.impl;
 
 import org.example.basicfhirserver.mapper.EncounterMapper;
+import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.model.FormEncounter;
 import org.hl7.fhir.r4.model.*;
 import org.springframework.stereotype.Component;
@@ -16,9 +17,7 @@ public class EncounterMapperImpl implements EncounterMapper {
     public Encounter toR4(FormEncounter formEncounter) {
 
         Encounter encounter = new Encounter();
-        encounter.getMeta().addProfile(
-                "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter"
-        );
+        encounter.getMeta().addProfile(ProfilesConstants.HL7_US_CORE_ENCOUNTER);
         encounter.getMeta().setVersionId("1");
         encounter.getMeta().setLastUpdated(
                 Date.from(formEncounter.getLastUpdate().atZone(ZoneId.systemDefault()).toInstant())

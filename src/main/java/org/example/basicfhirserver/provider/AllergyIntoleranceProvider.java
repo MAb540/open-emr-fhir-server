@@ -9,6 +9,7 @@ import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.AllergyIntoleranceMapper;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
+import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.allergyintolerance.AllergyIntoleranceSearchCriteria;
 import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
@@ -29,6 +30,10 @@ import java.util.Set;
 import java.util.UUID;
 
 @Component
+@SupportedProfiles(
+        profile = ProfilesConstants.HL7_US_CORE_ALLERGYINTOLERANCE,
+        supported = {ProfilesConstants.HL7_US_CORE_ALLERGYINTOLERANCE}
+)
 public class AllergyIntoleranceProvider implements IResourceProvider {
 
     private final AllergyIntoleranceService allergyIntoleranceService;

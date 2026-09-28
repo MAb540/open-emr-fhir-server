@@ -15,6 +15,7 @@ import java.util.List;
 
 import static org.example.basicfhirserver.mapper.utils.FhirCodeSystemConstants.*;
 import static org.example.basicfhirserver.mapper.utils.MapperHelper.getUnknownCodeableConcept;
+import static org.example.basicfhirserver.mapper.utils.ProfilesConstants.HL7_US_CORE_MEDICATIONREQUEST;
 
 
 @Component
@@ -56,7 +57,7 @@ public class MedicationRequestMapperImpl implements MedicationRequestMapper {
 
         org.hl7.fhir.r4.model.Meta meta = new org.hl7.fhir.r4.model.Meta();
         meta.setVersionId("1");
-        meta.addProfile("http://hl7.org/fhir/us/core/StructureDefinition/us-core-medicationrequest");
+        meta.addProfile(HL7_US_CORE_MEDICATIONREQUEST);
         if (prescriptionDBRecord.getDateModified() != null) {
             meta.setLastUpdated(
                     Date.from(prescriptionDBRecord.getDateModified().atZone(ZoneId.systemDefault()).toInstant())

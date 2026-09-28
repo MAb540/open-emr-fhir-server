@@ -2,6 +2,7 @@ package org.example.basicfhirserver.mapper.impl;
 
 import org.example.basicfhirserver.mapper.AllergyIntoleranceMapper;
 import org.example.basicfhirserver.mapper.utils.CodeTypes;
+import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.repository.jdbc.allergy.AllergyDBRecord;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.utilities.xhtml.NodeType;
@@ -47,7 +48,7 @@ public class AllergyIntoleranceMapperImpl implements AllergyIntoleranceMapper {
 
         org.hl7.fhir.r4.model.Meta meta = new org.hl7.fhir.r4.model.Meta();
         meta.setVersionId("1");
-        meta.addProfile("http://hl7.org/fhir/us/core/StructureDefinition/us-core-allergyintolerance");
+        meta.addProfile(ProfilesConstants.HL7_US_CORE_ALLERGYINTOLERANCE);
         if (allergyDBRecord.getModifydate() != null) {
             meta.setLastUpdated(
                     Date.from(allergyDBRecord.getModifydate().atZone(ZoneId.systemDefault()).toInstant())
