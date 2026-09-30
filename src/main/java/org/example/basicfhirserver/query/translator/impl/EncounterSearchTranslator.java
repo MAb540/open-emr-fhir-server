@@ -20,6 +20,8 @@ public class EncounterSearchTranslator implements SearchTranslator<EncounterSear
                 .patientId(criteria.getPatient() == null ? null : List.of(criteria.getPatient().getIdPart()))
                 .date(date(criteria.getDate(), d -> d == null ? null :
                         d.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()))
+                .lastUpdated(date(criteria.getLastUpdated(), d -> d == null ? null :
+                        d.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()))
                 .count(criteria.getCount())
                 .offset(criteria.getOffset())
                 .build();

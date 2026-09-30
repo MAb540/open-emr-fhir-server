@@ -226,6 +226,55 @@ public class FormEncounterServiceImpl implements FormEncounterService {
             params.addValue("patientUuid", binaryUuids);
         }
         addDateFilter(sql, params, encounterSearchQuery);
+        addLastUpdatedFilter(sql, params, encounterSearchQuery);
+    }
+
+    private void addLastUpdatedFilter(
+            StringBuilder sql,
+            MapSqlParameterSource params,
+            EncounterSearchQuery encounterSearchQuery
+    ) {
+        if (encounterSearchQuery.getLastUpdated() == null ||
+                encounterSearchQuery.getLastUpdated().getValue() == null) {
+            return;
+        }
+
+        LocalDateTime lastUpdated =
+                encounterSearchQuery.getLastUpdated().getValue();
+
+        if (encounterSearchQuery.getLastUpdated().getPrefix() == null) {
+            sql.append(" AND fe.last_update = :lastUpdated");
+            params.addValue("lastUpdated", lastUpdated);
+            return;
+        }
+
+        switch (encounterSearchQuery.getLastUpdated().getPrefix()) {
+            case GREATERTHAN:
+                sql.append(" AND fe.last_update > :lastUpdated");
+                break;
+            case GREATERTHAN_OR_EQUALS:
+                sql.append(" AND fe.last_update >= :lastUpdated");
+                break;
+            case LESSTHAN:
+            case ENDS_BEFORE:
+                sql.append(" AND fe.last_update < :lastUpdated");
+                break;
+            case LESSTHAN_OR_EQUALS:
+                sql.append(" AND fe.last_update <= :lastUpdated");
+                break;
+            case NOT_EQUAL:
+                sql.append(" AND fe.last_update <> :lastUpdated");
+                break;
+            case STARTS_AFTER:
+                sql.append(" AND fe.last_update > :lastUpdated");
+                break;
+            case EQUAL:
+            case APPROXIMATE:
+            default:
+                sql.append(" AND fe.last_update = :lastUpdated");
+                break;
+        }
+        params.addValue("lastUpdated", lastUpdated);
     }
 
     private void addDateFilter(

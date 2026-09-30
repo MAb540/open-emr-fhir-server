@@ -61,6 +61,7 @@ public class EncounterResourceProvider implements IResourceProvider {
             @OptionalParam(name = Encounter.SP_RES_ID) TokenParam id,
             @OptionalParam(name = Encounter.SP_PATIENT) ReferenceParam patient,
             @OptionalParam(name = Encounter.SP_DATE) DateParam date,
+            @OptionalParam(name = Encounter.SP_RES_LAST_UPDATED) DateParam lastUpdated,
             @Count Integer count,
             @Offset Integer offset
     ) {
@@ -68,6 +69,7 @@ public class EncounterResourceProvider implements IResourceProvider {
                 .id(id)
                 .patient(patient)
                 .date(date)
+                .lastUpdated(lastUpdated)
                 .count(count)
                 .offset(offset)
                 .build();
