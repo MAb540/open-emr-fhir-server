@@ -104,6 +104,7 @@ public class ConditionServiceImpl implements ConditionService {
         return ConditionSearchQuery.builder()
                 .patientId(query.getPatientId())
                 .category(query.getCategory())
+                .lastUpdated(query.getLastUpdated())
                 .count(count)
                 .offset(offset)
                 .build();

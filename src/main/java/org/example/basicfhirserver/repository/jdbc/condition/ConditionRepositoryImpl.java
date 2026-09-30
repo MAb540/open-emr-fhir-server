@@ -10,6 +10,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,6 +44,7 @@ public class ConditionRepositoryImpl implements ConditionRepository {
         StringBuilder sql = conditionProblemListItemQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
         addFilterInConditionProblemListItem(sql, params, conditionSearchQuery);
+        addLastUpdatedFilter(sql, params, conditionSearchQuery);
 
         long total = countTotal(sql, params);
 
@@ -85,6 +87,54 @@ public class ConditionRepositoryImpl implements ConditionRepository {
         }
     }
 
+    private void addLastUpdatedFilter(
+            StringBuilder sql,
+            MapSqlParameterSource params,
+            ConditionSearchQuery conditionSearchQuery
+    ) {
+        if (conditionSearchQuery.getLastUpdated() == null ||
+                conditionSearchQuery.getLastUpdated().getValue() == null) {
+            return;
+        }
+
+        LocalDateTime lastUpdated =
+                conditionSearchQuery.getLastUpdated().getValue();
+
+        if (conditionSearchQuery.getLastUpdated().getPrefix() == null) {
+            sql.append(" AND l.last_updated_time = :lastUpdated");
+            params.addValue("lastUpdated", lastUpdated);
+            return;
+        }
+
+        switch (conditionSearchQuery.getLastUpdated().getPrefix()) {
+            case GREATERTHAN:
+                sql.append(" AND l.last_updated_time > :lastUpdated");
+                break;
+            case GREATERTHAN_OR_EQUALS:
+                sql.append(" AND l.last_updated_time >= :lastUpdated");
+                break;
+            case LESSTHAN:
+            case ENDS_BEFORE:
+                sql.append(" AND l.last_updated_time < :lastUpdated");
+                break;
+            case LESSTHAN_OR_EQUALS:
+                sql.append(" AND l.last_updated_time <= :lastUpdated");
+                break;
+            case NOT_EQUAL:
+                sql.append(" AND l.last_updated_time <> :lastUpdated");
+                break;
+            case STARTS_AFTER:
+                sql.append(" AND l.last_updated_time > :lastUpdated");
+                break;
+            case EQUAL:
+            case APPROXIMATE:
+            default:
+                sql.append(" AND l.last_updated_time = :lastUpdated");
+                break;
+        }
+        params.addValue("lastUpdated", lastUpdated);
+    }
+
     @Override
     public List<ConditionEncounterDiagnosisDBRecord> findConditionEncounterDiagnosisById(UUID uuid) {
         StringBuilder sql = conditionEncounterDiagnosisQuery();
@@ -103,6 +153,7 @@ public class ConditionRepositoryImpl implements ConditionRepository {
 
         StringBuilder sql = conditionEncounterDiagnosisQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
+        addLastUpdatedFilter(sql, params, conditionSearchQuery);
 
         long total = countTotal(sql, params);
 
@@ -144,6 +195,7 @@ public class ConditionRepositoryImpl implements ConditionRepository {
 
         StringBuilder sql = conditionHealthConcernQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
+        addLastUpdatedFilter(sql, params, conditionSearchQuery);
 
         long total = countTotal(sql, params);
 
@@ -399,7 +451,7 @@ public class ConditionRepositoryImpl implements ConditionRepository {
                         title AS health_concern_subtype_title
                     FROM list_options
                     WHERE list_id='Observation_Types'
-                ) AS lo_healthconcerns ON l.subtype = lo_healthconcerns.health_concern_subtype 
+                ) AS lo_healthconcerns ON l.subtype = lo_healthconcerns.health_concern_subtype WHERE 1=1
                 """);
     }
 

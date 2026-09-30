@@ -3,6 +3,7 @@ package org.example.basicfhirserver.provider;
 import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.param.DateParam;
 import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
@@ -83,6 +84,7 @@ public class ConditionResourceProvider implements IResourceProvider {
     public IBundleProvider searchConditions(
             @OptionalParam(name = MedicationRequest.SP_PATIENT) ReferenceParam patient,
             @OptionalParam(name = Observation.SP_CATEGORY) TokenParam category,
+            @OptionalParam(name = Condition.SP_RES_LAST_UPDATED) DateParam lastUpdated,
             @IncludeParam(allow = {
                     "Condition:subject",
                     "Condition:encounter"
@@ -94,6 +96,7 @@ public class ConditionResourceProvider implements IResourceProvider {
         ConditionSearchCriteria criteria = ConditionSearchCriteria.builder()
                 .patient(patient)
                 .category(category)
+                .lastUpdated(lastUpdated)
                 .count(count)
                 .offset(offset)
                 .build();

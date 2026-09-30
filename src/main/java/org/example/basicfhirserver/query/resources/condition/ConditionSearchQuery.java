@@ -1,10 +1,12 @@
 package org.example.basicfhirserver.query.resources.condition;
 
-import ca.uhn.fhir.rest.param.TokenParam;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.example.basicfhirserver.query.resources.SearchValue;
+
+import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
@@ -13,6 +15,7 @@ import lombok.NoArgsConstructor;
 public class ConditionSearchQuery {
     private String patientId;
     private String category;
+    private SearchValue<LocalDateTime> lastUpdated;
     private Integer count;
     private Integer offset;
 }
