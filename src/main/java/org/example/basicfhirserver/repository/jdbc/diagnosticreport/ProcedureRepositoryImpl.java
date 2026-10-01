@@ -302,6 +302,55 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
             params.addValue("standard_codes", codes);
         }
         addDateFilter(sql, params, diagnosticReportSearchQuery);
+        addLastUpdatedFilter(sql, params, diagnosticReportSearchQuery);
+    }
+
+    private void addLastUpdatedFilter(
+            StringBuilder sql,
+            MapSqlParameterSource params,
+            DiagnosticReportSearchQuery diagnosticReportSearchQuery
+    ) {
+        if (diagnosticReportSearchQuery.getLastUpdated() == null ||
+                diagnosticReportSearchQuery.getLastUpdated().getValue() == null) {
+            return;
+        }
+
+        LocalDateTime lastUpdated =
+                diagnosticReportSearchQuery.getLastUpdated().getValue();
+
+        if (diagnosticReportSearchQuery.getLastUpdated().getPrefix() == null) {
+            sql.append(" AND preport.report_date = :lastUpdated");
+            params.addValue("lastUpdated", lastUpdated);
+            return;
+        }
+
+        switch (diagnosticReportSearchQuery.getLastUpdated().getPrefix()) {
+            case GREATERTHAN:
+                sql.append(" AND preport.report_date > :lastUpdated");
+                break;
+            case GREATERTHAN_OR_EQUALS:
+                sql.append(" AND preport.report_date >= :lastUpdated");
+                break;
+            case LESSTHAN:
+            case ENDS_BEFORE:
+                sql.append(" AND preport.report_date < :lastUpdated");
+                break;
+            case LESSTHAN_OR_EQUALS:
+                sql.append(" AND preport.report_date <= :lastUpdated");
+                break;
+            case NOT_EQUAL:
+                sql.append(" AND preport.report_date <> :lastUpdated");
+                break;
+            case STARTS_AFTER:
+                sql.append(" AND preport.report_date > :lastUpdated");
+                break;
+            case EQUAL:
+            case APPROXIMATE:
+            default:
+                sql.append(" AND preport.report_date = :lastUpdated");
+                break;
+        }
+        params.addValue("lastUpdated", lastUpdated);
     }
 
     private void addDateFilter(

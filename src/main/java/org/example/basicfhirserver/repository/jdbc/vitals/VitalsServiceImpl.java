@@ -29,16 +29,9 @@ public class VitalsServiceImpl implements VitalsService {
         StringBuilder sql = vitalsQuery();
         MapSqlParameterSource params = new MapSqlParameterSource();
 
-        addPatientFilter(
-                sql,
+        addFilters(sql,
                 params,
-                searchQuery
-        );
-        addDateFilter(
-                sql,
-                params,
-                searchQuery
-        );
+                searchQuery);
 
         int limit = (searchQuery.getCount() != null) ? searchQuery.getCount() : 5;
         int offset = (searchQuery.getOffset() != null) ? searchQuery.getOffset() : 0;
@@ -159,25 +152,31 @@ public class VitalsServiceImpl implements VitalsService {
                 """);
     }
 
-    private void addPatientFilter(
+    private void addFilters(
             StringBuilder sql,
             MapSqlParameterSource parameters,
             ObservationSearchQuery searchQuery
     ) {
         if (searchQuery.getPatientId() == null) {
-            return;
+            sql.append("""
+                    AND patient.uuid IN (:patient_uuid)
+                    """);
+            List<byte[]> binaryUuids = searchQuery.getPatientId().stream()
+                    .map(idStr -> toBytes(UUID.fromString(idStr)))
+                    .toList();
+
+            parameters.addValue("patient_uuid",
+                    binaryUuids
+            );
         }
-        sql.append("""
-                AND patient.uuid IN (:patient_uuid)
-                """);
-
-        List<byte[]> binaryUuids = searchQuery.getPatientId().stream()
-                .map(idStr -> toBytes(UUID.fromString(idStr)))
-                .toList();
-
-        parameters.addValue("patient_uuid",
-                binaryUuids
+        addDateFilter(
+                sql,
+                parameters,
+                searchQuery
         );
+        addLastUpdatedFilter(sql,
+                parameters,
+                searchQuery);
     }
 
     private void addDateFilter(
@@ -230,6 +229,57 @@ public class VitalsServiceImpl implements VitalsService {
                 break;
         }
         parameters.addValue("date", date);
+    }
+
+    private void addLastUpdatedFilter(
+            StringBuilder sql,
+            MapSqlParameterSource parameters,
+            ObservationSearchQuery searchQuery
+    ) {
+        if (searchQuery.getLastUpdated() == null ||
+                searchQuery.getLastUpdated().getValue() == null) {
+            return;
+        }
+
+        LocalDateTime lastUpdated =
+                searchQuery.getLastUpdated().getValue();
+
+        if (searchQuery.getDate().getPrefix() == null) {
+            sql.append(" AND vitals.last_updated = :lastUpdated ");
+            parameters.addValue("lastUpdated", lastUpdated);
+            return;
+        }
+
+        switch (searchQuery.getDate().getPrefix()) {
+            case GREATERTHAN:
+                sql.append(" AND vitals.last_updated > :lastUpdated");
+                break;
+
+            case GREATERTHAN_OR_EQUALS:
+                sql.append(" AND vitals.last_updated >= :lastUpdated");
+                break;
+
+            case LESSTHAN:
+                sql.append(" AND vitals.last_updated < :lastUpdated");
+                break;
+
+            case LESSTHAN_OR_EQUALS:
+                sql.append(" AND vitals.last_updated <= :lastUpdated");
+                break;
+
+            case NOT_EQUAL:
+                sql.append(" AND vitals.last_updated <> :lastUpdated");
+                break;
+
+            case EQUAL:
+            case APPROXIMATE:
+            case STARTS_AFTER:
+            case ENDS_BEFORE:
+            default:
+                sql.append(" AND vitals.last_updated = :lastUpdated");
+                break;
+        }
+        parameters.addValue("lastUpdated", lastUpdated);
     }
 
     private RowMapper<VitalsDBRecord> vitalObservationRowMapper() {

@@ -22,6 +22,8 @@ public class DiagnosticReportSearchTranslator implements SearchTranslator<Diagno
                 .patientId(criteria.getPatient() == null ? null : criteria.getPatient().getIdPart())
                 .date(date(criteria.getDate(), d -> d == null ? null :
                         d.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()))
+                .lastUpdated(date(criteria.getLastUpdated(), d -> d == null ? null :
+                        d.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()))
                 .codes(
                         criteria.getCodes() == null
                                 ? List.of()

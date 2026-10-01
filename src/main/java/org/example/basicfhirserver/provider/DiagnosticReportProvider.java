@@ -57,6 +57,7 @@ public class DiagnosticReportProvider implements IResourceProvider {
             @OptionalParam(name = DiagnosticReport.SP_RES_ID) TokenParam id,
             @OptionalParam(name = DiagnosticReport.SP_PATIENT) ReferenceParam patient,
             @OptionalParam(name = Observation.SP_DATE) DateParam date,
+            @OptionalParam(name = DiagnosticReport.SP_RES_LAST_UPDATED) DateParam lastUpdated,
             @OptionalParam(name = Observation.SP_CODE) TokenOrListParam codes,
             @Count Integer count,
             @Offset Integer offset
@@ -65,6 +66,7 @@ public class DiagnosticReportProvider implements IResourceProvider {
                 .id(id)
                 .patient(patient)
                 .date(date)
+                .lastUpdated(lastUpdated)
                 .codes(codes)
                 .count(count)
                 .offset(offset)

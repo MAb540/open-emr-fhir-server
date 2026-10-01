@@ -17,6 +17,7 @@ public class DiagnosticReportSearchCriteria {
     private TokenParam id;
     private ReferenceParam patient;
     private DateParam date;
+    private DateParam lastUpdated;
     private TokenOrListParam codes;
     private Integer count;
     private Integer offset;
