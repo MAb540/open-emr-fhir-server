@@ -17,6 +17,7 @@ import java.util.List;
 public class PatientSearchQuery {
 
     private List<String> patientId;
+    private SearchValue<LocalDateTime> lastUpdated;
     private String identifier;
     private SearchValue<String> firstName;
     private SearchValue<String> lastName;

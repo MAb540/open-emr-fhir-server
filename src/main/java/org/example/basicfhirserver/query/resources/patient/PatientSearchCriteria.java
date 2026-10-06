@@ -11,6 +11,7 @@ import lombok.*;
 @Builder
 public class PatientSearchCriteria {
     private TokenParam id;
+    private DateParam lastUpdated;
     private TokenParam identifier;
     private StringParam family;
     private StringParam given;

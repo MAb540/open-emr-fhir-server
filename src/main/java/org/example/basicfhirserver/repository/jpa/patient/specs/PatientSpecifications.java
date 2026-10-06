@@ -29,7 +29,7 @@ public class PatientSpecifications {
 //                predicates.add(cb.equal(root.get("uuid"), UUID.fromString(query.getPatientId())));
                 CriteriaBuilder.In<UUID> inClause = cb.in(root.get("uuid"));
                 query.getPatientId().stream().map(UUID::fromString)
-                                .forEach(inClause::value);
+                        .forEach(inClause::value);
                 predicates.add(inClause);
             }
 
@@ -261,6 +261,78 @@ public class PatientSpecifications {
                                     cb.equal(
                                             root.get("deceasedDate"),
                                             deathDate.getValue()
+                                    )
+                            );
+                    }
+                }
+            }
+
+            if (query.getLastUpdated() != null) {
+                SearchValue<LocalDateTime> lastUpdated = query.getLastUpdated();
+                if (lastUpdated.getPrefix() == null) {
+                    predicates.add(
+                            cb.equal(
+                                    root.get("lastUpdated"),
+                                    lastUpdated.getValue()
+                            )
+                    );
+                } else {
+                    switch (lastUpdated.getPrefix()) {
+                        case NOT_EQUAL:
+                            predicates.add(
+                                    cb.notEqual(
+                                            root.get("lastUpdated"),
+                                            lastUpdated.getValue()
+                                    )
+                            );
+                            break;
+
+                        case LESSTHAN:
+                            predicates.add(
+                                    cb.lessThan(
+                                            root.get("lastUpdated"),
+                                            lastUpdated.getValue()
+                                    )
+                            );
+                            break;
+
+                        case GREATERTHAN:
+                            predicates.add(
+                                    cb.greaterThan(
+                                            root.get("lastUpdated"),
+                                            lastUpdated.getValue()
+                                    )
+                            );
+                            break;
+
+                        case GREATERTHAN_OR_EQUALS:
+                            predicates.add(
+                                    cb.greaterThanOrEqualTo(
+                                            root.get("lastUpdated"),
+                                            lastUpdated.getValue()
+                                    )
+                            );
+                            break;
+
+
+                        case LESSTHAN_OR_EQUALS:
+                            predicates.add(
+                                    cb.lessThanOrEqualTo(
+                                            root.get("lastUpdated"),
+                                            lastUpdated.getValue()
+                                    )
+                            );
+                            break;
+
+                        case EQUAL:
+                        case APPROXIMATE:
+                        case STARTS_AFTER:
+                        case ENDS_BEFORE:
+                        default:
+                            predicates.add(
+                                    cb.equal(
+                                            root.get("lastUpdated"),
+                                            lastUpdated.getValue()
                                     )
                             );
                     }

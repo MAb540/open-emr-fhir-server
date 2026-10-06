@@ -17,7 +17,9 @@ public class PatientSearchTranslator implements SearchTranslator<PatientSearchQu
     public PatientSearchQuery translate(PatientSearchCriteria criteria) {
 
         return PatientSearchQuery.builder()
-                .patientId(List.of(token(criteria.getId())))
+                .patientId(criteria.getId() != null ? List.of(token(criteria.getId())) : List.of())
+                .lastUpdated(date(criteria.getLastUpdated(), d -> d == null ? null :
+                        d.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()))
                 .identifier(token(criteria.getIdentifier()))
                 .firstName(stringMatch(criteria.getGiven()))
                 .lastName(stringMatch(criteria.getFamily()))

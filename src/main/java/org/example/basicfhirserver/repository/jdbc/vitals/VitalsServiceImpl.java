@@ -157,7 +157,7 @@ public class VitalsServiceImpl implements VitalsService {
             MapSqlParameterSource parameters,
             ObservationSearchQuery searchQuery
     ) {
-        if (searchQuery.getPatientId() == null) {
+        if (searchQuery.getPatientId() != null && !searchQuery.getPatientId().isEmpty()) {
             sql.append("""
                     AND patient.uuid IN (:patient_uuid)
                     """);

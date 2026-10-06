@@ -1,7 +1,6 @@
 package org.example.basicfhirserver.provider;
 
 import ca.uhn.fhir.model.api.Include;
-import ca.uhn.fhir.model.api.annotation.Description;
 import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.DateParam;

@@ -51,7 +51,6 @@ public class PatientServiceImpl implements PatientService {
                         offset / limit,
                         limit
                 );
-
         return patientRepository.findAll(spec, pageable);
     }
 }

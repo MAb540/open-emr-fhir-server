@@ -17,7 +17,7 @@ import java.util.List;
 @Configuration
 public class FhirServerConfig {
 
-    private final String BASE_IG = "http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core";
+    private final String SUPPORTED_IG = "http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core";
 
     @Bean
     public ServletRegistrationBean<RestfulServer> fhirServerServlet(
@@ -30,6 +30,7 @@ public class FhirServerConfig {
             AllergyIntoleranceProvider allergyIntoleranceProvider,
             ConditionResourceProvider conditionResourceProvider,
             DiagnosticReportProvider diagnosticReportProvider,
+            BulkExportPollProvider bulkExportPollProvider,
             FhirContextConfig fhirContextConfig,
             RequestValidatingInterceptor validatingInterceptor) {
 
@@ -47,6 +48,7 @@ public class FhirServerConfig {
                 diagnosticReportProvider,
                 conditionResourceProvider
         ));
+        servlet.registerProvider(bulkExportPollProvider);
 
         CustomSecurityInterceptor customSecurityInterceptor = new CustomSecurityInterceptor();
 
@@ -58,7 +60,7 @@ public class FhirServerConfig {
 
                 cs.setPublisher("OpenEMR FHIR Facade Platform");
                 cs.setName("US-Core-Compliant-Facade-Engine");
-                cs.setImplementationGuide(List.of(new CanonicalType(BASE_IG)));
+                cs.setImplementationGuide(List.of(new CanonicalType(SUPPORTED_IG)));
 
                 cs.getRestFirstRep().getResource().forEach(resource -> {
                     servlet.getResourceProviders().stream()

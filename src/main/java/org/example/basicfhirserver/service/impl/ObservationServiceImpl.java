@@ -53,9 +53,7 @@ public class ObservationServiceImpl implements ObservationService {
 
     @Override
     public List<VitalObservation> find(ObservationSearchQuery observationSearchQuery) {
-
         List<VitalsDBRecord> vitalRows = vitalService.findVitals(observationSearchQuery);
-
         if (vitalRows.isEmpty()) {
             return List.of();
         }

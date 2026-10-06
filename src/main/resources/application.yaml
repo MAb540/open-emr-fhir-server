@@ -8,3 +8,17 @@ spring:
     username: root
     password: root
     driver-class-name: org.mariadb.jdbc.Driver
+
+jobrunr:
+  background-job-server:
+    enabled: true
+  dashboard:
+    enabled: true
+    port: 8000
+
+#logging:
+#  structured:
+#    format:
+#      console: ecs  # Outputs structured JSON to the console
+#  level:
+#    org.example.basicfhirserver: DEBUG

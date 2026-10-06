@@ -2,19 +2,24 @@ package org.example.basicfhirserver.provider;
 
 import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.annotation.*;
-import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.DateParam;
 import ca.uhn.fhir.rest.param.StringParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
+import jakarta.servlet.http.HttpServletResponse;
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
+import org.example.basicfhirserver.exceptions.BulkExportValidationException;
+import org.example.basicfhirserver.jobs.export.FhirExportService;
 import org.example.basicfhirserver.mapper.EncounterMapper;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.mapper.ObservationMapper;
 import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.model.FormEncounter;
 import org.example.basicfhirserver.model.VitalObservation;
+import org.example.basicfhirserver.provider.parsers.BulkExportRequestParser;
+import org.example.basicfhirserver.provider.parsers.ParsedExportRequest;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.provider.validator.FhirResponseValidationService;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
@@ -25,19 +30,22 @@ import org.example.basicfhirserver.service.EncounterService;
 import org.example.basicfhirserver.service.ObservationService;
 import org.example.basicfhirserver.service.PatientService;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.CanonicalType;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Patient;
+import org.jobrunr.jobs.JobId;
+import org.jobrunr.jobs.context.JobContext;
+import org.jobrunr.scheduling.JobScheduler;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+
+import static org.example.basicfhirserver.jobs.export.FhirExportServiceConstants.ExportPollEndpointWithParams;
 
 @Component
 @SupportedProfiles(
@@ -55,6 +63,10 @@ public class PatientResourceProvider implements IResourceProvider {
     private final EncounterService encounterService;
     private final EncounterMapper encounterMapper;
 
+    @Autowired
+    private JobScheduler jobScheduler;
+    private final FhirExportService fhirExportService;
+
     public PatientResourceProvider(
             LegacyPatientMapper legacyPatientMapper,
             PatientSearchTranslator patientSearchTranslator,
@@ -63,7 +75,8 @@ public class PatientResourceProvider implements IResourceProvider {
             @Qualifier("ObservationServiceImpl") ObservationService observationService,
             ObservationMapper observationMapper,
             EncounterService encounterService,
-            EncounterMapper encounterMapper
+            EncounterMapper encounterMapper,
+            FhirExportService fhirExportService
     ) {
         this.legacyPatientMapper = legacyPatientMapper;
         this.patientSearchTranslator = patientSearchTranslator;
@@ -73,6 +86,7 @@ public class PatientResourceProvider implements IResourceProvider {
         this.observationMapper = observationMapper;
         this.encounterService = encounterService;
         this.encounterMapper = encounterMapper;
+        this.fhirExportService = fhirExportService;
     }
 
     @Override
@@ -89,12 +103,14 @@ public class PatientResourceProvider implements IResourceProvider {
     @Search()
     public IBundleProvider searchPatients(
             @OptionalParam(name = Patient.SP_RES_ID) TokenParam id,
+            @OptionalParam(name = Patient.SP_RES_LAST_UPDATED) DateParam lastUpdated,
             @OptionalParam(name = Patient.SP_IDENTIFIER) TokenParam identifier,
             @OptionalParam(name = Patient.SP_FAMILY) StringParam family,
             @OptionalParam(name = Patient.SP_GIVEN) StringParam given,
             @OptionalParam(name = Patient.SP_NAME) StringParam name,
             @OptionalParam(name = Patient.SP_BIRTHDATE) DateParam birthDate,
             @OptionalParam(name = Patient.SP_DEATH_DATE) DateParam deathDate,
+
             @IncludeParam(allow = {
                     "Patient:organization",
                     "Patient:general-practitioner"
@@ -111,6 +127,7 @@ public class PatientResourceProvider implements IResourceProvider {
     ) {
         PatientSearchCriteria criteria = PatientSearchCriteria.builder()
                 .id(id)
+                .lastUpdated(lastUpdated)
                 .identifier(identifier)
                 .family(family)
                 .given(given)
@@ -167,6 +184,7 @@ public class PatientResourceProvider implements IResourceProvider {
         int currentOffset = offset != null ? offset : 0;
         int currentPageSize = legacyPatientEntities.getContent().size();
 
+
         return new BundleProvider(
                 primaryPatients,
                 includedResources,
@@ -187,31 +205,40 @@ public class PatientResourceProvider implements IResourceProvider {
 //                }).toList();
     }
 
-    @Create
-    public MethodOutcome createPatient(@ResourceParam Patient incomingPatient) {
-        // Extract raw primitives from the incoming structural FHIR model
-        String familyName = incomingPatient.hasName() ? incomingPatient.getNameFirstRep().getFamily() : "UNKNOWN";
-        String givenName = incomingPatient.hasName() ? incomingPatient.getNameFirstRep().getGivenAsSingleString() : "UNKNOWN";
+    @Operation(name = "$export", type = Patient.class, idempotent = true, manualResponse = true)
+    public void patientExport(
+            RequestDetails theRequestDetails,
+            HttpServletResponse theServletResponse
+    ) throws Exception {
 
-        List<CanonicalType> profiles = incomingPatient.getMeta().getProfile();
+        try {
+            BulkExportRequestParser bulkExportRequestParser = new BulkExportRequestParser(fhirExportService.supportedExportResources());
+            ParsedExportRequest parsedRequest = bulkExportRequestParser.parseAndValidate(theRequestDetails);
 
-        for (CanonicalType p : profiles) {
-            System.out.println("profile value " + p.getValueAsString());
+            JobId jobId = jobScheduler.enqueue(() -> fhirExportService.executeBulkExport(JobContext.Null,
+                    parsedRequest.resourcesToExport(),
+                    parsedRequest.parsedSince()));
+
+            String serverBaseUrl = theRequestDetails.getFhirServerBase();
+            String pollingUrl = serverBaseUrl + ExportPollEndpointWithParams + jobId;
+
+            theServletResponse.setStatus(HttpServletResponse.SC_ACCEPTED);
+            theServletResponse.setHeader("Content-Location", pollingUrl);
+            theServletResponse.getWriter().close();
+
+        } catch (BulkExportValidationException e) {
+            theServletResponse.setStatus(e.getStatusCode());
+            theServletResponse.setContentType("application/fhir+json;charset=UTF-8");
+            String escapedError = e.getMessage().replace("\"", "\\\"");
+            theServletResponse.getWriter().write(
+                    "{\"resourceType\":\"OperationOutcome\",\"issue\":[{\"severity\":\"error\",\"code\":\"value\",\"diagnostics\":\"" + escapedError + "\"}]}"
+            );
+            theServletResponse.getWriter().close();
+
+        } catch (Exception e) {
+            theServletResponse.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            theServletResponse.getWriter().close();
         }
-
-        boolean isUsCore = profiles.stream()
-                .anyMatch(p -> p.getValueAsString().contains("us-core-patient"));
-
-        LocalDate dob = null;
-        if (incomingPatient.hasBirthDate()) {
-            dob = incomingPatient.getBirthDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-        }
-
-        String genderString = incomingPatient.hasGender() ? incomingPatient.getGender().toCode() : "unknown";
-//        String assignedLegacyId = legacyStorage.savePatient(givenName, familyName, dob, genderString);
-        MethodOutcome outcome = new MethodOutcome();
-        outcome.setId(new IdType("Patient", "1"));
-        return outcome;
     }
 
 }
