@@ -3,6 +3,7 @@ package org.example.basicfhirserver.provider;
 import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.param.DateParam;
 import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
@@ -70,6 +71,7 @@ public class AllergyIntoleranceProvider implements IResourceProvider {
     public IBundleProvider searchAllergyIntolerance(
             @OptionalParam(name = AllergyIntolerance.SP_RES_ID) TokenParam id,
             @OptionalParam(name = MedicationRequest.SP_PATIENT) ReferenceParam patient,
+            @OptionalParam(name = AllergyIntolerance.SP_RES_LAST_UPDATED) DateParam lastUpdated,
             @IncludeParam(allow = {
                     "AllergyIntolerance:patient"
             })
@@ -80,6 +82,7 @@ public class AllergyIntoleranceProvider implements IResourceProvider {
         AllergyIntoleranceSearchCriteria criteria = AllergyIntoleranceSearchCriteria.builder()
                 .id(id)
                 .patient(patient)
+                .lastUpdated(lastUpdated)
                 .count(count)
                 .offset(offset)
                 .build();

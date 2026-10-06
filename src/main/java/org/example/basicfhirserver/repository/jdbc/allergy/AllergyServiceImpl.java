@@ -4,12 +4,12 @@ import org.example.basicfhirserver.query.resources.allergyintolerance.AllergyInt
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -184,6 +184,55 @@ public class AllergyServiceImpl implements AllergyService {
             params.addValue("patientUuid", binaryUuid);
         }
 
+        addLastUpdatedFilter(sql, params, allergyIntoleranceSearchQuery);
+    }
+
+    private void addLastUpdatedFilter(
+            StringBuilder sql,
+            MapSqlParameterSource params,
+            AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery
+    ) {
+        if (allergyIntoleranceSearchQuery.getLastUpdated() == null ||
+                allergyIntoleranceSearchQuery.getLastUpdated().getValue() == null) {
+            return;
+        }
+
+        LocalDateTime lastUpdated =
+                allergyIntoleranceSearchQuery.getLastUpdated().getValue();
+
+        if (allergyIntoleranceSearchQuery.getLastUpdated().getPrefix() == null) {
+            sql.append(" AND lists.modifydate = :lastUpdated");
+            params.addValue("lastUpdated", lastUpdated);
+            return;
+        }
+
+        switch (allergyIntoleranceSearchQuery.getLastUpdated().getPrefix()) {
+            case GREATERTHAN:
+                sql.append(" AND lists.modifydate > :lastUpdated");
+                break;
+            case GREATERTHAN_OR_EQUALS:
+                sql.append(" AND lists.modifydate >= :lastUpdated");
+                break;
+            case LESSTHAN:
+            case ENDS_BEFORE:
+                sql.append(" AND lists.modifydate < :lastUpdated");
+                break;
+            case LESSTHAN_OR_EQUALS:
+                sql.append(" AND lists.modifydate <= :lastUpdated");
+                break;
+            case NOT_EQUAL:
+                sql.append(" AND lists.modifydate <> :lastUpdated");
+                break;
+            case STARTS_AFTER:
+                sql.append(" AND lists.modifydate > :lastUpdated");
+                break;
+            case EQUAL:
+            case APPROXIMATE:
+            default:
+                sql.append(" AND lists.modifydate = :lastUpdated");
+                break;
+        }
+        params.addValue("lastUpdated", lastUpdated);
     }
 
     private RowMapper<AllergyDBRecord> allergyDBRecordRowMapper() {
