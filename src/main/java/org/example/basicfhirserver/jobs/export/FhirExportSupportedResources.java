@@ -4,15 +4,14 @@ import lombok.Getter;
 
 @Getter
 public enum FhirExportSupportedResources {
-    PATIENT("Patient"),
-    OBSERVATION("Observation"),
-    CONDITION("Condition"),
-    ENCOUNTER("Encounter");
+  PATIENT("Patient"),
+  OBSERVATION("Observation"),
+  CONDITION("Condition"),
+  ENCOUNTER("Encounter");
 
-    private final String value;
+  private final String value;
 
-    FhirExportSupportedResources(String value) {
-        this.value = value;
-    }
-
+  FhirExportSupportedResources(String value) {
+    this.value = value;
+  }
 }

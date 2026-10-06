@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
-
 import lombok.extern.slf4j.Slf4j;
 import org.example.basicfhirserver.config.FhirContextConfig;
 import org.example.basicfhirserver.domain.entities.ExportJobFilesEntity;
@@ -77,11 +76,10 @@ public class FhirExportService {
     this.exportJobFilesService = exportJobFilesService;
   }
 
-
-
   public List<String> supportedExportResources() {
     return Stream.of(FhirExportSupportedResources.values())
-                    .map(FhirExportSupportedResources::getValue).toList();
+        .map(FhirExportSupportedResources::getValue)
+        .toList();
   }
 
   @Job(name = "FHIR Bulk Data Export for job %0")
@@ -96,7 +94,7 @@ public class FhirExportService {
       createExportFilesDir();
       SearchValue<LocalDateTime> parsedSince = parseSinceParameter(since);
 
-      if (supportedResources.contains( FhirExportSupportedResources.PATIENT.getValue() ) ) {
+      if (supportedResources.contains(FhirExportSupportedResources.PATIENT.getValue())) {
         ExportPatients(jobID, parsedSince);
       }
 
@@ -104,7 +102,7 @@ public class FhirExportService {
         ExportObservations(jobID, parsedSince);
       }
 
-      if(supportedResources.contains(FhirExportSupportedResources.ENCOUNTER.getValue())){
+      if (supportedResources.contains(FhirExportSupportedResources.ENCOUNTER.getValue())) {
         ExportEncounters(jobID, parsedSince);
       }
 
@@ -253,14 +251,14 @@ public class FhirExportService {
     boolean hasMoreData = true;
 
     try (BufferedWriter writer =
-                 new BufferedWriter(new FileWriter(filePath.toFile()), FILE_BUFFER_SIZE)) {
+        new BufferedWriter(new FileWriter(filePath.toFile()), FILE_BUFFER_SIZE)) {
       while (hasMoreData) {
         EncounterSearchQuery query =
-                EncounterSearchQuery.builder()
-                        .lastUpdated(since)
-                        .count(BATCH_SIZE)
-                        .offset(offset)
-                        .build();
+            EncounterSearchQuery.builder()
+                .lastUpdated(since)
+                .count(BATCH_SIZE)
+                .offset(offset)
+                .build();
 
         Page<FormEncounter> page = encounterService.find(query);
         List<FormEncounter> content = page.getContent();
@@ -277,24 +275,24 @@ public class FhirExportService {
           writer.newLine();
         }
         log.debug(
-                "JobID {}: Encounter export job exported {} records (Current offset: {})",
-                jobID,
-                content.size(),
-                offset);
+            "JobID {}: Encounter export job exported {} records (Current offset: {})",
+            jobID,
+            content.size(),
+            offset);
 
         offset += BATCH_SIZE;
         hasMoreData = page.hasNext();
       }
 
       log.info(
-              "JobID {}: Encounter export job NDJSON file written successfully to {}", jobID, filePath);
+          "JobID {}: Encounter export job NDJSON file written successfully to {}", jobID, filePath);
       ExportJobFilesEntity exportJobFilesEntity =
-              ExportJobFilesEntity.builder()
-                      .jobUuid(jobID)
-                      .fileId(filePath.toString())
-                      .resourceType("Patient")
-                      .createdAt(LocalDateTime.now())
-                      .build();
+          ExportJobFilesEntity.builder()
+              .jobUuid(jobID)
+              .fileId(filePath.toString())
+              .resourceType("Patient")
+              .createdAt(LocalDateTime.now())
+              .build();
 
       exportJobFilesService.save(exportJobFilesEntity);
       log.info("JobID {}: Encounter export job metadata saved successfully.", jobID);
@@ -307,7 +305,6 @@ public class FhirExportService {
       throw new RuntimeException(e);
     }
   }
-
 
   private void createExportFilesDir() {
     try {
@@ -322,7 +319,4 @@ public class FhirExportService {
   public Path getExportFileRootPath() {
     return Paths.get(EXPORT_FILE_PATH);
   }
-
-
-
 }
