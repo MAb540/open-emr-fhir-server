@@ -5,6 +5,5 @@ import org.hl7.fhir.r4.model.Encounter;
 
 public interface EncounterMapper extends ResourceMapper<Encounter, FormEncounter> {
 
-    Encounter toR4(FormEncounter formEncounter);
-
+  Encounter toR4(FormEncounter formEncounter);
 }

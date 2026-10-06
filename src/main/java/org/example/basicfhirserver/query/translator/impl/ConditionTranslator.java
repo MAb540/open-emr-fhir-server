@@ -1,26 +1,31 @@
 package org.example.basicfhirserver.query.translator.impl;
 
+import static org.example.basicfhirserver.query.translator.utils.TranslatorUtils.date;
+
+import java.time.ZoneId;
 import org.example.basicfhirserver.query.resources.condition.ConditionSearchCriteria;
 import org.example.basicfhirserver.query.resources.condition.ConditionSearchQuery;
 import org.example.basicfhirserver.query.translator.SearchTranslator;
 import org.springframework.stereotype.Component;
 
-import java.time.ZoneId;
-
-import static org.example.basicfhirserver.query.translator.utils.TranslatorUtils.date;
-
 @Component
-public class ConditionTranslator implements SearchTranslator<ConditionSearchQuery, ConditionSearchCriteria> {
+public class ConditionTranslator
+    implements SearchTranslator<ConditionSearchQuery, ConditionSearchCriteria> {
 
-    @Override
-    public ConditionSearchQuery translate(ConditionSearchCriteria criteria) {
-        return ConditionSearchQuery.builder()
-                .patientId(criteria.getPatient() == null ? null : criteria.getPatient().getIdPart())
-                .category(criteria.getCategory() == null ? null : criteria.getCategory().getValue())
-                .lastUpdated(date(criteria.getLastUpdated(), d -> d == null ? null :
-                        d.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()))
-                .count(criteria.getCount())
-                .offset(criteria.getOffset())
-                .build();
-    }
+  @Override
+  public ConditionSearchQuery translate(ConditionSearchCriteria criteria) {
+    return ConditionSearchQuery.builder()
+        .patientId(criteria.getPatient() == null ? null : criteria.getPatient().getIdPart())
+        .category(criteria.getCategory() == null ? null : criteria.getCategory().getValue())
+        .lastUpdated(
+            date(
+                criteria.getLastUpdated(),
+                d ->
+                    d == null
+                        ? null
+                        : d.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()))
+        .count(criteria.getCount())
+        .offset(criteria.getOffset())
+        .build();
+  }
 }

@@ -8,16 +8,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 public class MedicationRequestSearchCriteria {
-    private TokenOrListParam intent;
-    private ReferenceParam patient;
-    private StringParam status;
-    private Integer count;
-    private Integer offset;
+  private TokenOrListParam intent;
+  private ReferenceParam patient;
+  private StringParam status;
+  private Integer count;
+  private Integer offset;
 }
-

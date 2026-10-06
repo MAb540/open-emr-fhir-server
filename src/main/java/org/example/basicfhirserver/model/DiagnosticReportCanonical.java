@@ -7,6 +7,6 @@ import org.springframework.data.domain.Page;
 
 @Value
 public class DiagnosticReportCanonical {
-    Page<ClinicalNotesDBRecord> notes;
-    Page<ProcedureDBRecord> procedures;
+  Page<ClinicalNotesDBRecord> notes;
+  Page<ProcedureDBRecord> procedures;
 }

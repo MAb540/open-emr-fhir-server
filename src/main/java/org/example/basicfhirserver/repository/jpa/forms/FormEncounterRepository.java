@@ -6,6 +6,6 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface FormEncounterRepository extends JpaRepository<FormEncounterEntity, Long>,
-        JpaSpecificationExecutor<FormEncounterEntity> {
-}
+public interface FormEncounterRepository
+    extends JpaRepository<FormEncounterEntity, Long>,
+        JpaSpecificationExecutor<FormEncounterEntity> {}

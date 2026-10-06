@@ -1,5 +1,9 @@
 package org.example.basicfhirserver.mapper.impl;
 
+import java.time.ZoneId;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 import org.example.basicfhirserver.mapper.PractitionerMapper;
 import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.hl7.fhir.r4.model.*;
@@ -7,146 +11,156 @@ import org.hl7.fhir.utilities.xhtml.NodeType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import org.springframework.stereotype.Component;
 
-import java.time.ZoneId;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-
 @Component
 public class PractitionerMapperImpl implements PractitionerMapper {
 
-    @Override
-    public Practitioner toR4(org.example.basicfhirserver.model.Practitioner userPractitioner) {
-        Practitioner practitioner = new Practitioner();
+  @Override
+  public Practitioner toR4(org.example.basicfhirserver.model.Practitioner userPractitioner) {
+    Practitioner practitioner = new Practitioner();
 
-        practitioner.getMeta()
-                .addProfile(ProfilesConstants.HL7_US_CORE_PRACTITIONER)
-                .setVersionId("1")
-                .setLastUpdated(
-                        Date.from(userPractitioner.getLastUpdated().atZone(ZoneId.systemDefault()).toInstant())
-                );
+    practitioner
+        .getMeta()
+        .addProfile(ProfilesConstants.HL7_US_CORE_PRACTITIONER)
+        .setVersionId("1")
+        .setLastUpdated(
+            Date.from(
+                userPractitioner.getLastUpdated().atZone(ZoneId.systemDefault()).toInstant()));
 
-        practitioner.setId(userPractitioner.getUuid().toString());
-        practitioner.setActive(userPractitioner.getActive());
-        practitioner.setName(Collections.singletonList(createHumanNameFromRecord(userPractitioner)));
+    practitioner.setId(userPractitioner.getUuid().toString());
+    practitioner.setActive(userPractitioner.getActive());
+    practitioner.setName(Collections.singletonList(createHumanNameFromRecord(userPractitioner)));
 
-        Narrative narrative = new Narrative()
-                .setStatus(Narrative.NarrativeStatus.GENERATED)
-                .setDiv(new XhtmlNode(NodeType.Element, "div")
-                        .setValue(userPractitioner.getFirstName() + " " + userPractitioner.getLastName()));
-        practitioner.setText(narrative);
+    Narrative narrative =
+        new Narrative()
+            .setStatus(Narrative.NarrativeStatus.GENERATED)
+            .setDiv(
+                new XhtmlNode(NodeType.Element, "div")
+                    .setValue(
+                        userPractitioner.getFirstName() + " " + userPractitioner.getLastName()));
+    practitioner.setText(narrative);
 
-        practitioner.setAddress(normalizeAddress(userPractitioner));
-        practitioner.setTelecom(normalizeContactPoint(userPractitioner));
+    practitioner.setAddress(normalizeAddress(userPractitioner));
+    practitioner.setTelecom(normalizeContactPoint(userPractitioner));
 
-        if (userPractitioner.getNpi() != null) {
-            practitioner.addIdentifier(
-                    new Identifier()
-                            .setSystem("http://hl7.org/fhir/sid/us-npi")
-                            .setValue(userPractitioner.getNpi())
-            );
-        } else {
-            Identifier missingIdentifier = new Identifier();
-            missingIdentifier.setSystem("http://hl7.org/fhir/sid/us-npi");
-            missingIdentifier.getValueElement().addExtension(
-                    new Extension()
-                            .setUrl("http://hl7.org/fhir/StructureDefinition/data-absent-reason")
-                            .setValue(new CodeType("unknown"))
-            );
-            practitioner.addIdentifier(missingIdentifier);
-        }
-
-
-        return practitioner;
-
+    if (userPractitioner.getNpi() != null) {
+      practitioner.addIdentifier(
+          new Identifier()
+              .setSystem("http://hl7.org/fhir/sid/us-npi")
+              .setValue(userPractitioner.getNpi()));
+    } else {
+      Identifier missingIdentifier = new Identifier();
+      missingIdentifier.setSystem("http://hl7.org/fhir/sid/us-npi");
+      missingIdentifier
+          .getValueElement()
+          .addExtension(
+              new Extension()
+                  .setUrl("http://hl7.org/fhir/StructureDefinition/data-absent-reason")
+                  .setValue(new CodeType("unknown")));
+      practitioner.addIdentifier(missingIdentifier);
     }
 
-    private List<ContactPoint> normalizeContactPoint(org.example.basicfhirserver.model.Practitioner userPractitioner) {
+    return practitioner;
+  }
 
-        List<org.example.basicfhirserver.model.Practitioner.TelecomItem> telecomItems = userPractitioner.getTelecoms();
-        if (telecomItems == null) {
-            return new java.util.ArrayList<>();
-        }
+  private List<ContactPoint> normalizeContactPoint(
+      org.example.basicfhirserver.model.Practitioner userPractitioner) {
 
-        return telecomItems.stream().map(item -> {
-            ContactPoint contactPointPhone = new ContactPoint();
+    List<org.example.basicfhirserver.model.Practitioner.TelecomItem> telecomItems =
+        userPractitioner.getTelecoms();
+    if (telecomItems == null) {
+      return new java.util.ArrayList<>();
+    }
 
-            if (item.getSystem() != null) {
+    return telecomItems.stream()
+        .map(
+            item -> {
+              ContactPoint contactPointPhone = new ContactPoint();
+
+              if (item.getSystem() != null) {
                 String systemStr = item.getSystem().toLowerCase().trim();
                 try {
-                    contactPointPhone.setSystem(ContactPoint.ContactPointSystem.fromCode(systemStr));
+                  contactPointPhone.setSystem(ContactPoint.ContactPointSystem.fromCode(systemStr));
                 } catch (Exception e) {
-                    contactPointPhone.setSystem(ContactPoint.ContactPointSystem.PHONE);
+                  contactPointPhone.setSystem(ContactPoint.ContactPointSystem.PHONE);
                 }
-            }
+              }
 
-            if (item.getUse() != null) {
+              if (item.getUse() != null) {
                 String useStr = item.getUse().toLowerCase().trim();
                 try {
-                    contactPointPhone.setUse(ContactPoint.ContactPointUse.fromCode(useStr));
+                  contactPointPhone.setUse(ContactPoint.ContactPointUse.fromCode(useStr));
                 } catch (Exception e) {
-                    contactPointPhone.setUse(ContactPoint.ContactPointUse.WORK);
+                  contactPointPhone.setUse(ContactPoint.ContactPointUse.WORK);
                 }
-            }
-            contactPointPhone.setValue(item.getValue());
-            return contactPointPhone;
-        }).toList();
+              }
+              contactPointPhone.setValue(item.getValue());
+              return contactPointPhone;
+            })
+        .toList();
+  }
+
+  private List<Address> normalizeAddress(
+      org.example.basicfhirserver.model.Practitioner userPractitioner) {
+    if (userPractitioner == null || userPractitioner.getAddresses() == null) {
+      return new java.util.ArrayList<>();
     }
 
-    private List<Address> normalizeAddress(org.example.basicfhirserver.model.Practitioner userPractitioner) {
-        if (userPractitioner == null || userPractitioner.getAddresses() == null) {
-            return new java.util.ArrayList<>();
-        }
+    return userPractitioner.getAddresses().stream()
+        .filter(java.util.Objects::nonNull)
+        .map(
+            item -> {
+              Address address = new Address();
 
-        return userPractitioner.getAddresses().stream()
-                .filter(java.util.Objects::nonNull)
-                .map(item -> {
-                    Address address = new Address();
+              List<StringType> lines =
+                  java.util.stream.Stream.of(item.getLine1(), item.getLine2())
+                      .filter(line -> line != null && !line.trim().isEmpty())
+                      .map(StringType::new)
+                      .toList();
 
-                    List<StringType> lines = java.util.stream.Stream.of(item.getLine1(), item.getLine2())
-                            .filter(line -> line != null && !line.trim().isEmpty())
-                            .map(StringType::new)
-                            .toList();
+              if (!lines.isEmpty()) {
+                address.setLine(lines);
+              }
 
-                    if (!lines.isEmpty()) {
-                        address.setLine(lines);
-                    }
+              address.setCity(item.getCity());
+              address.setState(item.getState());
+              address.setPostalCode(item.getPostalCode());
+              address.setCountry(item.getCountry());
 
-                    address.setCity(item.getCity());
-                    address.setState(item.getState());
-                    address.setPostalCode(item.getPostalCode());
-                    address.setCountry(item.getCountry());
+              return address;
+            })
+        .toList();
+  }
 
-                    return address;
-                })
-                .toList();
+  private HumanName createHumanNameFromRecord(
+      org.example.basicfhirserver.model.Practitioner userPractitioner) {
+    HumanName name = new HumanName();
+    name.setUse(HumanName.NameUse.OFFICIAL);
+
+    if (userPractitioner.getPhysicianTypeTitle() != null
+        && !userPractitioner.getPhysicianTypeTitle().trim().isEmpty()) {
+      name.addPrefix(userPractitioner.getPhysicianTypeTitle());
     }
 
-    private HumanName createHumanNameFromRecord(org.example.basicfhirserver.model.Practitioner userPractitioner) {
-        HumanName name = new HumanName();
-        name.setUse(HumanName.NameUse.OFFICIAL);
-
-        if (userPractitioner.getPhysicianTypeTitle() != null && !userPractitioner.getPhysicianTypeTitle().trim().isEmpty()) {
-            name.addPrefix(userPractitioner.getPhysicianTypeTitle());
-        }
-
-        if (userPractitioner.getLastName() != null && !userPractitioner.getLastName().trim().isEmpty()) {
-            name.setFamily(userPractitioner.getLastName());
-        }
-
-        if (userPractitioner.getFirstName() != null && !userPractitioner.getFirstName().trim().isEmpty()) {
-            name.addGiven(userPractitioner.getFirstName());
-        }
-
-        if (userPractitioner.getMiddleName() != null && !userPractitioner.getMiddleName().trim().isEmpty()) {
-            name.addGiven(userPractitioner.getMiddleName());
-        }
-
-        String textLname = userPractitioner.getLastName() != null ? userPractitioner.getLastName() : "";
-        String textFname = userPractitioner.getFirstName() != null ? userPractitioner.getFirstName() : "";
-        name.setText((textLname + " " + textFname).trim());
-
-        return name;
+    if (userPractitioner.getLastName() != null
+        && !userPractitioner.getLastName().trim().isEmpty()) {
+      name.setFamily(userPractitioner.getLastName());
     }
 
+    if (userPractitioner.getFirstName() != null
+        && !userPractitioner.getFirstName().trim().isEmpty()) {
+      name.addGiven(userPractitioner.getFirstName());
+    }
+
+    if (userPractitioner.getMiddleName() != null
+        && !userPractitioner.getMiddleName().trim().isEmpty()) {
+      name.addGiven(userPractitioner.getMiddleName());
+    }
+
+    String textLname = userPractitioner.getLastName() != null ? userPractitioner.getLastName() : "";
+    String textFname =
+        userPractitioner.getFirstName() != null ? userPractitioner.getFirstName() : "";
+    name.setText((textLname + " " + textFname).trim());
+
+    return name;
+  }
 }

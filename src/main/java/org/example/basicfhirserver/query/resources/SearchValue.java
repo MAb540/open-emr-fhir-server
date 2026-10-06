@@ -14,15 +14,13 @@ import lombok.extern.jackson.Jacksonized;
 @AllArgsConstructor
 public class SearchValue<T> {
 
-    private ParamPrefixEnum prefix;
+  private ParamPrefixEnum prefix;
 
-    private boolean contains;
+  private boolean contains;
 
-    private boolean exact;
+  private boolean exact;
 
-    private String system;
+  private String system;
 
-    private T value;
+  private T value;
 }
-
-

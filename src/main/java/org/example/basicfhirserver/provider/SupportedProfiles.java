@@ -8,6 +8,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface SupportedProfiles {
-    String profile() default "";
-    String[] supported() default {};
+  String profile() default "";
+
+  String[] supported() default {};
 }

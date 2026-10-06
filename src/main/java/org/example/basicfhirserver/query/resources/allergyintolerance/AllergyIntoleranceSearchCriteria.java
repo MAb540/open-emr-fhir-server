@@ -8,16 +8,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 public class AllergyIntoleranceSearchCriteria {
-    private TokenParam id;
-    private ReferenceParam patient;
-    private DateParam lastUpdated;
-    private Integer count;
-    private Integer offset;
+  private TokenParam id;
+  private ReferenceParam patient;
+  private DateParam lastUpdated;
+  private Integer count;
+  private Integer offset;
 }
-

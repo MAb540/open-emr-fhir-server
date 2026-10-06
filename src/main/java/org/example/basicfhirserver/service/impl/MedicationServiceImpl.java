@@ -1,6 +1,8 @@
 package org.example.basicfhirserver.service.impl;
 
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import java.util.List;
+import java.util.UUID;
 import org.example.basicfhirserver.query.resources.medication.MedicationSearchQuery;
 import org.example.basicfhirserver.repository.jdbc.drug.DrugDBRecord;
 import org.example.basicfhirserver.repository.jdbc.drug.DrugService;
@@ -8,32 +10,29 @@ import org.example.basicfhirserver.service.MedicationService;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.UUID;
-
 @Service
 public class MedicationServiceImpl implements MedicationService {
 
-    private final DrugService drugService;
+  private final DrugService drugService;
 
-    public MedicationServiceImpl(DrugService drugService) {
-        this.drugService = drugService;
+  public MedicationServiceImpl(DrugService drugService) {
+    this.drugService = drugService;
+  }
+
+  @Override
+  public DrugDBRecord findById(UUID uuid) {
+
+    List<DrugDBRecord> drugDBRecords = drugService.findById(uuid);
+    if (drugDBRecords.isEmpty()) {
+      throw new ResourceNotFoundException("Medication with given ID " + uuid + " not found.");
     }
 
-    @Override
-    public DrugDBRecord findById(UUID uuid) {
+    return drugDBRecords.get(0);
+  }
 
-        List<DrugDBRecord> drugDBRecords = drugService.findById(uuid);
-        if (drugDBRecords.isEmpty()) {
-            throw new ResourceNotFoundException("Medication with given ID " + uuid + " not found.");
-        }
+  @Override
+  public Page<DrugDBRecord> find(MedicationSearchQuery medicationSearchQuery) {
 
-        return drugDBRecords.get(0);
-    }
-
-    @Override
-    public Page<DrugDBRecord> find(MedicationSearchQuery medicationSearchQuery) {
-
-        return drugService.find(medicationSearchQuery);
-    }
+    return drugService.find(medicationSearchQuery);
+  }
 }

@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class MedicationSearchQuery {
-    private Integer count;
-    private Integer offset;
+  private Integer count;
+  private Integer offset;
 }

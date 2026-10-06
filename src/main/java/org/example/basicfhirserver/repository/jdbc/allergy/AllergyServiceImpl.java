@@ -1,5 +1,10 @@
 package org.example.basicfhirserver.repository.jdbc.allergy;
 
+import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 import org.example.basicfhirserver.query.resources.allergyintolerance.AllergyIntoleranceSearchQuery;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -9,72 +14,74 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
-
-import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
-
 @Repository
 public class AllergyServiceImpl implements AllergyService {
 
-    private static final int DEFAULT_PAGE_SIZE = 5;
-    private static final int DEFAULT_PAGE_OFFSET = 0;
+  private static final int DEFAULT_PAGE_SIZE = 5;
+  private static final int DEFAULT_PAGE_OFFSET = 0;
 
-    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+  private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-    public AllergyServiceImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
-    }
+  public AllergyServiceImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+    this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+  }
 
-    @Override
-    public List<AllergyDBRecord> findById(UUID uuid) {
+  @Override
+  public List<AllergyDBRecord> findById(UUID uuid) {
 
-        StringBuilder sql = allergyQuery();
+    StringBuilder sql = allergyQuery();
 
-        sql.append(" AND allergy_ids.allergy_uuid= :uuid");
-        byte[] binaryUuid = toBytes(uuid);
+    sql.append(" AND allergy_ids.allergy_uuid= :uuid");
+    byte[] binaryUuid = toBytes(uuid);
 
-        MapSqlParameterSource parameters = new MapSqlParameterSource();
-        parameters.addValue("uuid", binaryUuid);
+    MapSqlParameterSource parameters = new MapSqlParameterSource();
+    parameters.addValue("uuid", binaryUuid);
 
-        return namedParameterJdbcTemplate.query(sql.toString(), parameters, allergyDBRecordRowMapper());
-    }
+    return namedParameterJdbcTemplate.query(sql.toString(), parameters, allergyDBRecordRowMapper());
+  }
 
-    @Override
-    public Page<AllergyDBRecord> find(AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery) {
+  @Override
+  public Page<AllergyDBRecord> find(AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery) {
 
-        StringBuilder sql = allergyQuery();
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        addFilter(sql, params, allergyIntoleranceSearchQuery);
+    StringBuilder sql = allergyQuery();
+    MapSqlParameterSource params = new MapSqlParameterSource();
+    addFilter(sql, params, allergyIntoleranceSearchQuery);
 
-        int limit = (allergyIntoleranceSearchQuery.getCount() != null) ? allergyIntoleranceSearchQuery.getCount() : DEFAULT_PAGE_SIZE;
-        int offset = (allergyIntoleranceSearchQuery.getOffset() != null) ? allergyIntoleranceSearchQuery.getOffset() : DEFAULT_PAGE_OFFSET;
-        sql.append("""
+    int limit =
+        (allergyIntoleranceSearchQuery.getCount() != null)
+            ? allergyIntoleranceSearchQuery.getCount()
+            : DEFAULT_PAGE_SIZE;
+    int offset =
+        (allergyIntoleranceSearchQuery.getOffset() != null)
+            ? allergyIntoleranceSearchQuery.getOffset()
+            : DEFAULT_PAGE_OFFSET;
+    sql.append(
+        """
                 ORDER BY lists.date DESC limit :limit offset :offset
                 """);
 
-        params.addValue("limit", limit);
-        params.addValue("offset", offset);
+    params.addValue("limit", limit);
+    params.addValue("offset", offset);
 
-        List<AllergyDBRecord> allergyDBRecords =
-                namedParameterJdbcTemplate.query(sql.toString(), params, allergyDBRecordRowMapper());
+    List<AllergyDBRecord> allergyDBRecords =
+        namedParameterJdbcTemplate.query(sql.toString(), params, allergyDBRecordRowMapper());
 
-        long total = countTotal(allergyIntoleranceSearchQuery, params);
+    long total = countTotal(allergyIntoleranceSearchQuery, params);
 
-        return new PageImpl<>(allergyDBRecords, PageRequest.of(offset / limit, limit), total);
-    }
+    return new PageImpl<>(allergyDBRecords, PageRequest.of(offset / limit, limit), total);
+  }
 
+  private long countTotal(
+      AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery, MapSqlParameterSource params) {
+    StringBuilder sqlCount = allergyCountQuery();
+    addFilter(sqlCount, params, allergyIntoleranceSearchQuery);
+    Long total = namedParameterJdbcTemplate.queryForObject(sqlCount.toString(), params, Long.class);
+    return total != null ? total : 0L;
+  }
 
-    private long countTotal(AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery, MapSqlParameterSource params) {
-        StringBuilder sqlCount = allergyCountQuery();
-        addFilter(sqlCount, params, allergyIntoleranceSearchQuery);
-        Long total = namedParameterJdbcTemplate.queryForObject(sqlCount.toString(), params, Long.class);
-        return total != null ? total : 0L;
-    }
-
-    private StringBuilder allergyQuery() {
-        return new StringBuilder("""
+  private StringBuilder allergyQuery() {
+    return new StringBuilder(
+        """
                     SELECT lists.*,
                             lists.pid AS patient_id,
                             lists.title,
@@ -123,10 +130,11 @@ public class AllergyServiceImpl implements AllergyService {
                                 FROM facility
                             ) organizations ON organizations.name = practitioners.organization WHERE 1=1
                 """);
-    }
+  }
 
-    private StringBuilder allergyCountQuery() {
-        return new StringBuilder("""
+  private StringBuilder allergyCountQuery() {
+    return new StringBuilder(
+        """
                     SELECT COUNT(*)
                         FROM (
                                 SELECT lists.*, lists.pid AS patient_id FROM lists
@@ -159,135 +167,132 @@ public class AllergyServiceImpl implements AllergyService {
                                 ,facility.uuid AS organization_uuid
                                 ,facility.name
                                 FROM facility
-                            ) organizations ON organizations.name = practitioners.organization 
+                            ) organizations ON organizations.name = practitioners.organization
                         WHERE 1=1
                 """);
+  }
+
+  private void addFilter(
+      StringBuilder sql,
+      MapSqlParameterSource params,
+      AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery) {
+
+    if (allergyIntoleranceSearchQuery.getId() != null) {
+      String uuid = allergyIntoleranceSearchQuery.getId();
+      byte[] binaryUuid = toBytes(UUID.fromString(uuid));
+      sql.append(" AND allergy_ids.allergy_uuid = :allergyUuid ");
+      params.addValue("allergyUuid", binaryUuid);
     }
 
-    private void addFilter(
-            StringBuilder sql,
-            MapSqlParameterSource params,
-            AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery
-    ) {
-
-        if (allergyIntoleranceSearchQuery.getId() != null) {
-            String uuid = allergyIntoleranceSearchQuery.getId();
-            byte[] binaryUuid = toBytes(UUID.fromString(uuid));
-            sql.append(" AND allergy_ids.allergy_uuid = :allergyUuid ");
-            params.addValue("allergyUuid", binaryUuid);
-        }
-
-        if (allergyIntoleranceSearchQuery.getPatientId() != null) {
-            String uuid = allergyIntoleranceSearchQuery.getPatientId();
-            byte[] binaryUuid = toBytes(UUID.fromString(uuid));
-            sql.append(" AND patient.puuid = :patientUuid ");
-            params.addValue("patientUuid", binaryUuid);
-        }
-
-        addLastUpdatedFilter(sql, params, allergyIntoleranceSearchQuery);
+    if (allergyIntoleranceSearchQuery.getPatientId() != null) {
+      String uuid = allergyIntoleranceSearchQuery.getPatientId();
+      byte[] binaryUuid = toBytes(UUID.fromString(uuid));
+      sql.append(" AND patient.puuid = :patientUuid ");
+      params.addValue("patientUuid", binaryUuid);
     }
 
-    private void addLastUpdatedFilter(
-            StringBuilder sql,
-            MapSqlParameterSource params,
-            AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery
-    ) {
-        if (allergyIntoleranceSearchQuery.getLastUpdated() == null ||
-                allergyIntoleranceSearchQuery.getLastUpdated().getValue() == null) {
-            return;
-        }
+    addLastUpdatedFilter(sql, params, allergyIntoleranceSearchQuery);
+  }
 
-        LocalDateTime lastUpdated =
-                allergyIntoleranceSearchQuery.getLastUpdated().getValue();
-
-        if (allergyIntoleranceSearchQuery.getLastUpdated().getPrefix() == null) {
-            sql.append(" AND lists.modifydate = :lastUpdated");
-            params.addValue("lastUpdated", lastUpdated);
-            return;
-        }
-
-        switch (allergyIntoleranceSearchQuery.getLastUpdated().getPrefix()) {
-            case GREATERTHAN:
-                sql.append(" AND lists.modifydate > :lastUpdated");
-                break;
-            case GREATERTHAN_OR_EQUALS:
-                sql.append(" AND lists.modifydate >= :lastUpdated");
-                break;
-            case LESSTHAN:
-            case ENDS_BEFORE:
-                sql.append(" AND lists.modifydate < :lastUpdated");
-                break;
-            case LESSTHAN_OR_EQUALS:
-                sql.append(" AND lists.modifydate <= :lastUpdated");
-                break;
-            case NOT_EQUAL:
-                sql.append(" AND lists.modifydate <> :lastUpdated");
-                break;
-            case STARTS_AFTER:
-                sql.append(" AND lists.modifydate > :lastUpdated");
-                break;
-            case EQUAL:
-            case APPROXIMATE:
-            default:
-                sql.append(" AND lists.modifydate = :lastUpdated");
-                break;
-        }
-        params.addValue("lastUpdated", lastUpdated);
+  private void addLastUpdatedFilter(
+      StringBuilder sql,
+      MapSqlParameterSource params,
+      AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery) {
+    if (allergyIntoleranceSearchQuery.getLastUpdated() == null
+        || allergyIntoleranceSearchQuery.getLastUpdated().getValue() == null) {
+      return;
     }
 
-    private RowMapper<AllergyDBRecord> allergyDBRecordRowMapper() {
-        return (rs, rowNum) -> AllergyDBRecord.builder()
-                .id(rs.getLong("id"))
-                .date(toLocalDateTime(rs.getTimestamp("date")))
-                .type(rs.getString("type"))
-                .title(rs.getString("title"))
-                .begdate(toLocalDateTime(rs.getTimestamp("begdate")))
-                .enddate(toLocalDateTime(rs.getTimestamp("enddate")))
-                .returndate(toLocalDate(rs.getDate("returndate")))
-                .occurrence(rs.getObject("occurrence") != null ? rs.getInt("occurrence") : null)
-                .classification(rs.getObject("classification") != null ? rs.getInt("classification") : null)
-                .referredby(rs.getString("referredby"))
-                .extrainfo(rs.getString("extrainfo"))
-                .diagnosis(rs.getString("diagnosis"))
-                .activity(rs.getObject("activity") != null ? rs.getInt("activity") : null)
-                .comments(rs.getString("comments"))
-                .pid(rs.getObject("pid") != null ? rs.getLong("pid") : null)
-                .user(rs.getString("user"))
-                .groupname(rs.getString("groupname"))
-                .outcome(rs.getInt("outcome"))
-                .destination(rs.getString("destination"))
-                .reinjuryId(rs.getLong("reinjury_id"))
-                .injuryPart(rs.getString("injury_part"))
-                .injuryType(rs.getString("injury_type"))
-                .injuryGrade(rs.getString("injury_grade"))
-                .reaction(rs.getString("reaction"))
-                .externalAllergyid(rs.getObject("external_allergyid") != null ? rs.getInt("external_allergyid") : null)
-                .erxSource(rs.getString("erx_source"))
-                .erxUploaded(rs.getString("erx_uploaded"))
-                .modifydate(toLocalDateTime(rs.getTimestamp("modifydate")))
-                .severityAl(rs.getString("severity_al"))
-                .externalId(rs.getString("external_id"))
-                .subtype(rs.getString("subtype"))
-                .listOptionId(rs.getString("list_option_id"))
-                .uuid(toUuid(rs.getBytes("uuid")))
-                .verification(rs.getString("verification"))
-                .udi(rs.getString("udi"))
-                .udiData(rs.getString("udi_data"))
+    LocalDateTime lastUpdated = allergyIntoleranceSearchQuery.getLastUpdated().getValue();
 
-                .patientId(rs.getObject("patient_id") != null ? rs.getLong("patient_id") : null)
-                .practitioner(rs.getString("practitioner"))
-                .practitionerNpi(rs.getString("practitioner_npi"))
-                .practitionerUuid(toUuid(rs.getBytes("practitioner_uuid")))
-                .organization(rs.getString("organization"))
-                .organizationUuid(toUuid(rs.getBytes("organization_uuid")))
-                .puuid(toUuid(rs.getBytes("puuid")))
-                .patientUuid(toUuid(rs.getBytes("patient_uuid")))
-                .allergyUuid(toUuid(rs.getBytes("allergy_uuid")))
-                .reactionTitle(rs.getString("reaction_title"))
-                .reactionCodes(rs.getString("reaction_codes"))
-                .verificationTitle(rs.getString("verification_title"))
-                .build();
-
+    if (allergyIntoleranceSearchQuery.getLastUpdated().getPrefix() == null) {
+      sql.append(" AND lists.modifydate = :lastUpdated");
+      params.addValue("lastUpdated", lastUpdated);
+      return;
     }
 
+    switch (allergyIntoleranceSearchQuery.getLastUpdated().getPrefix()) {
+      case GREATERTHAN:
+        sql.append(" AND lists.modifydate > :lastUpdated");
+        break;
+      case GREATERTHAN_OR_EQUALS:
+        sql.append(" AND lists.modifydate >= :lastUpdated");
+        break;
+      case LESSTHAN:
+      case ENDS_BEFORE:
+        sql.append(" AND lists.modifydate < :lastUpdated");
+        break;
+      case LESSTHAN_OR_EQUALS:
+        sql.append(" AND lists.modifydate <= :lastUpdated");
+        break;
+      case NOT_EQUAL:
+        sql.append(" AND lists.modifydate <> :lastUpdated");
+        break;
+      case STARTS_AFTER:
+        sql.append(" AND lists.modifydate > :lastUpdated");
+        break;
+      case EQUAL:
+      case APPROXIMATE:
+      default:
+        sql.append(" AND lists.modifydate = :lastUpdated");
+        break;
+    }
+    params.addValue("lastUpdated", lastUpdated);
+  }
+
+  private RowMapper<AllergyDBRecord> allergyDBRecordRowMapper() {
+    return (rs, rowNum) ->
+        AllergyDBRecord.builder()
+            .id(rs.getLong("id"))
+            .date(toLocalDateTime(rs.getTimestamp("date")))
+            .type(rs.getString("type"))
+            .title(rs.getString("title"))
+            .begdate(toLocalDateTime(rs.getTimestamp("begdate")))
+            .enddate(toLocalDateTime(rs.getTimestamp("enddate")))
+            .returndate(toLocalDate(rs.getDate("returndate")))
+            .occurrence(rs.getObject("occurrence") != null ? rs.getInt("occurrence") : null)
+            .classification(
+                rs.getObject("classification") != null ? rs.getInt("classification") : null)
+            .referredby(rs.getString("referredby"))
+            .extrainfo(rs.getString("extrainfo"))
+            .diagnosis(rs.getString("diagnosis"))
+            .activity(rs.getObject("activity") != null ? rs.getInt("activity") : null)
+            .comments(rs.getString("comments"))
+            .pid(rs.getObject("pid") != null ? rs.getLong("pid") : null)
+            .user(rs.getString("user"))
+            .groupname(rs.getString("groupname"))
+            .outcome(rs.getInt("outcome"))
+            .destination(rs.getString("destination"))
+            .reinjuryId(rs.getLong("reinjury_id"))
+            .injuryPart(rs.getString("injury_part"))
+            .injuryType(rs.getString("injury_type"))
+            .injuryGrade(rs.getString("injury_grade"))
+            .reaction(rs.getString("reaction"))
+            .externalAllergyid(
+                rs.getObject("external_allergyid") != null ? rs.getInt("external_allergyid") : null)
+            .erxSource(rs.getString("erx_source"))
+            .erxUploaded(rs.getString("erx_uploaded"))
+            .modifydate(toLocalDateTime(rs.getTimestamp("modifydate")))
+            .severityAl(rs.getString("severity_al"))
+            .externalId(rs.getString("external_id"))
+            .subtype(rs.getString("subtype"))
+            .listOptionId(rs.getString("list_option_id"))
+            .uuid(toUuid(rs.getBytes("uuid")))
+            .verification(rs.getString("verification"))
+            .udi(rs.getString("udi"))
+            .udiData(rs.getString("udi_data"))
+            .patientId(rs.getObject("patient_id") != null ? rs.getLong("patient_id") : null)
+            .practitioner(rs.getString("practitioner"))
+            .practitionerNpi(rs.getString("practitioner_npi"))
+            .practitionerUuid(toUuid(rs.getBytes("practitioner_uuid")))
+            .organization(rs.getString("organization"))
+            .organizationUuid(toUuid(rs.getBytes("organization_uuid")))
+            .puuid(toUuid(rs.getBytes("puuid")))
+            .patientUuid(toUuid(rs.getBytes("patient_uuid")))
+            .allergyUuid(toUuid(rs.getBytes("allergy_uuid")))
+            .reactionTitle(rs.getString("reaction_title"))
+            .reactionCodes(rs.getString("reaction_codes"))
+            .verificationTitle(rs.getString("verification_title"))
+            .build();
+  }
 }

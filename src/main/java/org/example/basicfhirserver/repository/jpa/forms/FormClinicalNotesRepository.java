@@ -6,6 +6,6 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface FormClinicalNotesRepository extends JpaRepository<FormClinicalNotesEntity, Long>,
-        JpaSpecificationExecutor<FormClinicalNotesEntity> {
-}
+public interface FormClinicalNotesRepository
+    extends JpaRepository<FormClinicalNotesEntity, Long>,
+        JpaSpecificationExecutor<FormClinicalNotesEntity> {}

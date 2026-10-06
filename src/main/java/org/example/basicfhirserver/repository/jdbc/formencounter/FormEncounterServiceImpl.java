@@ -1,5 +1,10 @@
 package org.example.basicfhirserver.repository.jdbc.formencounter;
 
+import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -9,69 +14,68 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
-
-import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
-
 @Repository
 public class FormEncounterServiceImpl implements FormEncounterService {
 
-    private static final int DEFAULT_PAGE_SIZE = 5;
-    private static final int DEFAULT_PAGE_OFFSET = 0;
+  private static final int DEFAULT_PAGE_SIZE = 5;
+  private static final int DEFAULT_PAGE_OFFSET = 0;
 
-    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+  private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-    public FormEncounterServiceImpl(
-            NamedParameterJdbcTemplate namedParameterJdbcTemplate
-    ) {
-        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
-    }
+  public FormEncounterServiceImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+    this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+  }
 
-    @Override
-    public List<FormEncounterDBRecord> findById(UUID uuid) {
-        StringBuilder sql = formEncounterQuery();
+  @Override
+  public List<FormEncounterDBRecord> findById(UUID uuid) {
+    StringBuilder sql = formEncounterQuery();
 
-        sql.append(" AND fe.euuid = :uuid");
-        byte[] binaryUuid = toBytes(uuid);
+    sql.append(" AND fe.euuid = :uuid");
+    byte[] binaryUuid = toBytes(uuid);
 
-        MapSqlParameterSource parameters = new MapSqlParameterSource();
-        parameters.addValue("uuid", binaryUuid);
+    MapSqlParameterSource parameters = new MapSqlParameterSource();
+    parameters.addValue("uuid", binaryUuid);
 
-        return namedParameterJdbcTemplate.query(sql.toString(),
-                parameters,
-                formEncounterRowMapper());
-    }
+    return namedParameterJdbcTemplate.query(sql.toString(), parameters, formEncounterRowMapper());
+  }
 
-    @Override
-    public Page<FormEncounterDBRecord> find(EncounterSearchQuery encounterSearchQuery) {
-        StringBuilder sql = formEncounterQuery();
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        addFilter(sql, params, encounterSearchQuery);
+  @Override
+  public Page<FormEncounterDBRecord> find(EncounterSearchQuery encounterSearchQuery) {
+    StringBuilder sql = formEncounterQuery();
+    MapSqlParameterSource params = new MapSqlParameterSource();
+    addFilter(sql, params, encounterSearchQuery);
 
-        long total = countTotal(sql, params);
-        int offset = encounterSearchQuery.getOffset() != null ? encounterSearchQuery.getOffset() : DEFAULT_PAGE_OFFSET;
-        int limit = encounterSearchQuery.getCount() != null ? encounterSearchQuery.getCount() : DEFAULT_PAGE_SIZE;
+    long total = countTotal(sql, params);
+    int offset =
+        encounterSearchQuery.getOffset() != null
+            ? encounterSearchQuery.getOffset()
+            : DEFAULT_PAGE_OFFSET;
+    int limit =
+        encounterSearchQuery.getCount() != null
+            ? encounterSearchQuery.getCount()
+            : DEFAULT_PAGE_SIZE;
 
-        sql.append(" ORDER BY fe.encounter_date DESC limit :limit offset :offset ");
-        params.addValue("offset", offset);
-        params.addValue("limit", limit);
+    sql.append(" ORDER BY fe.encounter_date DESC limit :limit offset :offset ");
+    params.addValue("offset", offset);
+    params.addValue("limit", limit);
 
-        List<FormEncounterDBRecord> records =
-                namedParameterJdbcTemplate.query(sql.toString(), params, formEncounterRowMapper());
+    List<FormEncounterDBRecord> records =
+        namedParameterJdbcTemplate.query(sql.toString(), params, formEncounterRowMapper());
 
-        return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
-    }
+    return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
+  }
 
-    private long countTotal(StringBuilder filteredSql, MapSqlParameterSource params) {
-        String countSql = "SELECT COUNT(*) from ( %s ) as query_count";
-        Long total = namedParameterJdbcTemplate.queryForObject(countSql.formatted(filteredSql), params, Long.class);
-        return total != null ? total : 0L;
-    }
+  private long countTotal(StringBuilder filteredSql, MapSqlParameterSource params) {
+    String countSql = "SELECT COUNT(*) from ( %s ) as query_count";
+    Long total =
+        namedParameterJdbcTemplate.queryForObject(
+            countSql.formatted(filteredSql), params, Long.class);
+    return total != null ? total : 0L;
+  }
 
-    private StringBuilder formEncounterQuery() {
-        return new StringBuilder("""
+  private StringBuilder formEncounterQuery() {
+    return new StringBuilder(
+        """
                 SELECT fe.eid,
                     fe.euuid,
                     fe.encounter_date AS date, -- Changed to read the unescaped subquery alias
@@ -94,19 +98,19 @@ public class FormEncounterServiceImpl implements FormEncounterService {
                     fe.class_code,
                     class.notes as class_title,
                     opc.pc_catname,
-                
+
                     patient.pid,
                     patient.puuid,
                     facilities.facility_id,
                     facilities.facility_uuid,
                     facilities.facility_name,
                     facilities.facility_location_uuid,
-                
+
                     fa.billing_facility_id,
                     fa.billing_facility_uuid,
                     fa.billing_facility_name,
                     fa.billing_location_uuid,
-                
+
                     fe.provider_id,
                     fe.referring_provider_id,
                     fe.ordering_provider_id,
@@ -116,7 +120,7 @@ public class FormEncounterServiceImpl implements FormEncounterService {
                     referrers.referrer_username,
                     fe.discharge_disposition,
                     discharge_list.discharge_disposition_text
-                
+
                     FROM (
                         select
                             encounter as eid,
@@ -199,183 +203,169 @@ public class FormEncounterServiceImpl implements FormEncounterService {
                         ,title AS discharge_disposition_text
                         FROM list_options
                         WHERE list_id = 'discharge-disposition'
-                    ) discharge_list ON fe.discharge_disposition = discharge_list.discharge_option_id WHERE 1=1 
+                    ) discharge_list ON fe.discharge_disposition = discharge_list.discharge_option_id WHERE 1=1
                 """);
-    }
+  }
 
-    private void addFilter(
-            StringBuilder sql,
-            MapSqlParameterSource params,
-            EncounterSearchQuery encounterSearchQuery
-    ) {
-        if (encounterSearchQuery.getEncounterId() != null && !encounterSearchQuery.getEncounterId().isEmpty()) {
-            List<byte[]> binaryUuids = encounterSearchQuery.getEncounterId().stream()
-                    .map(idStr -> toBytes(UUID.fromString(idStr)))
-                    .toList();
-            sql.append("""
+  private void addFilter(
+      StringBuilder sql, MapSqlParameterSource params, EncounterSearchQuery encounterSearchQuery) {
+    if (encounterSearchQuery.getEncounterId() != null
+        && !encounterSearchQuery.getEncounterId().isEmpty()) {
+      List<byte[]> binaryUuids =
+          encounterSearchQuery.getEncounterId().stream()
+              .map(idStr -> toBytes(UUID.fromString(idStr)))
+              .toList();
+      sql.append(
+          """
                     AND fe.euuid IN (:encounterUuid)
                     """);
-            params.addValue("encounterUuid", binaryUuids);
-        }
-
-        if (encounterSearchQuery.getPatientId() != null) {
-            List<byte[]> binaryUuids = encounterSearchQuery.getPatientId().stream()
-                    .map(idStr -> toBytes(UUID.fromString(idStr)))
-                    .toList();
-            sql.append(" AND (patient.puuid IN (:patientUuid) ) ");
-            params.addValue("patientUuid", binaryUuids);
-        }
-        addDateFilter(sql, params, encounterSearchQuery);
-        addLastUpdatedFilter(sql, params, encounterSearchQuery);
+      params.addValue("encounterUuid", binaryUuids);
     }
 
-    private void addLastUpdatedFilter(
-            StringBuilder sql,
-            MapSqlParameterSource params,
-            EncounterSearchQuery encounterSearchQuery
-    ) {
-        if (encounterSearchQuery.getLastUpdated() == null ||
-                encounterSearchQuery.getLastUpdated().getValue() == null) {
-            return;
-        }
+    if (encounterSearchQuery.getPatientId() != null) {
+      List<byte[]> binaryUuids =
+          encounterSearchQuery.getPatientId().stream()
+              .map(idStr -> toBytes(UUID.fromString(idStr)))
+              .toList();
+      sql.append(" AND (patient.puuid IN (:patientUuid) ) ");
+      params.addValue("patientUuid", binaryUuids);
+    }
+    addDateFilter(sql, params, encounterSearchQuery);
+    addLastUpdatedFilter(sql, params, encounterSearchQuery);
+  }
 
-        LocalDateTime lastUpdated =
-                encounterSearchQuery.getLastUpdated().getValue();
-
-        if (encounterSearchQuery.getLastUpdated().getPrefix() == null) {
-            sql.append(" AND fe.last_update = :lastUpdated");
-            params.addValue("lastUpdated", lastUpdated);
-            return;
-        }
-
-        switch (encounterSearchQuery.getLastUpdated().getPrefix()) {
-            case GREATERTHAN:
-                sql.append(" AND fe.last_update > :lastUpdated");
-                break;
-            case GREATERTHAN_OR_EQUALS:
-                sql.append(" AND fe.last_update >= :lastUpdated");
-                break;
-            case LESSTHAN:
-            case ENDS_BEFORE:
-                sql.append(" AND fe.last_update < :lastUpdated");
-                break;
-            case LESSTHAN_OR_EQUALS:
-                sql.append(" AND fe.last_update <= :lastUpdated");
-                break;
-            case NOT_EQUAL:
-                sql.append(" AND fe.last_update <> :lastUpdated");
-                break;
-            case STARTS_AFTER:
-                sql.append(" AND fe.last_update > :lastUpdated");
-                break;
-            case EQUAL:
-            case APPROXIMATE:
-            default:
-                sql.append(" AND fe.last_update = :lastUpdated");
-                break;
-        }
-        params.addValue("lastUpdated", lastUpdated);
+  private void addLastUpdatedFilter(
+      StringBuilder sql, MapSqlParameterSource params, EncounterSearchQuery encounterSearchQuery) {
+    if (encounterSearchQuery.getLastUpdated() == null
+        || encounterSearchQuery.getLastUpdated().getValue() == null) {
+      return;
     }
 
-    private void addDateFilter(
-            StringBuilder sql,
-            MapSqlParameterSource params,
-            EncounterSearchQuery encounterSearchQuery
-    ) {
-        if (encounterSearchQuery.getDate() == null ||
-                encounterSearchQuery.getDate().getValue() == null) {
-            return;
-        }
+    LocalDateTime lastUpdated = encounterSearchQuery.getLastUpdated().getValue();
 
-        LocalDateTime date =
-                encounterSearchQuery.getDate().getValue();
-
-        if (encounterSearchQuery.getDate().getPrefix() == null) {
-            sql.append(" AND fe.encounter_date = :date");
-            params.addValue("date", date);
-            return;
-        }
-
-        switch (encounterSearchQuery.getDate().getPrefix()) {
-            case GREATERTHAN:
-                sql.append(" AND fe.encounter_date > :encounterDate");
-                break;
-            case GREATERTHAN_OR_EQUALS:
-                sql.append(" AND fe.encounter_date >= :encounterDate");
-                break;
-            case LESSTHAN:
-            case ENDS_BEFORE: // Handled logically
-                sql.append(" AND fe.encounter_date < :encounterDate");
-                break;
-            case LESSTHAN_OR_EQUALS:
-                sql.append(" AND fe.encounter_date <= :encounterDate");
-                break;
-            case NOT_EQUAL:
-                sql.append(" AND fe.encounter_date <> :encounterDate");
-                break;
-            case STARTS_AFTER: // Handled logically
-                sql.append(" AND fe.encounter_date > :encounterDate");
-                break;
-            case EQUAL:
-            case APPROXIMATE:
-            default:
-                sql.append(" AND fe.encounter_date = :encounterDate");
-                break;
-        }
-        params.addValue("encounterDate", date);
+    if (encounterSearchQuery.getLastUpdated().getPrefix() == null) {
+      sql.append(" AND fe.last_update = :lastUpdated");
+      params.addValue("lastUpdated", lastUpdated);
+      return;
     }
 
-    private RowMapper<FormEncounterDBRecord> formEncounterRowMapper() {
-        return (rs, rowNum) -> FormEncounterDBRecord.builder()
-                .eid(rs.getObject("eid", Long.class))
-                .euuid(toUuid(rs.getBytes("euuid")))
-                .date(toLocalDateTime(rs.getTimestamp("date")))
-                .reason(rs.getString("reason"))
-                .onsetDate(toLocalDate(rs.getDate("onset_date")))
-                .sensitivity(rs.getString("sensitivity"))
-                .billingNote(rs.getString("billing_note"))
-                .pcCatid(rs.getObject("pc_catid", Long.class))
-                .lastLevelBilled(rs.getObject("last_level_billed", Integer.class))
-                .lastLevelClosed(rs.getObject("last_level_closed", Integer.class))
-                .lastStmtDate(toLocalDate(rs.getDate("last_stmt_date")))
-                .stmtCount(rs.getObject("stmt_count", Integer.class))
-                .supervisorId(rs.getObject("supervisor_id", Long.class))
-                .invoiceRefno(rs.getString("invoice_refno"))
-                .referralSource(rs.getString("referral_source"))
-                .billingFacility(rs.getObject("billing_facility", Long.class))
-                .externalId(rs.getString("external_id"))
-                .lastUpdate(toLocalDateTime(rs.getTimestamp("last_update")))
-                .posCode(rs.getString("pos_code"))
-                .classCode(rs.getString("class_code"))
+    switch (encounterSearchQuery.getLastUpdated().getPrefix()) {
+      case GREATERTHAN:
+        sql.append(" AND fe.last_update > :lastUpdated");
+        break;
+      case GREATERTHAN_OR_EQUALS:
+        sql.append(" AND fe.last_update >= :lastUpdated");
+        break;
+      case LESSTHAN:
+      case ENDS_BEFORE:
+        sql.append(" AND fe.last_update < :lastUpdated");
+        break;
+      case LESSTHAN_OR_EQUALS:
+        sql.append(" AND fe.last_update <= :lastUpdated");
+        break;
+      case NOT_EQUAL:
+        sql.append(" AND fe.last_update <> :lastUpdated");
+        break;
+      case STARTS_AFTER:
+        sql.append(" AND fe.last_update > :lastUpdated");
+        break;
+      case EQUAL:
+      case APPROXIMATE:
+      default:
+        sql.append(" AND fe.last_update = :lastUpdated");
+        break;
+    }
+    params.addValue("lastUpdated", lastUpdated);
+  }
 
-                .classTitle(rs.getString("class_title"))
-                .pcCatname(rs.getString("pc_catname"))
-
-                .pid(rs.getObject("pid", Long.class))
-                .puuid(toUuid(rs.getBytes("puuid")))
-
-                .facilityId(rs.getObject("facility_id", Long.class))
-                .facilityUuid(toUuid(rs.getBytes("facility_uuid")))
-                .facilityName(rs.getString("facility_name"))
-                .facilityLocationUuid(toUuid(rs.getBytes("facility_location_uuid")))
-
-                .billingFacilityId(rs.getObject("billing_facility_id", Long.class))
-                .billingFacilityUuid(toUuid(rs.getBytes("billing_facility_uuid")))
-                .billingFacilityName(rs.getString("billing_facility_name"))
-                .billingLocationUuid(toUuid(rs.getBytes("billing_location_uuid")))
-
-                .providerId(rs.getObject("provider_id", Long.class))
-                .referringProviderId(rs.getObject("referring_provider_id", Long.class))
-                .orderingProviderId(rs.getObject("ordering_provider_id", Long.class))
-
-                .providerUuid(toUuid(rs.getBytes("provider_uuid")))
-                .providerUsername(rs.getString("provider_username"))
-                .referrerUuid(toUuid(rs.getBytes("referrer_uuid")))
-                .referrerUsername(rs.getString("referrer_username"))
-
-                .dischargeDisposition(rs.getString("discharge_disposition"))
-                .dischargeDispositionText(rs.getString("discharge_disposition_text"))
-                .build();
+  private void addDateFilter(
+      StringBuilder sql, MapSqlParameterSource params, EncounterSearchQuery encounterSearchQuery) {
+    if (encounterSearchQuery.getDate() == null
+        || encounterSearchQuery.getDate().getValue() == null) {
+      return;
     }
 
+    LocalDateTime date = encounterSearchQuery.getDate().getValue();
+
+    if (encounterSearchQuery.getDate().getPrefix() == null) {
+      sql.append(" AND fe.encounter_date = :date");
+      params.addValue("date", date);
+      return;
+    }
+
+    switch (encounterSearchQuery.getDate().getPrefix()) {
+      case GREATERTHAN:
+        sql.append(" AND fe.encounter_date > :encounterDate");
+        break;
+      case GREATERTHAN_OR_EQUALS:
+        sql.append(" AND fe.encounter_date >= :encounterDate");
+        break;
+      case LESSTHAN:
+      case ENDS_BEFORE: // Handled logically
+        sql.append(" AND fe.encounter_date < :encounterDate");
+        break;
+      case LESSTHAN_OR_EQUALS:
+        sql.append(" AND fe.encounter_date <= :encounterDate");
+        break;
+      case NOT_EQUAL:
+        sql.append(" AND fe.encounter_date <> :encounterDate");
+        break;
+      case STARTS_AFTER: // Handled logically
+        sql.append(" AND fe.encounter_date > :encounterDate");
+        break;
+      case EQUAL:
+      case APPROXIMATE:
+      default:
+        sql.append(" AND fe.encounter_date = :encounterDate");
+        break;
+    }
+    params.addValue("encounterDate", date);
+  }
+
+  private RowMapper<FormEncounterDBRecord> formEncounterRowMapper() {
+    return (rs, rowNum) ->
+        FormEncounterDBRecord.builder()
+            .eid(rs.getObject("eid", Long.class))
+            .euuid(toUuid(rs.getBytes("euuid")))
+            .date(toLocalDateTime(rs.getTimestamp("date")))
+            .reason(rs.getString("reason"))
+            .onsetDate(toLocalDate(rs.getDate("onset_date")))
+            .sensitivity(rs.getString("sensitivity"))
+            .billingNote(rs.getString("billing_note"))
+            .pcCatid(rs.getObject("pc_catid", Long.class))
+            .lastLevelBilled(rs.getObject("last_level_billed", Integer.class))
+            .lastLevelClosed(rs.getObject("last_level_closed", Integer.class))
+            .lastStmtDate(toLocalDate(rs.getDate("last_stmt_date")))
+            .stmtCount(rs.getObject("stmt_count", Integer.class))
+            .supervisorId(rs.getObject("supervisor_id", Long.class))
+            .invoiceRefno(rs.getString("invoice_refno"))
+            .referralSource(rs.getString("referral_source"))
+            .billingFacility(rs.getObject("billing_facility", Long.class))
+            .externalId(rs.getString("external_id"))
+            .lastUpdate(toLocalDateTime(rs.getTimestamp("last_update")))
+            .posCode(rs.getString("pos_code"))
+            .classCode(rs.getString("class_code"))
+            .classTitle(rs.getString("class_title"))
+            .pcCatname(rs.getString("pc_catname"))
+            .pid(rs.getObject("pid", Long.class))
+            .puuid(toUuid(rs.getBytes("puuid")))
+            .facilityId(rs.getObject("facility_id", Long.class))
+            .facilityUuid(toUuid(rs.getBytes("facility_uuid")))
+            .facilityName(rs.getString("facility_name"))
+            .facilityLocationUuid(toUuid(rs.getBytes("facility_location_uuid")))
+            .billingFacilityId(rs.getObject("billing_facility_id", Long.class))
+            .billingFacilityUuid(toUuid(rs.getBytes("billing_facility_uuid")))
+            .billingFacilityName(rs.getString("billing_facility_name"))
+            .billingLocationUuid(toUuid(rs.getBytes("billing_location_uuid")))
+            .providerId(rs.getObject("provider_id", Long.class))
+            .referringProviderId(rs.getObject("referring_provider_id", Long.class))
+            .orderingProviderId(rs.getObject("ordering_provider_id", Long.class))
+            .providerUuid(toUuid(rs.getBytes("provider_uuid")))
+            .providerUsername(rs.getString("provider_username"))
+            .referrerUuid(toUuid(rs.getBytes("referrer_uuid")))
+            .referrerUsername(rs.getString("referrer_username"))
+            .dischargeDisposition(rs.getString("discharge_disposition"))
+            .dischargeDispositionText(rs.getString("discharge_disposition_text"))
+            .build();
+  }
 }

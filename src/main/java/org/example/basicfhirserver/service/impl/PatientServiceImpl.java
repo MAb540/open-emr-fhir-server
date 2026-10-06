@@ -1,6 +1,8 @@
 package org.example.basicfhirserver.service.impl;
 
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import java.util.Optional;
+import java.util.UUID;
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
 import org.example.basicfhirserver.repository.jpa.patient.PatientRepository;
@@ -12,45 +14,35 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
-import java.util.UUID;
-
 @Service
 public class PatientServiceImpl implements PatientService {
 
-    private final PatientRepository patientRepository;
+  private final PatientRepository patientRepository;
 
-    public PatientServiceImpl(PatientRepository patientRepository) {
-        this.patientRepository = patientRepository;
+  public PatientServiceImpl(PatientRepository patientRepository) {
+    this.patientRepository = patientRepository;
+  }
+
+  @Override
+  public LegacyPatientEntity findById(UUID uuid) {
+    Specification<LegacyPatientEntity> spec = (root, query, cb) -> cb.equal(root.get("uuid"), uuid);
+    Optional<LegacyPatientEntity> legacyPatientEntity = patientRepository.findOne(spec);
+
+    if (legacyPatientEntity.isEmpty()) {
+      throw new ResourceNotFoundException("Patient with given ID " + uuid + " not found.");
     }
 
-    @Override
-    public LegacyPatientEntity findById(UUID uuid) {
-        Specification<LegacyPatientEntity> spec = (root, query, cb) ->
-                cb.equal(root.get("uuid"), uuid);
-        Optional<LegacyPatientEntity> legacyPatientEntity = patientRepository.findOne(spec);
+    return legacyPatientEntity.get();
+  }
 
-        if(legacyPatientEntity.isEmpty()){
-            throw new ResourceNotFoundException("Patient with given ID " + uuid + " not found.");
-        }
+  @Override
+  public Page<LegacyPatientEntity> find(PatientSearchQuery patientSearchQuery) {
+    Specification<LegacyPatientEntity> spec = PatientSpecifications.from(patientSearchQuery);
 
-        return legacyPatientEntity.get();
-    }
+    int limit = (patientSearchQuery.getCount() != null) ? patientSearchQuery.getCount() : 5;
+    int offset = (patientSearchQuery.getOffset() != null) ? patientSearchQuery.getOffset() : 0;
 
-
-    @Override
-    public Page<LegacyPatientEntity> find(PatientSearchQuery patientSearchQuery) {
-        Specification<LegacyPatientEntity> spec =
-                PatientSpecifications.from(patientSearchQuery);
-
-        int limit = (patientSearchQuery.getCount() != null) ? patientSearchQuery.getCount() : 5;
-        int offset = (patientSearchQuery.getOffset() != null) ? patientSearchQuery.getOffset() : 0;
-
-        Pageable pageable =
-                PageRequest.of(
-                        offset / limit,
-                        limit
-                );
-        return patientRepository.findAll(spec, pageable);
-    }
+    Pageable pageable = PageRequest.of(offset / limit, limit);
+    return patientRepository.findAll(spec, pageable);
+  }
 }

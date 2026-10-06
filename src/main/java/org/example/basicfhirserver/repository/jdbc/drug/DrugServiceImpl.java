@@ -1,78 +1,83 @@
 package org.example.basicfhirserver.repository.jdbc.drug;
 
+import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
+
+import java.util.List;
+import java.util.UUID;
 import org.example.basicfhirserver.query.resources.medication.MedicationSearchQuery;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.UUID;
-
-import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
-
 @Repository
 public class DrugServiceImpl implements DrugService {
 
-    private static final int DEFAULT_PAGE_SIZE = 5;
-    private static final int DEFAULT_PAGE_OFFSET = 0;
+  private static final int DEFAULT_PAGE_SIZE = 5;
+  private static final int DEFAULT_PAGE_OFFSET = 0;
 
-    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+  private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-    public DrugServiceImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
-    }
+  public DrugServiceImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+    this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+  }
 
-    @Override
-    public List<DrugDBRecord> findById(UUID uuid) {
+  @Override
+  public List<DrugDBRecord> findById(UUID uuid) {
 
-        StringBuilder sql = drugQuery();
+    StringBuilder sql = drugQuery();
 
-        sql.append(" AND drug_table.uuid= :uuid");
-        byte[] binaryUuid = toBytes(uuid);
+    sql.append(" AND drug_table.uuid= :uuid");
+    byte[] binaryUuid = toBytes(uuid);
 
-        MapSqlParameterSource parameters = new MapSqlParameterSource();
-        parameters.addValue("uuid", binaryUuid);
+    MapSqlParameterSource parameters = new MapSqlParameterSource();
+    parameters.addValue("uuid", binaryUuid);
 
-        return namedParameterJdbcTemplate.query(sql.toString(), parameters, drugDBRecordRowMapper());
+    return namedParameterJdbcTemplate.query(sql.toString(), parameters, drugDBRecordRowMapper());
+  }
 
-    }
+  @Override
+  public Page<DrugDBRecord> find(MedicationSearchQuery medicationSearchQuery) {
 
+    StringBuilder sql = drugQuery();
+    MapSqlParameterSource params = new MapSqlParameterSource();
 
-    @Override
-    public Page<DrugDBRecord> find(MedicationSearchQuery medicationSearchQuery) {
+    long total = countTotal(sql, params);
 
-        StringBuilder sql = drugQuery();
-        MapSqlParameterSource params = new MapSqlParameterSource();
+    int offset =
+        medicationSearchQuery.getOffset() != null
+            ? medicationSearchQuery.getOffset()
+            : DEFAULT_PAGE_OFFSET;
+    int limit =
+        medicationSearchQuery.getCount() != null
+            ? medicationSearchQuery.getCount()
+            : DEFAULT_PAGE_SIZE;
 
-        long total = countTotal(sql, params);
+    sql.append(
+        " ORDER BY drug_table.drug_last_updated DESC, drug_table.drug_id DESC limit :limit offset :offset ");
+    params.addValue("limit", limit);
+    params.addValue("offset", offset);
 
-        int offset = medicationSearchQuery.getOffset() != null ? medicationSearchQuery.getOffset() : DEFAULT_PAGE_OFFSET;
-        int limit = medicationSearchQuery.getCount() != null ? medicationSearchQuery.getCount() : DEFAULT_PAGE_SIZE;
+    List<DrugDBRecord> records =
+        namedParameterJdbcTemplate.query(sql.toString(), params, drugDBRecordRowMapper());
 
-        sql.append(" ORDER BY drug_table.drug_last_updated DESC, drug_table.drug_id DESC limit :limit offset :offset ");
-        params.addValue("limit", limit);
-        params.addValue("offset", offset);
+    return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
+  }
 
-        List<DrugDBRecord> records =
-                namedParameterJdbcTemplate.query(sql.toString(), params, drugDBRecordRowMapper());
+  private long countTotal(StringBuilder filteredSql, MapSqlParameterSource params) {
+    String countSql = "SELECT COUNT(*) from ( %s ) as query_count";
+    Long total =
+        namedParameterJdbcTemplate.queryForObject(
+            countSql.formatted(filteredSql), params, Long.class);
+    return total != null ? total : 0L;
+  }
 
-        return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
-    }
-
-    private long countTotal(StringBuilder filteredSql, MapSqlParameterSource params) {
-        String countSql = "SELECT COUNT(*) from ( %s ) as query_count";
-        Long total = namedParameterJdbcTemplate.queryForObject(countSql.formatted(filteredSql), params, Long.class);
-        return total != null ? total : 0L;
-    }
-
-
-    private StringBuilder drugQuery() {
-        return new StringBuilder("""
+  private StringBuilder drugQuery() {
+    return new StringBuilder(
+        """
                 SELECT
                     drug_table.drug_id,
                     drug_table.uuid,
@@ -131,29 +136,28 @@ public class DrugServiceImpl implements DrugService {
                     ) patient
                     ON patient.pid = drug_prescriptions.prescription_patient_id WHERE 1=1
                 """);
-    }
+  }
 
-
-    private RowMapper<DrugDBRecord> drugDBRecordRowMapper() {
-        return (rs, rowNum) -> DrugDBRecord.builder()
-                .drugId(rs.getLong("drug_id"))
-                .uuid(toUuid(rs.getBytes("uuid")))
-                .name(rs.getString("name"))
-                .ndcNumber(rs.getString("ndc_number"))
-                .form(rs.getString("form"))
-                .size(rs.getString("size"))
-                .unit(rs.getString("unit"))
-                .route(rs.getString("route"))
-                .relatedCode(rs.getString("related_code"))
-                .active(rs.getObject("active") != null ? rs.getInt("active") : null)
-                .drugCode(rs.getString("drug_code"))
-                .rxnormDrugcode(rs.getString("rxnorm_drugcode"))
-                .manufacturer(rs.getString("manufacturer"))
-                .lotNumber(rs.getString("lot_number"))
-                .expiration(toLocalDateTime(rs.getTimestamp("expiration")))
-                .drugLastUpdated(toLocalDateTime(rs.getTimestamp("drug_last_updated")))
-                .drugDateCreated(toLocalDateTime(rs.getTimestamp("drug_date_created")))
-                .build();
-    }
-
+  private RowMapper<DrugDBRecord> drugDBRecordRowMapper() {
+    return (rs, rowNum) ->
+        DrugDBRecord.builder()
+            .drugId(rs.getLong("drug_id"))
+            .uuid(toUuid(rs.getBytes("uuid")))
+            .name(rs.getString("name"))
+            .ndcNumber(rs.getString("ndc_number"))
+            .form(rs.getString("form"))
+            .size(rs.getString("size"))
+            .unit(rs.getString("unit"))
+            .route(rs.getString("route"))
+            .relatedCode(rs.getString("related_code"))
+            .active(rs.getObject("active") != null ? rs.getInt("active") : null)
+            .drugCode(rs.getString("drug_code"))
+            .rxnormDrugcode(rs.getString("rxnorm_drugcode"))
+            .manufacturer(rs.getString("manufacturer"))
+            .lotNumber(rs.getString("lot_number"))
+            .expiration(toLocalDateTime(rs.getTimestamp("expiration")))
+            .drugLastUpdated(toLocalDateTime(rs.getTimestamp("drug_last_updated")))
+            .drugDateCreated(toLocalDateTime(rs.getTimestamp("drug_date_created")))
+            .build();
+  }
 }

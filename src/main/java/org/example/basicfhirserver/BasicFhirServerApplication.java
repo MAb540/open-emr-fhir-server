@@ -6,10 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class BasicFhirServerApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(BasicFhirServerApplication.class, args);
-    }
-
+  public static void main(String[] args) {
+    SpringApplication.run(BasicFhirServerApplication.class, args);
+  }
 }
-
-

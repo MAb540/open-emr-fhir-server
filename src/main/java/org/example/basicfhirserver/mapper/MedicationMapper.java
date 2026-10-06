@@ -5,6 +5,5 @@ import org.hl7.fhir.r4.model.Medication;
 
 public interface MedicationMapper extends ResourceMapper<Medication, DrugDBRecord> {
 
-    Medication toR4(DrugDBRecord drugDBRecord);
-
+  Medication toR4(DrugDBRecord drugDBRecord);
 }

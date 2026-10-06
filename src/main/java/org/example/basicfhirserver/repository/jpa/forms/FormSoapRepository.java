@@ -6,6 +6,5 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface FormSoapRepository extends JpaRepository<FormSoapEntity, Long>,
-        JpaSpecificationExecutor<FormSoapEntity> {
-}
+public interface FormSoapRepository
+    extends JpaRepository<FormSoapEntity, Long>, JpaSpecificationExecutor<FormSoapEntity> {}

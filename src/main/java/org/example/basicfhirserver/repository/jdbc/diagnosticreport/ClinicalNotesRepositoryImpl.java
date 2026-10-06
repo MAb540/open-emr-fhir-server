@@ -1,5 +1,10 @@
 package org.example.basicfhirserver.repository.jdbc.diagnosticreport;
 
+import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 import org.example.basicfhirserver.query.resources.SearchValue;
 import org.example.basicfhirserver.query.resources.diagnosticreport.DiagnosticReportSearchQuery;
 import org.springframework.data.domain.Page;
@@ -11,54 +16,55 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
-
-import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
-
 @Repository
 public class ClinicalNotesRepositoryImpl implements ClinicalNotesRepository {
 
-    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+  private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-    public ClinicalNotesRepositoryImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
-    }
+  public ClinicalNotesRepositoryImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+    this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+  }
 
-    @Override
-    public List<ClinicalNotesDBRecord> findClinicalNotesById(UUID uuid) {
-        return List.of();
-    }
+  @Override
+  public List<ClinicalNotesDBRecord> findClinicalNotesById(UUID uuid) {
+    return List.of();
+  }
 
-    @Override
-    public Page<ClinicalNotesDBRecord> findClinicalNotes(DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
-        StringBuilder sql = clinicalNotesListItemQuery();
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        addFilter(sql, params, diagnosticReportSearchQuery);
+  @Override
+  public Page<ClinicalNotesDBRecord> findClinicalNotes(
+      DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
+    StringBuilder sql = clinicalNotesListItemQuery();
+    MapSqlParameterSource params = new MapSqlParameterSource();
+    addFilter(sql, params, diagnosticReportSearchQuery);
 
-        String countSql = "SELECT COUNT(*) FROM (" + sql + ") as total_count";
-        Long total = namedParameterJdbcTemplate.queryForObject(countSql, params, Long.class);
-        total = (total != null) ? total : 0L;
+    String countSql = "SELECT COUNT(*) FROM (" + sql + ") as total_count";
+    Long total = namedParameterJdbcTemplate.queryForObject(countSql, params, Long.class);
+    total = (total != null) ? total : 0L;
 
-        int limit = (diagnosticReportSearchQuery.getCount() != null) ? diagnosticReportSearchQuery.getCount() : 5;
-        int offset = (diagnosticReportSearchQuery.getOffset() != null) ? diagnosticReportSearchQuery.getOffset() : 0;
+    int limit =
+        (diagnosticReportSearchQuery.getCount() != null)
+            ? diagnosticReportSearchQuery.getCount()
+            : 5;
+    int offset =
+        (diagnosticReportSearchQuery.getOffset() != null)
+            ? diagnosticReportSearchQuery.getOffset()
+            : 0;
 
-        sql.append(" LIMIT :limit OFFSET :offset ");
-        params.addValue("limit", limit);
-        params.addValue("offset", offset);
+    sql.append(" LIMIT :limit OFFSET :offset ");
+    params.addValue("limit", limit);
+    params.addValue("offset", offset);
 
-        List<ClinicalNotesDBRecord> content = namedParameterJdbcTemplate.query(
-                sql.toString(),
-                params,
-                clinicalNotesListDBRecordRowMapper());
+    List<ClinicalNotesDBRecord> content =
+        namedParameterJdbcTemplate.query(
+            sql.toString(), params, clinicalNotesListDBRecordRowMapper());
 
-        Pageable pageable = PageRequest.of(offset / limit, limit);
-        return new PageImpl<>(content, pageable, total);
-    }
+    Pageable pageable = PageRequest.of(offset / limit, limit);
+    return new PageImpl<>(content, pageable, total);
+  }
 
-    private StringBuilder clinicalNotesListItemQuery() {
-        return new StringBuilder("""
+  private StringBuilder clinicalNotesListItemQuery() {
+    return new StringBuilder(
+        """
                 SELECT
                     notes.id
                     ,notes.uuid AS uuid
@@ -155,168 +161,164 @@ public class ClinicalNotesRepositoryImpl implements ClinicalNotesRepository {
                         list_id = 'Clinical_Note_Category'
                             ) lo_category ON notes.clinical_notes_category = lo_category.option_id WHERE 1=1
                 """);
-    }
+  }
 
-    private void addFilter(
-            StringBuilder sql,
-            MapSqlParameterSource params,
-            DiagnosticReportSearchQuery diagnosticReportSearchQuery
-    ) {
+  private void addFilter(
+      StringBuilder sql,
+      MapSqlParameterSource params,
+      DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
 
-        if (diagnosticReportSearchQuery.getDiagnosticReportId() != null) {
-            String uuid = diagnosticReportSearchQuery.getDiagnosticReportId();
-            byte[] binaryUuid = toBytes(UUID.fromString(uuid));
-            sql.append("""
+    if (diagnosticReportSearchQuery.getDiagnosticReportId() != null) {
+      String uuid = diagnosticReportSearchQuery.getDiagnosticReportId();
+      byte[] binaryUuid = toBytes(UUID.fromString(uuid));
+      sql.append(
+          """
                     AND notes.uuid = :uuid
                     """);
-            params.addValue("uuid", binaryUuid);
-        }
+      params.addValue("uuid", binaryUuid);
+    }
 
-        if (diagnosticReportSearchQuery.getPatientId() != null) {
-            String uuid = diagnosticReportSearchQuery.getPatientId();
-            byte[] binaryUuid = toBytes(UUID.fromString(uuid));
-            sql.append(" AND patients.puuid = :patientUuid ");
-            params.addValue("patientUuid", binaryUuid);
-        }
+    if (diagnosticReportSearchQuery.getPatientId() != null) {
+      String uuid = diagnosticReportSearchQuery.getPatientId();
+      byte[] binaryUuid = toBytes(UUID.fromString(uuid));
+      sql.append(" AND patients.puuid = :patientUuid ");
+      params.addValue("patientUuid", binaryUuid);
+    }
 
-        if (diagnosticReportSearchQuery.getCodes() != null && !diagnosticReportSearchQuery.getCodes().isEmpty()) {
-            List<String> codes = diagnosticReportSearchQuery.getCodes().stream()
-                    .map(SearchValue::getValue)
-                    .toList();
-            sql.append("""
+    if (diagnosticReportSearchQuery.getCodes() != null
+        && !diagnosticReportSearchQuery.getCodes().isEmpty()) {
+      List<String> codes =
+          diagnosticReportSearchQuery.getCodes().stream().map(SearchValue::getValue).toList();
+      sql.append(
+          """
                     AND notes.code IN (:codes)
                     """);
-            params.addValue("codes", codes);
-        }
-
-        addDateFilter(sql, params, diagnosticReportSearchQuery);
-        addLastUpdatedFilter(sql, params, diagnosticReportSearchQuery);
+      params.addValue("codes", codes);
     }
 
-    private void addLastUpdatedFilter(
-            StringBuilder sql,
-            MapSqlParameterSource params,
-            DiagnosticReportSearchQuery diagnosticReportSearchQuery
-    ) {
-        if (diagnosticReportSearchQuery.getLastUpdated() == null ||
-                diagnosticReportSearchQuery.getLastUpdated().getValue() == null) {
-            return;
-        }
+    addDateFilter(sql, params, diagnosticReportSearchQuery);
+    addLastUpdatedFilter(sql, params, diagnosticReportSearchQuery);
+  }
 
-        LocalDateTime lastUpdated =
-                diagnosticReportSearchQuery.getLastUpdated().getValue();
-
-        if (diagnosticReportSearchQuery.getLastUpdated().getPrefix() == null) {
-            sql.append(" AND notes.last_updated = :lastUpdated");
-            params.addValue("lastUpdated", lastUpdated);
-            return;
-        }
-
-        switch (diagnosticReportSearchQuery.getLastUpdated().getPrefix()) {
-            case GREATERTHAN:
-                sql.append(" AND notes.last_updated > :lastUpdated");
-                break;
-            case GREATERTHAN_OR_EQUALS:
-                sql.append(" AND notes.last_updated >= :lastUpdated");
-                break;
-            case LESSTHAN:
-            case ENDS_BEFORE:
-                sql.append(" AND notes.last_updated < :lastUpdated");
-                break;
-            case LESSTHAN_OR_EQUALS:
-                sql.append(" AND notes.last_updated <= :lastUpdated");
-                break;
-            case NOT_EQUAL:
-                sql.append(" AND notes.last_updated <> :lastUpdated");
-                break;
-            case STARTS_AFTER:
-                sql.append(" AND notes.last_updated > :lastUpdated");
-                break;
-            case EQUAL:
-            case APPROXIMATE:
-            default:
-                sql.append(" AND notes.last_updated = :lastUpdated");
-                break;
-        }
-        params.addValue("lastUpdated", lastUpdated);
+  private void addLastUpdatedFilter(
+      StringBuilder sql,
+      MapSqlParameterSource params,
+      DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
+    if (diagnosticReportSearchQuery.getLastUpdated() == null
+        || diagnosticReportSearchQuery.getLastUpdated().getValue() == null) {
+      return;
     }
 
-    private void addDateFilter(
-            StringBuilder sql,
-            MapSqlParameterSource params,
-            DiagnosticReportSearchQuery diagnosticReportSearchQuery
-    ) {
-        if (diagnosticReportSearchQuery.getDate() == null ||
-                diagnosticReportSearchQuery.getDate().getValue() == null) {
-            return;
-        }
+    LocalDateTime lastUpdated = diagnosticReportSearchQuery.getLastUpdated().getValue();
 
-        LocalDateTime date =
-                diagnosticReportSearchQuery.getDate().getValue();
-
-        if (diagnosticReportSearchQuery.getDate().getPrefix() == null) {
-            sql.append(" AND notes.date = :date");
-            params.addValue("date", date);
-            return;
-        }
-
-        switch (diagnosticReportSearchQuery.getDate().getPrefix()) {
-            case GREATERTHAN:
-                sql.append(" AND notes.date > :date");
-                break;
-            case GREATERTHAN_OR_EQUALS:
-                sql.append(" AND notes.date >= :date");
-                break;
-            case LESSTHAN:
-            case ENDS_BEFORE: // Handled logically
-                sql.append(" AND notes.date < :date");
-                break;
-            case LESSTHAN_OR_EQUALS:
-                sql.append(" AND notes.date <= :date");
-                break;
-            case NOT_EQUAL:
-                sql.append(" AND notes.date <> :date");
-                break;
-            case STARTS_AFTER: // Handled logically
-                sql.append(" AND notes.date > :date");
-                break;
-            case EQUAL:
-            case APPROXIMATE:
-            default:
-                sql.append(" AND notes.date = :date");
-                break;
-        }
-        params.addValue("date", date);
+    if (diagnosticReportSearchQuery.getLastUpdated().getPrefix() == null) {
+      sql.append(" AND notes.last_updated = :lastUpdated");
+      params.addValue("lastUpdated", lastUpdated);
+      return;
     }
 
-    private RowMapper<ClinicalNotesDBRecord> clinicalNotesListDBRecordRowMapper() {
-        return (rs, rowNum) -> ClinicalNotesDBRecord.builder()
-                .id(rs.getLong("id"))
-                .uuid(toUuid(rs.getBytes("uuid")))
-                .activity(rs.getObject("activity") != null ? rs.getInt("activity") : null)
-                .date(toLocalDateTime(rs.getTimestamp("date")))
-                .code(rs.getString("code"))
-                .codetext(rs.getString("codetext"))
-                .description(rs.getString("description"))
-                .externalId(rs.getString("external_id"))
-                .clinicalNotesType(rs.getString("clinical_notes_type"))
-                .noteRelatedTo(rs.getString("note_related_to"))
-                .clinicalNotesCategory(rs.getString("clinical_notes_category"))
-                .lastUpdated(toLocalDateTime(rs.getTimestamp("last_updated")))
-                .dateCreated(toLocalDateTime(rs.getTimestamp("date_created")))
-                .categoryCode(rs.getString("category_code"))
-                .categoryTitle(rs.getString("category_title"))
-                .pid(rs.getObject("pid") != null ? rs.getLong("pid") : null)
-                .puuid(toUuid(rs.getBytes("puuid")))
-                .eid(rs.getObject("eid") != null ? rs.getLong("eid") : null)
-                .euuid(toUuid(rs.getBytes("euuid")))
-                .encounterDate(toLocalDateTime(rs.getTimestamp("encounter_date")))
-                .username(rs.getString("username"))
-                .userUuid(rs.getString("user_uuid"))
-                .npi(rs.getString("npi"))
-                .physicianType(rs.getString("physician_type"))
-                .build();
+    switch (diagnosticReportSearchQuery.getLastUpdated().getPrefix()) {
+      case GREATERTHAN:
+        sql.append(" AND notes.last_updated > :lastUpdated");
+        break;
+      case GREATERTHAN_OR_EQUALS:
+        sql.append(" AND notes.last_updated >= :lastUpdated");
+        break;
+      case LESSTHAN:
+      case ENDS_BEFORE:
+        sql.append(" AND notes.last_updated < :lastUpdated");
+        break;
+      case LESSTHAN_OR_EQUALS:
+        sql.append(" AND notes.last_updated <= :lastUpdated");
+        break;
+      case NOT_EQUAL:
+        sql.append(" AND notes.last_updated <> :lastUpdated");
+        break;
+      case STARTS_AFTER:
+        sql.append(" AND notes.last_updated > :lastUpdated");
+        break;
+      case EQUAL:
+      case APPROXIMATE:
+      default:
+        sql.append(" AND notes.last_updated = :lastUpdated");
+        break;
+    }
+    params.addValue("lastUpdated", lastUpdated);
+  }
+
+  private void addDateFilter(
+      StringBuilder sql,
+      MapSqlParameterSource params,
+      DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
+    if (diagnosticReportSearchQuery.getDate() == null
+        || diagnosticReportSearchQuery.getDate().getValue() == null) {
+      return;
     }
 
+    LocalDateTime date = diagnosticReportSearchQuery.getDate().getValue();
 
+    if (diagnosticReportSearchQuery.getDate().getPrefix() == null) {
+      sql.append(" AND notes.date = :date");
+      params.addValue("date", date);
+      return;
+    }
+
+    switch (diagnosticReportSearchQuery.getDate().getPrefix()) {
+      case GREATERTHAN:
+        sql.append(" AND notes.date > :date");
+        break;
+      case GREATERTHAN_OR_EQUALS:
+        sql.append(" AND notes.date >= :date");
+        break;
+      case LESSTHAN:
+      case ENDS_BEFORE: // Handled logically
+        sql.append(" AND notes.date < :date");
+        break;
+      case LESSTHAN_OR_EQUALS:
+        sql.append(" AND notes.date <= :date");
+        break;
+      case NOT_EQUAL:
+        sql.append(" AND notes.date <> :date");
+        break;
+      case STARTS_AFTER: // Handled logically
+        sql.append(" AND notes.date > :date");
+        break;
+      case EQUAL:
+      case APPROXIMATE:
+      default:
+        sql.append(" AND notes.date = :date");
+        break;
+    }
+    params.addValue("date", date);
+  }
+
+  private RowMapper<ClinicalNotesDBRecord> clinicalNotesListDBRecordRowMapper() {
+    return (rs, rowNum) ->
+        ClinicalNotesDBRecord.builder()
+            .id(rs.getLong("id"))
+            .uuid(toUuid(rs.getBytes("uuid")))
+            .activity(rs.getObject("activity") != null ? rs.getInt("activity") : null)
+            .date(toLocalDateTime(rs.getTimestamp("date")))
+            .code(rs.getString("code"))
+            .codetext(rs.getString("codetext"))
+            .description(rs.getString("description"))
+            .externalId(rs.getString("external_id"))
+            .clinicalNotesType(rs.getString("clinical_notes_type"))
+            .noteRelatedTo(rs.getString("note_related_to"))
+            .clinicalNotesCategory(rs.getString("clinical_notes_category"))
+            .lastUpdated(toLocalDateTime(rs.getTimestamp("last_updated")))
+            .dateCreated(toLocalDateTime(rs.getTimestamp("date_created")))
+            .categoryCode(rs.getString("category_code"))
+            .categoryTitle(rs.getString("category_title"))
+            .pid(rs.getObject("pid") != null ? rs.getLong("pid") : null)
+            .puuid(toUuid(rs.getBytes("puuid")))
+            .eid(rs.getObject("eid") != null ? rs.getLong("eid") : null)
+            .euuid(toUuid(rs.getBytes("euuid")))
+            .encounterDate(toLocalDateTime(rs.getTimestamp("encounter_date")))
+            .username(rs.getString("username"))
+            .userUuid(rs.getString("user_uuid"))
+            .npi(rs.getString("npi"))
+            .physicianType(rs.getString("physician_type"))
+            .build();
+  }
 }

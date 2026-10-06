@@ -1,5 +1,10 @@
 package org.example.basicfhirserver.repository.jdbc.condition;
 
+import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 import org.example.basicfhirserver.query.resources.condition.ConditionSearchQuery;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -10,217 +15,217 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
-
-import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
-
 @Repository
 public class ConditionRepositoryImpl implements ConditionRepository {
 
-    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+  private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-    public ConditionRepositoryImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+  public ConditionRepositoryImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+    this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+  }
+
+  @Override
+  public List<ConditionProblemListItemDBRecord> findConditionProblemListItemById(UUID uuid) {
+
+    StringBuilder sql = conditionProblemListItemQuery();
+
+    sql.append(" AND l.uuid= :uuid");
+    byte[] binaryUuid = toBytes(uuid);
+
+    MapSqlParameterSource parameters = new MapSqlParameterSource();
+    parameters.addValue("uuid", binaryUuid);
+
+    return namedParameterJdbcTemplate.query(
+        sql.toString(), parameters, conditionProblemListDBRecordRowMapper());
+  }
+
+  @Override
+  public Page<ConditionProblemListItemDBRecord> findConditionProblemListItem(
+      ConditionSearchQuery conditionSearchQuery) {
+    StringBuilder sql = conditionProblemListItemQuery();
+    MapSqlParameterSource params = new MapSqlParameterSource();
+    addFilterInConditionProblemListItem(sql, params, conditionSearchQuery);
+    addLastUpdatedFilter(sql, params, conditionSearchQuery);
+
+    long total = countTotal(sql, params);
+
+    Integer limit = conditionSearchQuery.getCount();
+    int offset = conditionSearchQuery.getOffset() != null ? conditionSearchQuery.getOffset() : 0;
+
+    if (limit == null) {
+      return new PageImpl<>(
+          namedParameterJdbcTemplate.query(
+              sql.toString(), params, conditionProblemListDBRecordRowMapper()),
+          Pageable.unpaged(),
+          total);
     }
 
-    @Override
-    public List<ConditionProblemListItemDBRecord> findConditionProblemListItemById(UUID uuid) {
+    sql.append(" ORDER BY l.condition_date DESC limit :limit offset :offset ");
+    params.addValue("limit", limit);
+    params.addValue("offset", offset);
 
-        StringBuilder sql = conditionProblemListItemQuery();
+    List<ConditionProblemListItemDBRecord> records =
+        namedParameterJdbcTemplate.query(
+            sql.toString(), params, conditionProblemListDBRecordRowMapper());
 
-        sql.append(" AND l.uuid= :uuid");
-        byte[] binaryUuid = toBytes(uuid);
+    return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
+  }
 
-        MapSqlParameterSource parameters = new MapSqlParameterSource();
-        parameters.addValue("uuid", binaryUuid);
+  private long countTotal(StringBuilder filteredSql, MapSqlParameterSource params) {
+    String countSql = "SELECT COUNT(*) FROM (" + filteredSql + ") cnt";
+    Long total = namedParameterJdbcTemplate.queryForObject(countSql, params, Long.class);
+    return total != null ? total : 0L;
+  }
 
-        return namedParameterJdbcTemplate.query(sql.toString(), parameters, conditionProblemListDBRecordRowMapper());
+  private void addFilterInConditionProblemListItem(
+      StringBuilder sql, MapSqlParameterSource params, ConditionSearchQuery conditionSearchQuery) {
+    if (conditionSearchQuery.getPatientId() != null) {
+      String uuid = conditionSearchQuery.getPatientId();
+      byte[] binaryUuid = toBytes(UUID.fromString(uuid));
+      sql.append(" AND pd.puuid = :patientUuid ");
+      params.addValue("patientUuid", binaryUuid);
+    }
+  }
+
+  private void addLastUpdatedFilter(
+      StringBuilder sql, MapSqlParameterSource params, ConditionSearchQuery conditionSearchQuery) {
+    if (conditionSearchQuery.getLastUpdated() == null
+        || conditionSearchQuery.getLastUpdated().getValue() == null) {
+      return;
     }
 
-    @Override
-    public Page<ConditionProblemListItemDBRecord> findConditionProblemListItem(ConditionSearchQuery conditionSearchQuery) {
-        StringBuilder sql = conditionProblemListItemQuery();
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        addFilterInConditionProblemListItem(sql, params, conditionSearchQuery);
-        addLastUpdatedFilter(sql, params, conditionSearchQuery);
+    LocalDateTime lastUpdated = conditionSearchQuery.getLastUpdated().getValue();
 
-        long total = countTotal(sql, params);
-
-        Integer limit = conditionSearchQuery.getCount();
-        int offset = conditionSearchQuery.getOffset() != null ? conditionSearchQuery.getOffset() : 0;
-
-        if (limit == null) {
-            return new PageImpl<>(
-                    namedParameterJdbcTemplate.query(sql.toString(), params, conditionProblemListDBRecordRowMapper()),
-                    Pageable.unpaged(),
-                    total);
-        }
-
-        sql.append(" ORDER BY l.condition_date DESC limit :limit offset :offset ");
-        params.addValue("limit", limit);
-        params.addValue("offset", offset);
-
-        List<ConditionProblemListItemDBRecord> records =
-                namedParameterJdbcTemplate.query(sql.toString(), params, conditionProblemListDBRecordRowMapper());
-
-        return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
+    if (conditionSearchQuery.getLastUpdated().getPrefix() == null) {
+      sql.append(" AND l.last_updated_time = :lastUpdated");
+      params.addValue("lastUpdated", lastUpdated);
+      return;
     }
 
-    private long countTotal(StringBuilder filteredSql, MapSqlParameterSource params) {
-        String countSql = "SELECT COUNT(*) FROM (" + filteredSql + ") cnt";
-        Long total = namedParameterJdbcTemplate.queryForObject(countSql, params, Long.class);
-        return total != null ? total : 0L;
+    switch (conditionSearchQuery.getLastUpdated().getPrefix()) {
+      case GREATERTHAN:
+        sql.append(" AND l.last_updated_time > :lastUpdated");
+        break;
+      case GREATERTHAN_OR_EQUALS:
+        sql.append(" AND l.last_updated_time >= :lastUpdated");
+        break;
+      case LESSTHAN:
+      case ENDS_BEFORE:
+        sql.append(" AND l.last_updated_time < :lastUpdated");
+        break;
+      case LESSTHAN_OR_EQUALS:
+        sql.append(" AND l.last_updated_time <= :lastUpdated");
+        break;
+      case NOT_EQUAL:
+        sql.append(" AND l.last_updated_time <> :lastUpdated");
+        break;
+      case STARTS_AFTER:
+        sql.append(" AND l.last_updated_time > :lastUpdated");
+        break;
+      case EQUAL:
+      case APPROXIMATE:
+      default:
+        sql.append(" AND l.last_updated_time = :lastUpdated");
+        break;
+    }
+    params.addValue("lastUpdated", lastUpdated);
+  }
+
+  @Override
+  public List<ConditionEncounterDiagnosisDBRecord> findConditionEncounterDiagnosisById(UUID uuid) {
+    StringBuilder sql = conditionEncounterDiagnosisQuery();
+
+    sql.append(" AND ie.uuid= :uuid");
+    byte[] binaryUuid = toBytes(uuid);
+
+    MapSqlParameterSource parameters = new MapSqlParameterSource();
+    parameters.addValue("uuid", binaryUuid);
+
+    return namedParameterJdbcTemplate.query(
+        sql.toString(), parameters, conditionEncounterDiagnosisDBRecordRowMapper());
+  }
+
+  @Override
+  public Page<ConditionEncounterDiagnosisDBRecord> findConditionEncounterDiagnosis(
+      ConditionSearchQuery conditionSearchQuery) {
+
+    StringBuilder sql = conditionEncounterDiagnosisQuery();
+    MapSqlParameterSource params = new MapSqlParameterSource();
+    addLastUpdatedFilter(sql, params, conditionSearchQuery);
+
+    long total = countTotal(sql, params);
+
+    Integer limit = conditionSearchQuery.getCount();
+    int offset = conditionSearchQuery.getOffset() != null ? conditionSearchQuery.getOffset() : 0;
+
+    if (limit == null) {
+      return new PageImpl<>(
+          namedParameterJdbcTemplate.query(
+              sql.toString(), params, conditionEncounterDiagnosisDBRecordRowMapper()),
+          Pageable.unpaged(),
+          total);
     }
 
-    private void addFilterInConditionProblemListItem(
-            StringBuilder sql,
-            MapSqlParameterSource params,
-            ConditionSearchQuery conditionSearchQuery
-    ) {
-        if (conditionSearchQuery.getPatientId() != null) {
-            String uuid = conditionSearchQuery.getPatientId();
-            byte[] binaryUuid = toBytes(UUID.fromString(uuid));
-            sql.append(" AND pd.puuid = :patientUuid ");
-            params.addValue("patientUuid", binaryUuid);
-        }
+    sql.append(" ORDER BY ie.date DESC limit :limit offset :offset ");
+    params.addValue("limit", limit);
+    params.addValue("offset", offset);
+
+    List<ConditionEncounterDiagnosisDBRecord> records =
+        namedParameterJdbcTemplate.query(
+            sql.toString(), params, conditionEncounterDiagnosisDBRecordRowMapper());
+
+    return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
+  }
+
+  @Override
+  public List<ConditionHealthConcernDBRecord> findConditionHealthConcernDiagnosisById(UUID uuid) {
+    StringBuilder sql = conditionHealthConcernQuery();
+
+    sql.append(" AND l.uuid= :uuid");
+    byte[] binaryUuid = toBytes(uuid);
+
+    MapSqlParameterSource parameters = new MapSqlParameterSource();
+    parameters.addValue("uuid", binaryUuid);
+
+    return namedParameterJdbcTemplate.query(
+        sql.toString(), parameters, conditionHealthConcernDBRecordRowMapper());
+  }
+
+  @Override
+  public Page<ConditionHealthConcernDBRecord> findConditionHealthConcernDiagnosis(
+      ConditionSearchQuery conditionSearchQuery) {
+
+    StringBuilder sql = conditionHealthConcernQuery();
+    MapSqlParameterSource params = new MapSqlParameterSource();
+    addLastUpdatedFilter(sql, params, conditionSearchQuery);
+
+    long total = countTotal(sql, params);
+
+    Integer limit = conditionSearchQuery.getCount();
+    int offset = conditionSearchQuery.getOffset() != null ? conditionSearchQuery.getOffset() : 0;
+
+    if (limit == null) {
+      return new PageImpl<>(
+          namedParameterJdbcTemplate.query(
+              sql.toString(), params, conditionHealthConcernDBRecordRowMapper()),
+          Pageable.unpaged(),
+          total);
     }
 
-    private void addLastUpdatedFilter(
-            StringBuilder sql,
-            MapSqlParameterSource params,
-            ConditionSearchQuery conditionSearchQuery
-    ) {
-        if (conditionSearchQuery.getLastUpdated() == null ||
-                conditionSearchQuery.getLastUpdated().getValue() == null) {
-            return;
-        }
+    sql.append(" ORDER BY l.date DESC limit :limit offset :offset ");
+    params.addValue("limit", limit);
+    params.addValue("offset", offset);
 
-        LocalDateTime lastUpdated =
-                conditionSearchQuery.getLastUpdated().getValue();
+    List<ConditionHealthConcernDBRecord> records =
+        namedParameterJdbcTemplate.query(
+            sql.toString(), params, conditionHealthConcernDBRecordRowMapper());
 
-        if (conditionSearchQuery.getLastUpdated().getPrefix() == null) {
-            sql.append(" AND l.last_updated_time = :lastUpdated");
-            params.addValue("lastUpdated", lastUpdated);
-            return;
-        }
+    return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
+  }
 
-        switch (conditionSearchQuery.getLastUpdated().getPrefix()) {
-            case GREATERTHAN:
-                sql.append(" AND l.last_updated_time > :lastUpdated");
-                break;
-            case GREATERTHAN_OR_EQUALS:
-                sql.append(" AND l.last_updated_time >= :lastUpdated");
-                break;
-            case LESSTHAN:
-            case ENDS_BEFORE:
-                sql.append(" AND l.last_updated_time < :lastUpdated");
-                break;
-            case LESSTHAN_OR_EQUALS:
-                sql.append(" AND l.last_updated_time <= :lastUpdated");
-                break;
-            case NOT_EQUAL:
-                sql.append(" AND l.last_updated_time <> :lastUpdated");
-                break;
-            case STARTS_AFTER:
-                sql.append(" AND l.last_updated_time > :lastUpdated");
-                break;
-            case EQUAL:
-            case APPROXIMATE:
-            default:
-                sql.append(" AND l.last_updated_time = :lastUpdated");
-                break;
-        }
-        params.addValue("lastUpdated", lastUpdated);
-    }
-
-    @Override
-    public List<ConditionEncounterDiagnosisDBRecord> findConditionEncounterDiagnosisById(UUID uuid) {
-        StringBuilder sql = conditionEncounterDiagnosisQuery();
-
-        sql.append(" AND ie.uuid= :uuid");
-        byte[] binaryUuid = toBytes(uuid);
-
-        MapSqlParameterSource parameters = new MapSqlParameterSource();
-        parameters.addValue("uuid", binaryUuid);
-
-        return namedParameterJdbcTemplate.query(sql.toString(), parameters, conditionEncounterDiagnosisDBRecordRowMapper());
-    }
-
-    @Override
-    public Page<ConditionEncounterDiagnosisDBRecord> findConditionEncounterDiagnosis(ConditionSearchQuery conditionSearchQuery) {
-
-        StringBuilder sql = conditionEncounterDiagnosisQuery();
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        addLastUpdatedFilter(sql, params, conditionSearchQuery);
-
-        long total = countTotal(sql, params);
-
-        Integer limit = conditionSearchQuery.getCount();
-        int offset = conditionSearchQuery.getOffset() != null ? conditionSearchQuery.getOffset() : 0;
-
-        if (limit == null) {
-            return new PageImpl<>(
-                    namedParameterJdbcTemplate.query(sql.toString(), params, conditionEncounterDiagnosisDBRecordRowMapper()),
-                    Pageable.unpaged(),
-                    total);
-        }
-
-        sql.append(" ORDER BY ie.date DESC limit :limit offset :offset ");
-        params.addValue("limit", limit);
-        params.addValue("offset", offset);
-
-        List<ConditionEncounterDiagnosisDBRecord> records =
-                namedParameterJdbcTemplate.query(sql.toString(), params, conditionEncounterDiagnosisDBRecordRowMapper());
-
-        return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
-    }
-
-    @Override
-    public List<ConditionHealthConcernDBRecord> findConditionHealthConcernDiagnosisById(UUID uuid) {
-        StringBuilder sql = conditionHealthConcernQuery();
-
-        sql.append(" AND l.uuid= :uuid");
-        byte[] binaryUuid = toBytes(uuid);
-
-        MapSqlParameterSource parameters = new MapSqlParameterSource();
-        parameters.addValue("uuid", binaryUuid);
-
-        return namedParameterJdbcTemplate.query(sql.toString(), parameters, conditionHealthConcernDBRecordRowMapper());
-    }
-
-    @Override
-    public Page<ConditionHealthConcernDBRecord> findConditionHealthConcernDiagnosis(ConditionSearchQuery conditionSearchQuery) {
-
-        StringBuilder sql = conditionHealthConcernQuery();
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        addLastUpdatedFilter(sql, params, conditionSearchQuery);
-
-        long total = countTotal(sql, params);
-
-        Integer limit = conditionSearchQuery.getCount();
-        int offset = conditionSearchQuery.getOffset() != null ? conditionSearchQuery.getOffset() : 0;
-
-        if (limit == null) {
-            return new PageImpl<>(
-                    namedParameterJdbcTemplate.query(sql.toString(), params, conditionHealthConcernDBRecordRowMapper()),
-                    Pageable.unpaged(),
-                    total);
-        }
-
-        sql.append(" ORDER BY l.date DESC limit :limit offset :offset ");
-        params.addValue("limit", limit);
-        params.addValue("offset", offset);
-
-        List<ConditionHealthConcernDBRecord> records =
-                namedParameterJdbcTemplate.query(sql.toString(), params, conditionHealthConcernDBRecordRowMapper());
-
-        return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
-    }
-
-    private StringBuilder conditionProblemListItemQuery() {
-        return new StringBuilder("""
+  private StringBuilder conditionProblemListItemQuery() {
+    return new StringBuilder(
+        """
                 SELECT
                     l.id,
                     l.uuid,
@@ -273,32 +278,34 @@ public class ConditionRepositoryImpl implements ConditionRepository {
                     FROM issue_encounter
                 ) ie ON l.id = ie.list_id AND l.pid = ie.issue_encounter_pid WHERE 1=1
                 """);
-    }
+  }
 
-    private RowMapper<ConditionProblemListItemDBRecord> conditionProblemListDBRecordRowMapper() {
-        return (rs, rowNum) -> ConditionProblemListItemDBRecord.builder()
-                .id(rs.getLong("id"))
-                .uuid(toUuid(rs.getBytes("uuid")))
-                .pid(rs.getObject("pid") != null ? rs.getLong("pid") : null)
-                .conditionDate(toLocalDateTime(rs.getTimestamp("condition_date")))
-                .modifydate(toLocalDateTime(rs.getTimestamp("modifydate")))
-                .type(rs.getString("type"))
-                .title(rs.getString("title"))
-                .begdate(toLocalDateTime(rs.getTimestamp("begdate")))
-                .enddate(toLocalDateTime(rs.getTimestamp("enddate")))
-                .diagnosis(rs.getString("diagnosis"))
-                .activity(rs.getObject("activity") != null ? rs.getInt("activity") : null)
-                .comments(rs.getString("comments"))
-                .occurrence(rs.getObject("occurrence") != null ? rs.getInt("occurrence") : null)
-                .outcome(rs.getObject("outcome") != null ? rs.getInt("outcome") : null)
-                .verification(rs.getString("verification"))
-                .puuid(toUuid(rs.getBytes("puuid")))
-                .lastUpdatedTime(toLocalDateTime(rs.getTimestamp("last_updated_time")))
-                .build();
-    }
+  private RowMapper<ConditionProblemListItemDBRecord> conditionProblemListDBRecordRowMapper() {
+    return (rs, rowNum) ->
+        ConditionProblemListItemDBRecord.builder()
+            .id(rs.getLong("id"))
+            .uuid(toUuid(rs.getBytes("uuid")))
+            .pid(rs.getObject("pid") != null ? rs.getLong("pid") : null)
+            .conditionDate(toLocalDateTime(rs.getTimestamp("condition_date")))
+            .modifydate(toLocalDateTime(rs.getTimestamp("modifydate")))
+            .type(rs.getString("type"))
+            .title(rs.getString("title"))
+            .begdate(toLocalDateTime(rs.getTimestamp("begdate")))
+            .enddate(toLocalDateTime(rs.getTimestamp("enddate")))
+            .diagnosis(rs.getString("diagnosis"))
+            .activity(rs.getObject("activity") != null ? rs.getInt("activity") : null)
+            .comments(rs.getString("comments"))
+            .occurrence(rs.getObject("occurrence") != null ? rs.getInt("occurrence") : null)
+            .outcome(rs.getObject("outcome") != null ? rs.getInt("outcome") : null)
+            .verification(rs.getString("verification"))
+            .puuid(toUuid(rs.getBytes("puuid")))
+            .lastUpdatedTime(toLocalDateTime(rs.getTimestamp("last_updated_time")))
+            .build();
+  }
 
-    private StringBuilder conditionEncounterDiagnosisQuery() {
-        return new StringBuilder("""
+  private StringBuilder conditionEncounterDiagnosisQuery() {
+    return new StringBuilder(
+        """
                 SELECT
                      l.id,
                      ie.uuid,
@@ -383,41 +390,44 @@ public class ConditionRepositoryImpl implements ConditionRepository {
                      FROM patient_data
                  ) pd ON l.pid = pd.patient_id WHERE 1=1
                 """);
-    }
+  }
 
-    private RowMapper<ConditionEncounterDiagnosisDBRecord> conditionEncounterDiagnosisDBRecordRowMapper() {
-        return (rs, rowNum) -> ConditionEncounterDiagnosisDBRecord.builder()
-                .id(rs.getLong("id"))
-                .uuid(toUuid(rs.getBytes("uuid")))
-                .listsUuid(rs.getString("lists_uuid"))
-                .pid(rs.getObject("pid") != null ? rs.getLong("pid") : null)
-                .modifydate(toLocalDateTime(rs.getTimestamp("modifydate")))
-                .type(rs.getString("type"))
-                .title(rs.getString("title"))
-                .begdate(toLocalDateTime(rs.getTimestamp("begdate")))
-                .enddate(toLocalDateTime(rs.getTimestamp("enddate")))
-                .diagnosis(rs.getString("diagnosis"))
-                .activity(rs.getObject("activity") != null ? rs.getInt("activity") : null)
-                .comments(rs.getString("comments"))
-                .occurrence(rs.getObject("occurrence") != null ? rs.getInt("occurrence") : null)
-                .outcome(rs.getObject("outcome") != null ? rs.getInt("outcome") : null)
-                .verification(rs.getString("verification"))
-                .date(toLocalDateTime(rs.getTimestamp("date")))
-                .encounterUuid(toUuid(rs.getBytes("encounter_uuid")))
-                .encounterId(rs.getObject("encounter_id") != null ? rs.getLong("encounter_id") : null)
-                .encounterDate(toLocalDateTime(rs.getTimestamp("encounter_date")))
-                .creatorUuid(toUuid(rs.getBytes("creator_uuid")))
-                .creatorNpi(rs.getString("creator_npi"))
-                .updatorUuid(toUuid(rs.getBytes("updator_uuid")))
-                .updatorNpi(rs.getString("updator_npi"))
-                .resolved(rs.getObject("resolved") != null ? rs.getInt("resolved") : null)
-                .puuid(toUuid(rs.getBytes("puuid")))
-                .lastUpdatedTime(toLocalDateTime(rs.getTimestamp("last_updated_time")))
-                .build();
-    }
+  private RowMapper<ConditionEncounterDiagnosisDBRecord>
+      conditionEncounterDiagnosisDBRecordRowMapper() {
+    return (rs, rowNum) ->
+        ConditionEncounterDiagnosisDBRecord.builder()
+            .id(rs.getLong("id"))
+            .uuid(toUuid(rs.getBytes("uuid")))
+            .listsUuid(rs.getString("lists_uuid"))
+            .pid(rs.getObject("pid") != null ? rs.getLong("pid") : null)
+            .modifydate(toLocalDateTime(rs.getTimestamp("modifydate")))
+            .type(rs.getString("type"))
+            .title(rs.getString("title"))
+            .begdate(toLocalDateTime(rs.getTimestamp("begdate")))
+            .enddate(toLocalDateTime(rs.getTimestamp("enddate")))
+            .diagnosis(rs.getString("diagnosis"))
+            .activity(rs.getObject("activity") != null ? rs.getInt("activity") : null)
+            .comments(rs.getString("comments"))
+            .occurrence(rs.getObject("occurrence") != null ? rs.getInt("occurrence") : null)
+            .outcome(rs.getObject("outcome") != null ? rs.getInt("outcome") : null)
+            .verification(rs.getString("verification"))
+            .date(toLocalDateTime(rs.getTimestamp("date")))
+            .encounterUuid(toUuid(rs.getBytes("encounter_uuid")))
+            .encounterId(rs.getObject("encounter_id") != null ? rs.getLong("encounter_id") : null)
+            .encounterDate(toLocalDateTime(rs.getTimestamp("encounter_date")))
+            .creatorUuid(toUuid(rs.getBytes("creator_uuid")))
+            .creatorNpi(rs.getString("creator_npi"))
+            .updatorUuid(toUuid(rs.getBytes("updator_uuid")))
+            .updatorNpi(rs.getString("updator_npi"))
+            .resolved(rs.getObject("resolved") != null ? rs.getInt("resolved") : null)
+            .puuid(toUuid(rs.getBytes("puuid")))
+            .lastUpdatedTime(toLocalDateTime(rs.getTimestamp("last_updated_time")))
+            .build();
+  }
 
-    private StringBuilder conditionHealthConcernQuery() {
-        return new StringBuilder("""
+  private StringBuilder conditionHealthConcernQuery() {
+    return new StringBuilder(
+        """
                 SELECT
                     l.id,
                     l.uuid,
@@ -453,30 +463,30 @@ public class ConditionRepositoryImpl implements ConditionRepository {
                     WHERE list_id='Observation_Types'
                 ) AS lo_healthconcerns ON l.subtype = lo_healthconcerns.health_concern_subtype WHERE 1=1
                 """);
-    }
+  }
 
-    private RowMapper<ConditionHealthConcernDBRecord> conditionHealthConcernDBRecordRowMapper() {
-        return (rs, rowNum) -> ConditionHealthConcernDBRecord.builder()
-                .id(rs.getLong("id"))
-                .uuid(toUuid(rs.getBytes("uuid")))
-                .pid(rs.getObject("pid") != null ? rs.getLong("pid") : null)
-                .conditionDate(toLocalDateTime(rs.getTimestamp("condition_date")))
-                .modifydate(toLocalDateTime(rs.getTimestamp("modifydate")))
-                .type(rs.getString("type"))
-                .title(rs.getString("title"))
-                .begdate(toLocalDateTime(rs.getTimestamp("begdate")))
-                .enddate(toLocalDateTime(rs.getTimestamp("enddate")))
-                .diagnosis(rs.getString("diagnosis"))
-                .activity(rs.getObject("activity") != null ? rs.getInt("activity") : null)
-                .comments(rs.getString("comments"))
-                .occurrence(rs.getObject("occurrence") != null ? rs.getInt("occurrence") : null)
-                .outcome(rs.getObject("outcome") != null ? rs.getInt("outcome") : null)
-                .verification(rs.getString("verification"))
-                .healthConcernSubtype(rs.getString("health_concern_subtype"))
-                .healthConcernSubtypeTitle(rs.getString("health_concern_subtype_title"))
-                .puuid(toUuid(rs.getBytes("puuid")))
-                .lastUpdatedTime(toLocalDateTime(rs.getTimestamp("last_updated_time")))
-                .build();
-    }
-
+  private RowMapper<ConditionHealthConcernDBRecord> conditionHealthConcernDBRecordRowMapper() {
+    return (rs, rowNum) ->
+        ConditionHealthConcernDBRecord.builder()
+            .id(rs.getLong("id"))
+            .uuid(toUuid(rs.getBytes("uuid")))
+            .pid(rs.getObject("pid") != null ? rs.getLong("pid") : null)
+            .conditionDate(toLocalDateTime(rs.getTimestamp("condition_date")))
+            .modifydate(toLocalDateTime(rs.getTimestamp("modifydate")))
+            .type(rs.getString("type"))
+            .title(rs.getString("title"))
+            .begdate(toLocalDateTime(rs.getTimestamp("begdate")))
+            .enddate(toLocalDateTime(rs.getTimestamp("enddate")))
+            .diagnosis(rs.getString("diagnosis"))
+            .activity(rs.getObject("activity") != null ? rs.getInt("activity") : null)
+            .comments(rs.getString("comments"))
+            .occurrence(rs.getObject("occurrence") != null ? rs.getInt("occurrence") : null)
+            .outcome(rs.getObject("outcome") != null ? rs.getInt("outcome") : null)
+            .verification(rs.getString("verification"))
+            .healthConcernSubtype(rs.getString("health_concern_subtype"))
+            .healthConcernSubtypeTitle(rs.getString("health_concern_subtype_title"))
+            .puuid(toUuid(rs.getBytes("puuid")))
+            .lastUpdatedTime(toLocalDateTime(rs.getTimestamp("last_updated_time")))
+            .build();
+  }
 }

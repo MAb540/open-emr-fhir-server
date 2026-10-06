@@ -6,6 +6,5 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface FormVitalsRepository extends JpaRepository<FormVitalsEntity, Long>,
-        JpaSpecificationExecutor<FormVitalsEntity> {
-}
+public interface FormVitalsRepository
+    extends JpaRepository<FormVitalsEntity, Long>, JpaSpecificationExecutor<FormVitalsEntity> {}

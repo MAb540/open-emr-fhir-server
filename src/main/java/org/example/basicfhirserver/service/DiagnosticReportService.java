@@ -1,15 +1,14 @@
 package org.example.basicfhirserver.service;
 
+import java.util.UUID;
 import org.example.basicfhirserver.model.DiagnosticReportCanonical;
 import org.example.basicfhirserver.query.resources.diagnosticreport.DiagnosticReportSearchQuery;
 import org.example.basicfhirserver.repository.jdbc.diagnosticreport.ClinicalNotesDBRecord;
 
-import java.util.UUID;
-
 public interface DiagnosticReportService {
 
-    ClinicalNotesDBRecord findClinicalNotesById(UUID uuid);
+  ClinicalNotesDBRecord findClinicalNotesById(UUID uuid);
 
-    DiagnosticReportCanonical findClinicalNotes(DiagnosticReportSearchQuery diagnosticReportSearchQuery);
-
+  DiagnosticReportCanonical findClinicalNotes(
+      DiagnosticReportSearchQuery diagnosticReportSearchQuery);
 }

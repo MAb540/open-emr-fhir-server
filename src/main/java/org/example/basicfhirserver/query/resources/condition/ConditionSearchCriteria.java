@@ -13,9 +13,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class ConditionSearchCriteria {
-    private ReferenceParam patient;
-    private TokenParam category;
-    private DateParam lastUpdated;
-    private Integer count;
-    private Integer offset;
+  private ReferenceParam patient;
+  private TokenParam category;
+  private DateParam lastUpdated;
+  private Integer count;
+  private Integer offset;
 }

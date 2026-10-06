@@ -6,13 +6,14 @@ import org.example.basicfhirserver.query.translator.SearchTranslator;
 import org.springframework.stereotype.Component;
 
 @Component
-public class MedicationSearchTranslator implements SearchTranslator<MedicationSearchQuery, MedicationSearchCriteria> {
+public class MedicationSearchTranslator
+    implements SearchTranslator<MedicationSearchQuery, MedicationSearchCriteria> {
 
-    @Override
-    public MedicationSearchQuery translate(MedicationSearchCriteria criteria) {
-        return MedicationSearchQuery.builder()
-                .count(criteria.getCount())
-                .offset(criteria.getOffset())
-                .build();
-    }
+  @Override
+  public MedicationSearchQuery translate(MedicationSearchCriteria criteria) {
+    return MedicationSearchQuery.builder()
+        .count(criteria.getCount())
+        .offset(criteria.getOffset())
+        .build();
+  }
 }

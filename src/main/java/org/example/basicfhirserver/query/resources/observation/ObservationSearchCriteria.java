@@ -15,12 +15,11 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ObservationSearchCriteria {
 
-    private ReferenceParam patient;
-    private TokenParam category;
-    private TokenOrListParam codes;
-    private DateParam date;
-    private DateParam lastUpdated;
-    private Integer count;
-    private Integer offset;
-
+  private ReferenceParam patient;
+  private TokenParam category;
+  private TokenOrListParam codes;
+  private DateParam date;
+  private DateParam lastUpdated;
+  private Integer count;
+  private Integer offset;
 }

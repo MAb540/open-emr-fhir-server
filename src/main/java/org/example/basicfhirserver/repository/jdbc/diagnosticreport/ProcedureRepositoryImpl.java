@@ -1,5 +1,9 @@
 package org.example.basicfhirserver.repository.jdbc.diagnosticreport;
 
+import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
+
+import java.time.LocalDateTime;
+import java.util.*;
 import org.example.basicfhirserver.query.resources.SearchValue;
 import org.example.basicfhirserver.query.resources.diagnosticreport.DiagnosticReportSearchQuery;
 import org.springframework.data.domain.Page;
@@ -11,54 +15,58 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
-import java.util.*;
-
-import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
-
 @Repository
 public class ProcedureRepositoryImpl implements ProcedureRepository {
 
-    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+  private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-    public ProcedureRepositoryImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
-    }
+  public ProcedureRepositoryImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+    this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+  }
 
-    @Override
-    public List<ProcedureDBRecord> findProcedureById(UUID uuid) {
-        return List.of();
-    }
+  @Override
+  public List<ProcedureDBRecord> findProcedureById(UUID uuid) {
+    return List.of();
+  }
 
-    @Override
-    public Page<ProcedureDBRecord> findProcedures(DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
-        StringBuilder sql = procedureOrderListItemQuery();
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        addFilter(sql, params, diagnosticReportSearchQuery);
-        String countSql = """
+  @Override
+  public Page<ProcedureDBRecord> findProcedures(
+      DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
+    StringBuilder sql = procedureOrderListItemQuery();
+    MapSqlParameterSource params = new MapSqlParameterSource();
+    addFilter(sql, params, diagnosticReportSearchQuery);
+    String countSql =
+        """
                         SELECT COUNT(*)
                         FROM procedure_order porder
                         WHERE porder.activity = 1
                 """;
-        Long total = namedParameterJdbcTemplate.queryForObject(countSql, params, Long.class);
-        total = (total != null) ? total : 0L;
+    Long total = namedParameterJdbcTemplate.queryForObject(countSql, params, Long.class);
+    total = (total != null) ? total : 0L;
 
-        int limit = (diagnosticReportSearchQuery.getCount() != null) ? diagnosticReportSearchQuery.getCount() : 5;
-        int offset = (diagnosticReportSearchQuery.getOffset() != null) ? diagnosticReportSearchQuery.getOffset() : 0;
+    int limit =
+        (diagnosticReportSearchQuery.getCount() != null)
+            ? diagnosticReportSearchQuery.getCount()
+            : 5;
+    int offset =
+        (diagnosticReportSearchQuery.getOffset() != null)
+            ? diagnosticReportSearchQuery.getOffset()
+            : 0;
 
-        sql.append(" LIMIT :limit OFFSET :offset ");
-        params.addValue("limit", limit);
-        params.addValue("offset", offset);
+    sql.append(" LIMIT :limit OFFSET :offset ");
+    params.addValue("limit", limit);
+    params.addValue("offset", offset);
 
-        List<RawProcedureRecord> rawProcedureRecords =
-                namedParameterJdbcTemplate.query(sql.toString(), params, proceduresListDBRecordRowMapper());
+    List<RawProcedureRecord> rawProcedureRecords =
+        namedParameterJdbcTemplate.query(sql.toString(), params, proceduresListDBRecordRowMapper());
 
-        Pageable pageable = PageRequest.of(offset / limit, limit);
-        return new PageImpl<>(hydrateSearchResults(rawProcedureRecords), pageable, total);
-    }
+    Pageable pageable = PageRequest.of(offset / limit, limit);
+    return new PageImpl<>(hydrateSearchResults(rawProcedureRecords), pageable, total);
+  }
 
-    private StringBuilder procedureOrderListItemQuery() {
-        return new StringBuilder("""
+  private StringBuilder procedureOrderListItemQuery() {
+    return new StringBuilder(
+        """
                 SELECT
                     porder.order_uuid
                     ,porder.order_uuid AS uuid
@@ -85,13 +93,13 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
                     ,porder.order_intent
                     ,porder.location_id
                     ,porder.specimen_fasting
-                
+
                     ,preport.report_date
                     ,preport.procedure_report_id
                     ,preport.report_uuid
                     ,preport.report_notes
                     ,preport.procedure_order_seq
-                
+
                     ,presult.procedure_result_id
                     ,presult.result_uuid
                     ,presult.result_code
@@ -104,40 +112,40 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
                     ,presult.result_abnormal_codes
                     ,presult.result_comments
                     ,presult.result_status
-                
+
                     ,order_codes.procedure_name
                     ,order_codes.procedure_code
                     ,order_codes.procedure_type
                     ,order_codes.procedure_order_seq AS order_code_seq
                     ,order_codes.diagnoses
-                
+
                     ,pcode_types.standard_code
-                
+
                     ,labs.lab_id
                     ,labs.lab_uuid
                     ,labs.lab_npi
                     ,labs.lab_name
                     ,labs.lab_director_uuid
                     ,labs.lab_director_npi
-                
+
                     ,patients.puuid
                     ,patients.pid
                     ,patients.pid AS patient_id
-                
+
                     ,encounters.eid
                     ,encounters.euuid
                     ,encounters.encounter_date
-                
+
                     ,docs.doc_id
                     ,docs.doc_uuid
-                
+
                     ,provider.provider_uuid
                     ,provider.provider_id
                     ,provider.provider_fname
                     ,provider.provider_mname
                     ,provider.provider_lname
                     ,provider.provider_npi
-                
+
                     ,location.location_id
                     ,location.location_uuid
                     ,location.location_name
@@ -269,331 +277,384 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
                     FROM facility
                 ) location ON location.location_id = porder.location_id WHERE 1=1
                 """);
-    }
+  }
 
-    private void addFilter(
-            StringBuilder sql,
-            MapSqlParameterSource params,
-            DiagnosticReportSearchQuery diagnosticReportSearchQuery
-    ) {
-        if (diagnosticReportSearchQuery.getDiagnosticReportId() != null) {
-            String uuid = diagnosticReportSearchQuery.getDiagnosticReportId();
-            byte[] binaryUuid = toBytes(UUID.fromString(uuid));
-            sql.append("""
+  private void addFilter(
+      StringBuilder sql,
+      MapSqlParameterSource params,
+      DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
+    if (diagnosticReportSearchQuery.getDiagnosticReportId() != null) {
+      String uuid = diagnosticReportSearchQuery.getDiagnosticReportId();
+      byte[] binaryUuid = toBytes(UUID.fromString(uuid));
+      sql.append(
+          """
                     AND porder.order_uuid = :order_uuid
                     """);
-            params.addValue("order_uuid", binaryUuid);
-        }
+      params.addValue("order_uuid", binaryUuid);
+    }
 
-        if (diagnosticReportSearchQuery.getPatientId() != null) {
-            String uuid = diagnosticReportSearchQuery.getPatientId();
-            byte[] binaryUuid = toBytes(UUID.fromString(uuid));
-            sql.append(" AND patients.puuid = :patientUuid ");
-            params.addValue("patientUuid", binaryUuid);
-        }
+    if (diagnosticReportSearchQuery.getPatientId() != null) {
+      String uuid = diagnosticReportSearchQuery.getPatientId();
+      byte[] binaryUuid = toBytes(UUID.fromString(uuid));
+      sql.append(" AND patients.puuid = :patientUuid ");
+      params.addValue("patientUuid", binaryUuid);
+    }
 
-        if (diagnosticReportSearchQuery.getCodes() != null && !diagnosticReportSearchQuery.getCodes().isEmpty()) {
-            List<String> codes = diagnosticReportSearchQuery.getCodes().stream()
-                    .map(SearchValue::getValue)
-                    .toList();
-            sql.append("""
+    if (diagnosticReportSearchQuery.getCodes() != null
+        && !diagnosticReportSearchQuery.getCodes().isEmpty()) {
+      List<String> codes =
+          diagnosticReportSearchQuery.getCodes().stream().map(SearchValue::getValue).toList();
+      sql.append(
+          """
                     AND pcode_types.standard_code IN (:standard_codes)
                     """);
-            params.addValue("standard_codes", codes);
-        }
-        addDateFilter(sql, params, diagnosticReportSearchQuery);
-        addLastUpdatedFilter(sql, params, diagnosticReportSearchQuery);
+      params.addValue("standard_codes", codes);
+    }
+    addDateFilter(sql, params, diagnosticReportSearchQuery);
+    addLastUpdatedFilter(sql, params, diagnosticReportSearchQuery);
+  }
+
+  private void addLastUpdatedFilter(
+      StringBuilder sql,
+      MapSqlParameterSource params,
+      DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
+    if (diagnosticReportSearchQuery.getLastUpdated() == null
+        || diagnosticReportSearchQuery.getLastUpdated().getValue() == null) {
+      return;
     }
 
-    private void addLastUpdatedFilter(
-            StringBuilder sql,
-            MapSqlParameterSource params,
-            DiagnosticReportSearchQuery diagnosticReportSearchQuery
-    ) {
-        if (diagnosticReportSearchQuery.getLastUpdated() == null ||
-                diagnosticReportSearchQuery.getLastUpdated().getValue() == null) {
-            return;
-        }
+    LocalDateTime lastUpdated = diagnosticReportSearchQuery.getLastUpdated().getValue();
 
-        LocalDateTime lastUpdated =
-                diagnosticReportSearchQuery.getLastUpdated().getValue();
-
-        if (diagnosticReportSearchQuery.getLastUpdated().getPrefix() == null) {
-            sql.append(" AND preport.report_date = :lastUpdated");
-            params.addValue("lastUpdated", lastUpdated);
-            return;
-        }
-
-        switch (diagnosticReportSearchQuery.getLastUpdated().getPrefix()) {
-            case GREATERTHAN:
-                sql.append(" AND preport.report_date > :lastUpdated");
-                break;
-            case GREATERTHAN_OR_EQUALS:
-                sql.append(" AND preport.report_date >= :lastUpdated");
-                break;
-            case LESSTHAN:
-            case ENDS_BEFORE:
-                sql.append(" AND preport.report_date < :lastUpdated");
-                break;
-            case LESSTHAN_OR_EQUALS:
-                sql.append(" AND preport.report_date <= :lastUpdated");
-                break;
-            case NOT_EQUAL:
-                sql.append(" AND preport.report_date <> :lastUpdated");
-                break;
-            case STARTS_AFTER:
-                sql.append(" AND preport.report_date > :lastUpdated");
-                break;
-            case EQUAL:
-            case APPROXIMATE:
-            default:
-                sql.append(" AND preport.report_date = :lastUpdated");
-                break;
-        }
-        params.addValue("lastUpdated", lastUpdated);
+    if (diagnosticReportSearchQuery.getLastUpdated().getPrefix() == null) {
+      sql.append(" AND preport.report_date = :lastUpdated");
+      params.addValue("lastUpdated", lastUpdated);
+      return;
     }
 
-    private void addDateFilter(
-            StringBuilder sql,
-            MapSqlParameterSource params,
-            DiagnosticReportSearchQuery diagnosticReportSearchQuery
-    ) {
-        if (diagnosticReportSearchQuery.getDate() == null ||
-                diagnosticReportSearchQuery.getDate().getValue() == null) {
-            return;
-        }
+    switch (diagnosticReportSearchQuery.getLastUpdated().getPrefix()) {
+      case GREATERTHAN:
+        sql.append(" AND preport.report_date > :lastUpdated");
+        break;
+      case GREATERTHAN_OR_EQUALS:
+        sql.append(" AND preport.report_date >= :lastUpdated");
+        break;
+      case LESSTHAN:
+      case ENDS_BEFORE:
+        sql.append(" AND preport.report_date < :lastUpdated");
+        break;
+      case LESSTHAN_OR_EQUALS:
+        sql.append(" AND preport.report_date <= :lastUpdated");
+        break;
+      case NOT_EQUAL:
+        sql.append(" AND preport.report_date <> :lastUpdated");
+        break;
+      case STARTS_AFTER:
+        sql.append(" AND preport.report_date > :lastUpdated");
+        break;
+      case EQUAL:
+      case APPROXIMATE:
+      default:
+        sql.append(" AND preport.report_date = :lastUpdated");
+        break;
+    }
+    params.addValue("lastUpdated", lastUpdated);
+  }
 
-        LocalDateTime date =
-                diagnosticReportSearchQuery.getDate().getValue();
-
-        if (diagnosticReportSearchQuery.getDate().getPrefix() == null) {
-            sql.append(" AND preport.report_date = :date");
-            params.addValue("date", date);
-            return;
-        }
-
-        switch (diagnosticReportSearchQuery.getDate().getPrefix()) {
-            case GREATERTHAN:
-                sql.append(" AND preport.report_date > :date");
-                break;
-            case GREATERTHAN_OR_EQUALS:
-                sql.append(" AND preport.report_date >= :date");
-                break;
-            case LESSTHAN:
-            case ENDS_BEFORE: // Handled logically
-                sql.append(" AND preport.report_date < :date");
-                break;
-            case LESSTHAN_OR_EQUALS:
-                sql.append(" AND preport.report_date <= :date");
-                break;
-            case NOT_EQUAL:
-                sql.append(" AND preport.report_date <> :date");
-                break;
-            case STARTS_AFTER: // Handled logically
-                sql.append(" AND preport.report_date > :date");
-                break;
-            case EQUAL:
-            case APPROXIMATE:
-            default:
-                sql.append(" AND preport.report_date = :date");
-                break;
-        }
-        params.addValue("date", date);
+  private void addDateFilter(
+      StringBuilder sql,
+      MapSqlParameterSource params,
+      DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
+    if (diagnosticReportSearchQuery.getDate() == null
+        || diagnosticReportSearchQuery.getDate().getValue() == null) {
+      return;
     }
 
-    private RowMapper<RawProcedureRecord> proceduresListDBRecordRowMapper() {
-        return (rs, rowNum) -> RawProcedureRecord.builder()
-                .orderUuid(toUuid(rs.getBytes("order_uuid")))
-                .uuid(toUuid(rs.getBytes("uuid")))
-                .procedureOrderId(rs.getObject("procedure_order_id") != null ? rs.getLong("procedure_order_id") : null)
-                .orderProviderId(rs.getObject("order_provider_id") != null ? rs.getLong("order_provider_id") : null)
-                .orderActivity(rs.getObject("order_activity") != null ? rs.getInt("order_activity") : null)
-                .activity(rs.getObject("activity") != null ? rs.getInt("activity") : null)
-                .orderDiagnosis(rs.getString("order_diagnosis"))
-                .orderEncounterId(rs.getObject("order_encounter_id") != null ? rs.getLong("order_encounter_id") : null)
-                .orderLabId(rs.getObject("order_lab_id") != null ? rs.getLong("order_lab_id") : null)
-                .orderPatientId(rs.getObject("order_patient_id") != null ? rs.getLong("order_patient_id") : null)
-                .providerId(rs.getObject("provider_id") != null ? rs.getLong("provider_id") : null)
-                .dateOrdered(toLocalDateTime(rs.getTimestamp("date_ordered")))
-                .dateCollected(toLocalDateTime(rs.getTimestamp("date_collected")))
-                .orderStatus(rs.getString("order_status"))
-                .orderPriority(rs.getString("order_priority"))
-                .patientInstructions(rs.getString("patient_instructions"))
-                .clinicalHx(rs.getString("clinical_hx"))
-                .procedureOrderType(rs.getString("procedure_order_type"))
-                .scheduledDate(toLocalDateTime(rs.getTimestamp("scheduled_date")))
-                .scheduledStart(toLocalDateTime(rs.getTimestamp("scheduled_start")))
-                .scheduledEnd(toLocalDateTime(rs.getTimestamp("scheduled_end")))
-                .performerType(rs.getString("performer_type"))
-                .orderIntent(rs.getString("order_intent"))
-                .locationId(rs.getObject("location_id") != null ? rs.getLong("location_id") : null)
-                .specimenFasting(rs.getObject("specimen_fasting") != null ? rs.getInt("specimen_fasting") : null)
-                .reportDate(toLocalDateTime(rs.getTimestamp("report_date")))
-                .procedureReportId(rs.getObject("procedure_report_id") != null ? rs.getLong("procedure_report_id") : null)
-                .reportUuid(toUuid(rs.getBytes("report_uuid")))
-                .reportNotes(rs.getString("report_notes"))
-                .procedureOrderSeq(rs.getObject("procedure_order_seq") != null ? rs.getInt("procedure_order_seq") : null)
-                .procedureResultId(rs.getObject("procedure_result_id") != null ? rs.getLong("procedure_result_id") : null)
-                .resultUuid(toUuid(rs.getBytes("result_uuid")))
-                .resultCode(rs.getString("result_code"))
-                .resultText(rs.getString("result_text"))
-                .resultUnits(rs.getString("result_units"))
-                .resultResult(rs.getString("result_result"))
-                .resultRange(rs.getString("result_range"))
-                .resultAbnormal(rs.getString("result_abnormal"))
-                .resultAbnormalTitle(rs.getString("result_abnormal_title"))
-                .resultAbnormalCodes(rs.getString("result_abnormal_codes"))
-                .resultComments(rs.getString("result_comments"))
-                .resultStatus(rs.getString("result_status"))
-                .procedureName(rs.getString("procedure_name"))
-                .procedureCode(rs.getString("procedure_code"))
-                .procedureType(rs.getString("procedure_type"))
-                .orderCodeSeq(rs.getObject("order_code_seq") != null ? rs.getInt("order_code_seq") : null)
-                .diagnoses(rs.getString("diagnoses"))
-                .standardCode(rs.getString("standard_code"))
-                .labId(rs.getObject("lab_id") != null ? rs.getLong("lab_id") : null)
-                .labUuid(toUuid(rs.getBytes("lab_uuid")))
-                .labNpi(rs.getString("lab_npi"))
-                .labName(rs.getString("lab_name"))
-                .labDirectorUuid(toUuid(rs.getBytes("lab_director_uuid")))
-                .labDirectorNpi(rs.getString("lab_director_npi"))
-                .puuid(toUuid(rs.getBytes("puuid")))
-                .pid(rs.getObject("pid") != null ? rs.getLong("pid") : null)
-                .patientId(rs.getObject("patient_id") != null ? rs.getLong("patient_id") : null)
-                .eid(rs.getObject("eid") != null ? rs.getLong("eid") : null)
-                .euuid(toUuid(rs.getBytes("euuid")))
-                .encounterDate(toLocalDateTime(rs.getTimestamp("encounter_date")))
-                .docId(rs.getObject("doc_id") != null ? rs.getLong("doc_id") : null)
-                .docUuid(toUuid(rs.getBytes("doc_uuid")))
-                .providerUuid(toUuid(rs.getBytes("provider_uuid")))
-                .providerId(rs.getObject("provider_id") != null ? rs.getLong("provider_id") : null)
-                .providerFname(rs.getString("provider_fname"))
-                .providerMname(rs.getString("provider_mname"))
-                .providerLname(rs.getString("provider_lname"))
-                .providerNpi(rs.getString("provider_npi"))
-                .locationUuid(toUuid(rs.getBytes("location_uuid")))
-                .locationName(rs.getString("location_name"))
+    LocalDateTime date = diagnosticReportSearchQuery.getDate().getValue();
+
+    if (diagnosticReportSearchQuery.getDate().getPrefix() == null) {
+      sql.append(" AND preport.report_date = :date");
+      params.addValue("date", date);
+      return;
+    }
+
+    switch (diagnosticReportSearchQuery.getDate().getPrefix()) {
+      case GREATERTHAN:
+        sql.append(" AND preport.report_date > :date");
+        break;
+      case GREATERTHAN_OR_EQUALS:
+        sql.append(" AND preport.report_date >= :date");
+        break;
+      case LESSTHAN:
+      case ENDS_BEFORE: // Handled logically
+        sql.append(" AND preport.report_date < :date");
+        break;
+      case LESSTHAN_OR_EQUALS:
+        sql.append(" AND preport.report_date <= :date");
+        break;
+      case NOT_EQUAL:
+        sql.append(" AND preport.report_date <> :date");
+        break;
+      case STARTS_AFTER: // Handled logically
+        sql.append(" AND preport.report_date > :date");
+        break;
+      case EQUAL:
+      case APPROXIMATE:
+      default:
+        sql.append(" AND preport.report_date = :date");
+        break;
+    }
+    params.addValue("date", date);
+  }
+
+  private RowMapper<RawProcedureRecord> proceduresListDBRecordRowMapper() {
+    return (rs, rowNum) ->
+        RawProcedureRecord.builder()
+            .orderUuid(toUuid(rs.getBytes("order_uuid")))
+            .uuid(toUuid(rs.getBytes("uuid")))
+            .procedureOrderId(
+                rs.getObject("procedure_order_id") != null
+                    ? rs.getLong("procedure_order_id")
+                    : null)
+            .orderProviderId(
+                rs.getObject("order_provider_id") != null ? rs.getLong("order_provider_id") : null)
+            .orderActivity(
+                rs.getObject("order_activity") != null ? rs.getInt("order_activity") : null)
+            .activity(rs.getObject("activity") != null ? rs.getInt("activity") : null)
+            .orderDiagnosis(rs.getString("order_diagnosis"))
+            .orderEncounterId(
+                rs.getObject("order_encounter_id") != null
+                    ? rs.getLong("order_encounter_id")
+                    : null)
+            .orderLabId(rs.getObject("order_lab_id") != null ? rs.getLong("order_lab_id") : null)
+            .orderPatientId(
+                rs.getObject("order_patient_id") != null ? rs.getLong("order_patient_id") : null)
+            .providerId(rs.getObject("provider_id") != null ? rs.getLong("provider_id") : null)
+            .dateOrdered(toLocalDateTime(rs.getTimestamp("date_ordered")))
+            .dateCollected(toLocalDateTime(rs.getTimestamp("date_collected")))
+            .orderStatus(rs.getString("order_status"))
+            .orderPriority(rs.getString("order_priority"))
+            .patientInstructions(rs.getString("patient_instructions"))
+            .clinicalHx(rs.getString("clinical_hx"))
+            .procedureOrderType(rs.getString("procedure_order_type"))
+            .scheduledDate(toLocalDateTime(rs.getTimestamp("scheduled_date")))
+            .scheduledStart(toLocalDateTime(rs.getTimestamp("scheduled_start")))
+            .scheduledEnd(toLocalDateTime(rs.getTimestamp("scheduled_end")))
+            .performerType(rs.getString("performer_type"))
+            .orderIntent(rs.getString("order_intent"))
+            .locationId(rs.getObject("location_id") != null ? rs.getLong("location_id") : null)
+            .specimenFasting(
+                rs.getObject("specimen_fasting") != null ? rs.getInt("specimen_fasting") : null)
+            .reportDate(toLocalDateTime(rs.getTimestamp("report_date")))
+            .procedureReportId(
+                rs.getObject("procedure_report_id") != null
+                    ? rs.getLong("procedure_report_id")
+                    : null)
+            .reportUuid(toUuid(rs.getBytes("report_uuid")))
+            .reportNotes(rs.getString("report_notes"))
+            .procedureOrderSeq(
+                rs.getObject("procedure_order_seq") != null
+                    ? rs.getInt("procedure_order_seq")
+                    : null)
+            .procedureResultId(
+                rs.getObject("procedure_result_id") != null
+                    ? rs.getLong("procedure_result_id")
+                    : null)
+            .resultUuid(toUuid(rs.getBytes("result_uuid")))
+            .resultCode(rs.getString("result_code"))
+            .resultText(rs.getString("result_text"))
+            .resultUnits(rs.getString("result_units"))
+            .resultResult(rs.getString("result_result"))
+            .resultRange(rs.getString("result_range"))
+            .resultAbnormal(rs.getString("result_abnormal"))
+            .resultAbnormalTitle(rs.getString("result_abnormal_title"))
+            .resultAbnormalCodes(rs.getString("result_abnormal_codes"))
+            .resultComments(rs.getString("result_comments"))
+            .resultStatus(rs.getString("result_status"))
+            .procedureName(rs.getString("procedure_name"))
+            .procedureCode(rs.getString("procedure_code"))
+            .procedureType(rs.getString("procedure_type"))
+            .orderCodeSeq(
+                rs.getObject("order_code_seq") != null ? rs.getInt("order_code_seq") : null)
+            .diagnoses(rs.getString("diagnoses"))
+            .standardCode(rs.getString("standard_code"))
+            .labId(rs.getObject("lab_id") != null ? rs.getLong("lab_id") : null)
+            .labUuid(toUuid(rs.getBytes("lab_uuid")))
+            .labNpi(rs.getString("lab_npi"))
+            .labName(rs.getString("lab_name"))
+            .labDirectorUuid(toUuid(rs.getBytes("lab_director_uuid")))
+            .labDirectorNpi(rs.getString("lab_director_npi"))
+            .puuid(toUuid(rs.getBytes("puuid")))
+            .pid(rs.getObject("pid") != null ? rs.getLong("pid") : null)
+            .patientId(rs.getObject("patient_id") != null ? rs.getLong("patient_id") : null)
+            .eid(rs.getObject("eid") != null ? rs.getLong("eid") : null)
+            .euuid(toUuid(rs.getBytes("euuid")))
+            .encounterDate(toLocalDateTime(rs.getTimestamp("encounter_date")))
+            .docId(rs.getObject("doc_id") != null ? rs.getLong("doc_id") : null)
+            .docUuid(toUuid(rs.getBytes("doc_uuid")))
+            .providerUuid(toUuid(rs.getBytes("provider_uuid")))
+            .providerId(rs.getObject("provider_id") != null ? rs.getLong("provider_id") : null)
+            .providerFname(rs.getString("provider_fname"))
+            .providerMname(rs.getString("provider_mname"))
+            .providerLname(rs.getString("provider_lname"))
+            .providerNpi(rs.getString("provider_npi"))
+            .locationUuid(toUuid(rs.getBytes("location_uuid")))
+            .locationName(rs.getString("location_name"))
+            .build();
+  }
+
+  public List<ProcedureDBRecord> hydrateSearchResults(List<RawProcedureRecord> rawRows) {
+    if (rawRows == null || rawRows.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    List<String> procedureOrderUuuids = new ArrayList<>();
+
+    // Maps to track and reduce duplicate parent structures and report nodes
+    Map<String, ProcedureDBRecord> procedureByUuid = new HashMap<>();
+    Map<String, ProcedureDBRecord.ReportBlock> reportsByUuid = new HashMap<>();
+
+    // =========================================================================
+    // PASS 1: Build the tree structure and collect relational nodes
+    // =========================================================================
+    for (RawProcedureRecord row : rawRows) {
+      // Safe assignment preventing NullPointerException if orderUuid is null
+      String procedureUuid = row.getOrderUuid() != null ? row.getOrderUuid().toString() : null;
+      if (procedureUuid == null) {
+        continue;
+      }
+
+      // Create the parent root record container if we haven't seen this order yet
+      if (!procedureByUuid.containsKey(procedureUuid)) {
+        procedureOrderUuuids.add(procedureUuid);
+        ProcedureDBRecord parentRecord =
+            ProcedureDBRecord.builder()
+                .orderUuid(row.getOrderUuid())
+                .uuid(row.getUuid())
+                .procedureOrderId(row.getProcedureOrderId())
+                .orderProviderId(row.getOrderProviderId())
+                .orderActivity(row.getOrderActivity())
+                .activity(row.getActivity())
+                .orderDiagnosis(row.getOrderDiagnosis())
+                .orderEncounterId(row.getOrderEncounterId())
+                .orderLabId(row.getOrderLabId())
+                .orderPatientId(row.getOrderPatientId())
+                .providerId(row.getProviderId())
+                .dateOrdered(row.getDateOrdered())
+                .dateCollected(row.getDateCollected())
+                .orderStatus(row.getOrderStatus())
+                .orderPriority(row.getOrderPriority())
+                .patientInstructions(row.getPatientInstructions())
+                .clinicalHx(row.getClinicalHx())
+                .procedureOrderType(row.getProcedureOrderType())
+                .scheduledDate(row.getScheduledDate())
+                .scheduledStart(row.getScheduledStart())
+                .scheduledEnd(row.getScheduledEnd())
+                .performerType(row.getPerformerType())
+                .orderIntent(row.getOrderIntent())
+                .locationId(row.getLocationId())
+                .specimenFasting(row.getSpecimenFasting())
+                .procedureName(row.getProcedureName())
+                .procedureCode(row.getProcedureCode())
+                .diagnoses(row.getDiagnoses())
+                .standardCode(row.getStandardCode())
+                .provider(
+                    row.getProviderId() != null
+                        ? ProcedureDBRecord.ProviderInfo.builder()
+                            .id(row.getProviderId())
+                            .uuid(row.getProviderUuid())
+                            .fname(row.getProviderFname())
+                            .mname(row.getProviderMname())
+                            .lname(row.getProviderLname())
+                            .npi(row.getProviderNpi())
+                            .build()
+                        : null)
+                .lab(
+                    row.getLabId() != null
+                        ? ProcedureDBRecord.LabMetadataInfo.builder()
+                            .id(row.getLabId())
+                            .uuid(row.getLabUuid())
+                            .name(row.getLabName())
+                            .npi(row.getLabNpi())
+                            .directorUuid(row.getLabDirectorUuid())
+                            .directorNpi(row.getLabDirectorNpi())
+                            .build()
+                        : null)
+                .patient(
+                    row.getPid() != null
+                        ? ProcedureDBRecord.PatientReferenceInfo.builder()
+                            .pid(row.getPid())
+                            .uuid(row.getPuuid())
+                            .build()
+                        : null)
+                .encounter(
+                    row.getEid() != null
+                        ? ProcedureDBRecord.EncounterReferenceInfo.builder()
+                            .id(row.getEid())
+                            .uuid(row.getEuuid())
+                            .date(row.getEncounterDate())
+                            .build()
+                        : null)
+                .location(
+                    row.getLocationId() != null && row.getLocationUuid() != null
+                        ? ProcedureDBRecord.FacilityInfo.builder()
+                            .id(row.getLocationId())
+                            .uuid(row.getLocationUuid())
+                            .name(row.getLocationName())
+                            .build()
+                        : null)
+                .reports(new ArrayList<>())
                 .build();
+
+        procedureByUuid.put(procedureUuid, parentRecord);
+      }
+
+      ProcedureDBRecord currentProcedure = procedureByUuid.get(procedureUuid);
+      String reportUuid = row.getReportUuid() != null ? row.getReportUuid().toString() : null;
+
+      if (reportUuid != null && !reportUuid.isEmpty()) {
+        if (!reportsByUuid.containsKey(reportUuid)) {
+          ProcedureDBRecord.ReportBlock newReport =
+              ProcedureDBRecord.ReportBlock.builder()
+                  .id(row.getProcedureReportId())
+                  .uuid(row.getReportUuid())
+                  .date(row.getReportDate())
+                  .notes(row.getReportNotes())
+                  .orderSeq(row.getProcedureOrderSeq())
+                  .results(new ArrayList<>())
+                  .specimens(new ArrayList<>())
+                  .build();
+          reportsByUuid.put(reportUuid, newReport);
+          currentProcedure.getReports().add(newReport);
+        }
+
+        ProcedureDBRecord.ReportBlock currentReport = reportsByUuid.get(reportUuid);
+
+        if (row.getProcedureResultId() != null) {
+          ProcedureDBRecord.ResultBlock result =
+              ProcedureDBRecord.ResultBlock.builder()
+                  .id(row.getProcedureResultId())
+                  .uuid(row.getResultUuid())
+                  .code(row.getResultCode())
+                  .text(row.getResultText())
+                  .units(row.getResultUnits())
+                  .result(row.getResultResult())
+                  .range(row.getResultRange())
+                  .abnormal(row.getResultAbnormal())
+                  .comments(row.getResultComments())
+                  .build();
+
+          currentReport.getResults().add(result);
+        }
+      }
     }
 
-    public List<ProcedureDBRecord> hydrateSearchResults(List<RawProcedureRecord> rawRows) {
-        if (rawRows == null || rawRows.isEmpty()) {
-            return Collections.emptyList();
-        }
+    // =========================================================================
+    // PASS 2: Fetch dependent specimens for accumulated report nodes
+    // =========================================================================
+    String orderIdSql = "SELECT procedure_order_id FROM procedure_report WHERE uuid = :reportUuid";
 
-        List<String> procedureOrderUuuids = new ArrayList<>();
-
-        // Maps to track and reduce duplicate parent structures and report nodes
-        Map<String, ProcedureDBRecord> procedureByUuid = new HashMap<>();
-        Map<String, ProcedureDBRecord.ReportBlock> reportsByUuid = new HashMap<>();
-
-        // =========================================================================
-        // PASS 1: Build the tree structure and collect relational nodes
-        // =========================================================================
-        for (RawProcedureRecord row : rawRows) {
-            // Safe assignment preventing NullPointerException if orderUuid is null
-            String procedureUuid = row.getOrderUuid() != null ? row.getOrderUuid().toString() : null;
-            if (procedureUuid == null) {
-                continue;
-            }
-
-            // Create the parent root record container if we haven't seen this order yet
-            if (!procedureByUuid.containsKey(procedureUuid)) {
-                procedureOrderUuuids.add(procedureUuid);
-                ProcedureDBRecord parentRecord = ProcedureDBRecord.builder()
-                        .orderUuid(row.getOrderUuid())
-                        .uuid(row.getUuid())
-                        .procedureOrderId(row.getProcedureOrderId())
-                        .orderProviderId(row.getOrderProviderId())
-                        .orderActivity(row.getOrderActivity())
-                        .activity(row.getActivity())
-                        .orderDiagnosis(row.getOrderDiagnosis())
-                        .orderEncounterId(row.getOrderEncounterId())
-                        .orderLabId(row.getOrderLabId())
-                        .orderPatientId(row.getOrderPatientId())
-                        .providerId(row.getProviderId())
-                        .dateOrdered(row.getDateOrdered())
-                        .dateCollected(row.getDateCollected())
-                        .orderStatus(row.getOrderStatus())
-                        .orderPriority(row.getOrderPriority())
-                        .patientInstructions(row.getPatientInstructions())
-                        .clinicalHx(row.getClinicalHx())
-                        .procedureOrderType(row.getProcedureOrderType())
-                        .scheduledDate(row.getScheduledDate())
-                        .scheduledStart(row.getScheduledStart())
-                        .scheduledEnd(row.getScheduledEnd())
-                        .performerType(row.getPerformerType())
-                        .orderIntent(row.getOrderIntent())
-                        .locationId(row.getLocationId())
-                        .specimenFasting(row.getSpecimenFasting())
-                        .procedureName(row.getProcedureName())
-                        .procedureCode(row.getProcedureCode())
-                        .diagnoses(row.getDiagnoses())
-                        .standardCode(row.getStandardCode())
-
-                        .provider(row.getProviderId() != null ? ProcedureDBRecord.ProviderInfo.builder()
-                                .id(row.getProviderId()).uuid(row.getProviderUuid())
-                                .fname(row.getProviderFname()).mname(row.getProviderMname()).lname(row.getProviderLname())
-                                .npi(row.getProviderNpi()).build() : null)
-                        .lab(row.getLabId() != null ? ProcedureDBRecord.LabMetadataInfo.builder()
-                                .id(row.getLabId()).uuid(row.getLabUuid()).name(row.getLabName()).npi(row.getLabNpi())
-                                .directorUuid(row.getLabDirectorUuid()).directorNpi(row.getLabDirectorNpi()).build() : null)
-                        .patient(row.getPid() != null ? ProcedureDBRecord.PatientReferenceInfo.builder()
-                                .pid(row.getPid()).uuid(row.getPuuid()).build() : null)
-                        .encounter(row.getEid() != null ? ProcedureDBRecord.EncounterReferenceInfo.builder()
-                                .id(row.getEid()).uuid(row.getEuuid()).date(row.getEncounterDate()).build() : null)
-                        .location(row.getLocationId() != null && row.getLocationUuid() != null ? ProcedureDBRecord.FacilityInfo.builder()
-                                .id(row.getLocationId()).uuid(row.getLocationUuid()).name(row.getLocationName()).build() : null)
-                        .reports(new ArrayList<>())
-                        .build();
-
-                procedureByUuid.put(procedureUuid, parentRecord);
-            }
-
-            ProcedureDBRecord currentProcedure = procedureByUuid.get(procedureUuid);
-            String reportUuid = row.getReportUuid() != null ? row.getReportUuid().toString() : null;
-
-            if (reportUuid != null && !reportUuid.isEmpty()) {
-                if (!reportsByUuid.containsKey(reportUuid)) {
-                    ProcedureDBRecord.ReportBlock newReport = ProcedureDBRecord.ReportBlock.builder()
-                            .id(row.getProcedureReportId())
-                            .uuid(row.getReportUuid())
-                            .date(row.getReportDate())
-                            .notes(row.getReportNotes())
-                            .orderSeq(row.getProcedureOrderSeq())
-                            .results(new ArrayList<>())
-                            .specimens(new ArrayList<>())
-                            .build();
-                    reportsByUuid.put(reportUuid, newReport);
-                    currentProcedure.getReports().add(newReport);
-                }
-
-                ProcedureDBRecord.ReportBlock currentReport = reportsByUuid.get(reportUuid);
-
-                if (row.getProcedureResultId() != null) {
-                    ProcedureDBRecord.ResultBlock result = ProcedureDBRecord.ResultBlock.builder()
-                            .id(row.getProcedureResultId())
-                            .uuid(row.getResultUuid())
-                            .code(row.getResultCode())
-                            .text(row.getResultText())
-                            .units(row.getResultUnits())
-                            .result(row.getResultResult())
-                            .range(row.getResultRange())
-                            .abnormal(row.getResultAbnormal())
-                            .comments(row.getResultComments())
-                            .build();
-
-                    currentReport.getResults().add(result);
-                }
-            }
-        }
-
-        // =========================================================================
-        // PASS 2: Fetch dependent specimens for accumulated report nodes
-        // =========================================================================
-        String orderIdSql = "SELECT procedure_order_id FROM procedure_report WHERE uuid = :reportUuid";
-
-        String specimenSql = """
+    String specimenSql =
+        """
                 SELECT uuid AS specimen_uuid, specimen_identifier, accession_identifier,
                        specimen_type_code, specimen_type, collection_method_code, collection_method,
                        specimen_location_code, specimen_location, collected_date, collection_date_low,
@@ -604,60 +665,66 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
                 ORDER BY procedure_specimen_id
                 """;
 
-        for (Map.Entry<String, ProcedureDBRecord.ReportBlock> entry : reportsByUuid.entrySet()) {
-            String reportUuid = entry.getKey();
-            ProcedureDBRecord.ReportBlock report = entry.getValue();
+    for (Map.Entry<String, ProcedureDBRecord.ReportBlock> entry : reportsByUuid.entrySet()) {
+      String reportUuid = entry.getKey();
+      ProcedureDBRecord.ReportBlock report = entry.getValue();
 
-            if (report.getOrderSeq() != null) {
-                MapSqlParameterSource orderParams = new MapSqlParameterSource("reportUuid", reportUuid);
+      if (report.getOrderSeq() != null) {
+        MapSqlParameterSource orderParams = new MapSqlParameterSource("reportUuid", reportUuid);
 
-                List<Long> orderIdList = namedParameterJdbcTemplate.query(orderIdSql, orderParams,
-                        (rs, rowNum) -> rs.getLong("procedure_order_id"));
+        List<Long> orderIdList =
+            namedParameterJdbcTemplate.query(
+                orderIdSql, orderParams, (rs, rowNum) -> rs.getLong("procedure_order_id"));
 
-                if (!orderIdList.isEmpty() && orderIdList.get(0) != null) {
-                    Long orderId = orderIdList.get(0);
+        if (!orderIdList.isEmpty() && orderIdList.get(0) != null) {
+          Long orderId = orderIdList.get(0);
 
-                    MapSqlParameterSource specimenParams = new MapSqlParameterSource()
-                            .addValue("orderId", orderId)
-                            .addValue("orderSeq", report.getOrderSeq());
+          MapSqlParameterSource specimenParams =
+              new MapSqlParameterSource()
+                  .addValue("orderId", orderId)
+                  .addValue("orderSeq", report.getOrderSeq());
 
-                    List<ProcedureDBRecord.SpecimenBlock> specimens = namedParameterJdbcTemplate.query(specimenSql, specimenParams, (rs, rowNum) ->
-                            ProcedureDBRecord.SpecimenBlock.builder()
-                                    .uuid(toUuid(rs.getBytes("specimen_uuid")))
-                                    .identifier(rs.getString("specimen_identifier"))
-                                    .accession(rs.getString("accession_identifier"))
-                                    .typeCode(rs.getString("specimen_type_code"))
-                                    .type(rs.getString("specimen_type"))
-                                    .methodCode(rs.getString("collection_method_code"))
-                                    .method(rs.getString("collection_method"))
-                                    .locationCode(rs.getString("specimen_location_code"))
-                                    .location(rs.getString("specimen_location"))
-                                    .collectedDate(toLocalDateTime(rs.getTimestamp("collected_date")))
-                                    .collectionStart(toLocalDateTime(rs.getTimestamp("collection_date_low")))
-                                    .collectionEnd(toLocalDateTime(rs.getTimestamp("collection_date_high")))
-                                    .volume(rs.getObject("volume_value") != null ? rs.getDouble("volume_value") : null)
-                                    .volumeUnit(rs.getString("volume_unit"))
-                                    .conditionCode(rs.getString("condition_code"))
-                                    .specimenCondition(rs.getString("specimen_condition"))
-                                    .comments(rs.getString("specimen_comments"))
-                                    .deleted(rs.getObject("deleted") != null ? rs.getInt("deleted") : null)
-                                    .build()
-                    );
+          List<ProcedureDBRecord.SpecimenBlock> specimens =
+              namedParameterJdbcTemplate.query(
+                  specimenSql,
+                  specimenParams,
+                  (rs, rowNum) ->
+                      ProcedureDBRecord.SpecimenBlock.builder()
+                          .uuid(toUuid(rs.getBytes("specimen_uuid")))
+                          .identifier(rs.getString("specimen_identifier"))
+                          .accession(rs.getString("accession_identifier"))
+                          .typeCode(rs.getString("specimen_type_code"))
+                          .type(rs.getString("specimen_type"))
+                          .methodCode(rs.getString("collection_method_code"))
+                          .method(rs.getString("collection_method"))
+                          .locationCode(rs.getString("specimen_location_code"))
+                          .location(rs.getString("specimen_location"))
+                          .collectedDate(toLocalDateTime(rs.getTimestamp("collected_date")))
+                          .collectionStart(toLocalDateTime(rs.getTimestamp("collection_date_low")))
+                          .collectionEnd(toLocalDateTime(rs.getTimestamp("collection_date_high")))
+                          .volume(
+                              rs.getObject("volume_value") != null
+                                  ? rs.getDouble("volume_value")
+                                  : null)
+                          .volumeUnit(rs.getString("volume_unit"))
+                          .conditionCode(rs.getString("condition_code"))
+                          .specimenCondition(rs.getString("specimen_condition"))
+                          .comments(rs.getString("specimen_comments"))
+                          .deleted(rs.getObject("deleted") != null ? rs.getInt("deleted") : null)
+                          .build());
 
-                    if (!specimens.isEmpty()) {
-                        report.getSpecimens().addAll(specimens);
-                    }
-                }
-            }
+          if (!specimens.isEmpty()) {
+            report.getSpecimens().addAll(specimens);
+          }
         }
-
-        List<ProcedureDBRecord> finalRecords = new ArrayList<>();
-        for (String uuid : procedureOrderUuuids) {
-            finalRecords.add(procedureByUuid.get(uuid));
-        }
-
-        return finalRecords;
+      }
     }
 
+    List<ProcedureDBRecord> finalRecords = new ArrayList<>();
+    for (String uuid : procedureOrderUuuids) {
+      finalRecords.add(procedureByUuid.get(uuid));
+    }
 
+    return finalRecords;
+  }
 }

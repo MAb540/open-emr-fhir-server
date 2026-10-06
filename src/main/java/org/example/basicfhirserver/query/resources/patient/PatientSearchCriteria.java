@@ -10,23 +10,20 @@ import lombok.*;
 @NoArgsConstructor
 @Builder
 public class PatientSearchCriteria {
-    private TokenParam id;
-    private DateParam lastUpdated;
-    private TokenParam identifier;
-    private StringParam family;
-    private StringParam given;
-    private StringParam name;
-    private DateParam birthdate;
-    private DateParam deathDate;
-    private TokenParam gender;
-    private TokenParam telecom;
-    private StringParam addressCity;
-    private TokenParam active;
-    private StringParam phone;
-    private StringParam email;
-    private Integer count;
-    private Integer offset;
+  private TokenParam id;
+  private DateParam lastUpdated;
+  private TokenParam identifier;
+  private StringParam family;
+  private StringParam given;
+  private StringParam name;
+  private DateParam birthdate;
+  private DateParam deathDate;
+  private TokenParam gender;
+  private TokenParam telecom;
+  private StringParam addressCity;
+  private TokenParam active;
+  private StringParam phone;
+  private StringParam email;
+  private Integer count;
+  private Integer offset;
 }
-
-
-

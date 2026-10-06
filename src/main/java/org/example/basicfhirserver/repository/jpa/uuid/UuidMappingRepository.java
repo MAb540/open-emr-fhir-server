@@ -6,6 +6,5 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface UuidMappingRepository extends JpaRepository<UuidMappingEntity, Long>,
-        JpaSpecificationExecutor<UuidMappingEntity> {
-}
+public interface UuidMappingRepository
+    extends JpaRepository<UuidMappingEntity, Long>, JpaSpecificationExecutor<UuidMappingEntity> {}
