@@ -41,7 +41,6 @@ import org.hl7.fhir.r4.model.Patient;
 import org.jobrunr.jobs.JobId;
 import org.jobrunr.jobs.context.JobContext;
 import org.jobrunr.scheduling.JobScheduler;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
@@ -61,8 +60,8 @@ public class PatientResourceProvider implements IResourceProvider {
   private final EncounterService encounterService;
   private final EncounterMapper encounterMapper;
 
-  @Autowired private JobScheduler jobScheduler;
   private final FhirExportService fhirExportService;
+  private final JobScheduler jobScheduler;
 
   public PatientResourceProvider(
       LegacyPatientMapper legacyPatientMapper,
@@ -73,7 +72,8 @@ public class PatientResourceProvider implements IResourceProvider {
       ObservationMapper observationMapper,
       EncounterService encounterService,
       EncounterMapper encounterMapper,
-      FhirExportService fhirExportService) {
+      FhirExportService fhirExportService,
+      JobScheduler jobScheduler) {
     this.legacyPatientMapper = legacyPatientMapper;
     this.patientSearchTranslator = patientSearchTranslator;
     this.validationService = validationService;
@@ -83,6 +83,7 @@ public class PatientResourceProvider implements IResourceProvider {
     this.encounterService = encounterService;
     this.encounterMapper = encounterMapper;
     this.fhirExportService = fhirExportService;
+    this.jobScheduler = jobScheduler;
   }
 
   @Override
