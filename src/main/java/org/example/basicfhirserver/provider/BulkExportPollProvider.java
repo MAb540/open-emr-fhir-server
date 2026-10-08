@@ -53,25 +53,21 @@ public class BulkExportPollProvider {
   }
 
   @Operation(name = "$export", idempotent = true, manualResponse = true)
-  public void systemExport(
-          RequestDetails theRequestDetails,
-          HttpServletResponse theServletResponse
-  ) throws Exception {
+  public void systemExport(RequestDetails theRequestDetails, HttpServletResponse theServletResponse)
+      throws Exception {
     try {
       BulkExportRequestParser bulkExportRequestParser =
-              new BulkExportRequestParser(exportService.supportedSystemExportResources());
+          new BulkExportRequestParser(exportService.supportedSystemExportResources());
       ParsedExportRequest parsedRequest =
-              bulkExportRequestParser.parseAndValidate(theRequestDetails);
-
-
+          bulkExportRequestParser.parseAndValidate(theRequestDetails);
 
       JobId jobId =
-              jobScheduler.enqueue(
-                      () ->
-                              exportService.executeSystemBulkExport(
-                                      JobContext.Null,
-                                      parsedRequest.resourcesToExport(),
-                                      parsedRequest.parsedSince()));
+          jobScheduler.enqueue(
+              () ->
+                  exportService.executeSystemBulkExport(
+                      JobContext.Null,
+                      parsedRequest.resourcesToExport(),
+                                  parsedRequest.parsedSince()));
 
       String serverBaseUrl = theRequestDetails.getFhirServerBase();
       String pollingUrl = serverBaseUrl + ExportPollEndpointWithParams + jobId;
@@ -85,19 +81,17 @@ public class BulkExportPollProvider {
       theServletResponse.setContentType("application/fhir+json;charset=UTF-8");
       String escapedError = e.getMessage().replace("\"", "\\\"");
       theServletResponse
-              .getWriter()
-              .write(
-                      "{\"resourceType\":\"OperationOutcome\",\"issue\":[{\"severity\":\"error\",\"code\":\"value\",\"diagnostics\":\""
-                              + escapedError
-                              + "\"}]}");
+          .getWriter()
+          .write(
+              "{\"resourceType\":\"OperationOutcome\",\"issue\":[{\"severity\":\"error\",\"code\":\"value\",\"diagnostics\":\""
+                  + escapedError
+                  + "\"}]}");
       theServletResponse.getWriter().close();
 
     } catch (Exception e) {
       theServletResponse.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
       theServletResponse.getWriter().close();
     }
-
-
   }
 
   @Operation(name = "$" + ExportPollEndpoint, idempotent = true, manualResponse = true)

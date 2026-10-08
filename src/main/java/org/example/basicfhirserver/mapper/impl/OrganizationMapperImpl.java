@@ -71,8 +71,7 @@ public class OrganizationMapperImpl implements OrganizationMapper {
 
   private void addAddress(Organization organization, FacilityDBRecord facilityDBRecord) {
     List<StringType> lines = new ArrayList<>();
-    if (facilityDBRecord.getStreet() != null
-        && !facilityDBRecord.getStreet().trim().isEmpty()) {
+    if (facilityDBRecord.getStreet() != null && !facilityDBRecord.getStreet().trim().isEmpty()) {
       lines.add(new StringType(facilityDBRecord.getStreet()));
     }
 

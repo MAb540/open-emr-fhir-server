@@ -6,8 +6,10 @@ import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.toUuid;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import org.example.basicfhirserver.query.resources.person.PersonSearchQuery;
 import org.example.basicfhirserver.query.resources.practitioner.PractitionerSearchQuery;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -66,6 +68,29 @@ public class UserServiceImpl implements UserService {
 
     List<UserDBRecord> records =
         namedParameterJdbcTemplate.query(sql.toString(), params, userRowMapper());
+
+    return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
+  }
+
+  @Override
+  public Page<UserDBRecord> find(PersonSearchQuery personSearchQuery) {
+    StringBuilder sql = personQuery();
+    MapSqlParameterSource params = new MapSqlParameterSource();
+    addPersonFilter(sql, params, personSearchQuery);
+
+    long total = countTotal(sql, params);
+
+    int offset =
+        personSearchQuery.getOffset() != null ? personSearchQuery.getOffset() : DEFAULT_PAGE_OFFSET;
+    int limit =
+        personSearchQuery.getCount() != null ? personSearchQuery.getCount() : DEFAULT_PAGE_SIZE;
+
+    sql.append(" ORDER BY users.last_updated DESC limit :limit offset :offset ");
+    params.addValue("limit", limit);
+    params.addValue("offset", offset);
+
+    List<UserDBRecord> records =
+        namedParameterJdbcTemplate.query(sql.toString(), params, personRowMapper());
 
     return new PageImpl<>(records, PageRequest.of(offset / limit, limit), total);
   }
@@ -160,6 +185,50 @@ public class UserServiceImpl implements UserService {
                 """);
   }
 
+  private StringBuilder personQuery() {
+    return new StringBuilder(
+        """
+                SELECT users.id,
+                       users.uuid,
+                       users.title AS title,
+                       users.fname,
+                       users.lname,
+                       users.mname,
+                       users.federaltaxid,
+                       users.federaldrugid,
+                       users.upin,
+                       users.facility_id,
+                       users.facility,
+                       users.npi,
+                       users.email,
+                       users.active,
+                       users.specialty,
+                       users.billname,
+                       users.url,
+                       users.assistant,
+                       users.organization,
+                       users.valedictory,
+                       users.street,
+                       users.streetb,
+                       users.city,
+                       users.state,
+                       users.zip,
+                       users.phone,
+                       users.fax,
+                       users.phonew1,
+                       users.phonecell,
+                       users.notes,
+                       users.state_license_number,
+                       abook.title AS abook_title,
+                       users.last_updated
+                FROM users
+                LEFT JOIN (
+                    SELECT list_id, option_id, title FROM list_options
+                ) abook ON abook.list_id = 'abook_type' AND abook.option_id = users.abook_type
+                WHERE 1=1
+                """);
+  }
+
   private void addFilter(
       StringBuilder sql,
       MapSqlParameterSource params,
@@ -206,6 +275,80 @@ public class UserServiceImpl implements UserService {
                     """);
       params.addValue("npi", rawSearchValue);
     }
+  }
+
+  private void addPersonFilter(
+      StringBuilder sql, MapSqlParameterSource params, PersonSearchQuery personSearchQuery) {
+    if (personSearchQuery.getPersonId() != null && !personSearchQuery.getPersonId().isEmpty()) {
+      List<byte[]> binaryUuids =
+          personSearchQuery.getPersonId().stream()
+              .map(idStr -> toBytes(UUID.fromString(idStr)))
+              .toList();
+      sql.append(" AND users.uuid IN (:personUuid) ");
+      params.addValue("personUuid", binaryUuids);
+    }
+
+    if (personSearchQuery.getName() != null) {
+      String rawSearchValue = personSearchQuery.getName().getValue();
+      if (personSearchQuery.getName().isContains()) {
+        sql.append(
+            " AND (LOWER(users.lname) LIKE :nameFilter OR LOWER(users.fname) LIKE :nameFilter) ");
+        params.addValue("nameFilter", "%" + rawSearchValue.toLowerCase() + "%");
+      } else if (personSearchQuery.getName().isExact()) {
+        sql.append(" AND (users.lname = :nameFilter OR users.fname = :nameFilter) ");
+        params.addValue("nameFilter", rawSearchValue);
+      } else {
+        sql.append(
+            " AND (LOWER(users.lname) LIKE :nameFilter OR LOWER(users.fname) LIKE :nameFilter) ");
+        params.addValue("nameFilter", rawSearchValue.toLowerCase() + "%");
+      }
+    }
+
+    addLastUpdatedFilter(sql, params, personSearchQuery);
+  }
+
+  private void addLastUpdatedFilter(
+      StringBuilder sql, MapSqlParameterSource params, PersonSearchQuery personSearchQuery) {
+    if (personSearchQuery.getLastUpdated() == null
+        || personSearchQuery.getLastUpdated().getValue() == null) {
+      return;
+    }
+
+    LocalDateTime lastUpdated = personSearchQuery.getLastUpdated().getValue();
+
+    if (personSearchQuery.getLastUpdated().getPrefix() == null) {
+      sql.append(" AND users.last_updated = :lastUpdated");
+      params.addValue("lastUpdated", lastUpdated);
+      return;
+    }
+
+    switch (personSearchQuery.getLastUpdated().getPrefix()) {
+      case GREATERTHAN:
+        sql.append(" AND users.last_updated > :lastUpdated");
+        break;
+      case GREATERTHAN_OR_EQUALS:
+        sql.append(" AND users.last_updated >= :lastUpdated");
+        break;
+      case LESSTHAN:
+      case ENDS_BEFORE:
+        sql.append(" AND users.last_updated < :lastUpdated");
+        break;
+      case LESSTHAN_OR_EQUALS:
+        sql.append(" AND users.last_updated <= :lastUpdated");
+        break;
+      case NOT_EQUAL:
+        sql.append(" AND users.last_updated <> :lastUpdated");
+        break;
+      case STARTS_AFTER:
+        sql.append(" AND users.last_updated > :lastUpdated");
+        break;
+      case EQUAL:
+      case APPROXIMATE:
+      default:
+        sql.append(" AND users.last_updated = :lastUpdated");
+        break;
+    }
+    params.addValue("lastUpdated", lastUpdated);
   }
 
   private RowMapper<UserDBRecord> userRowMapper() {
@@ -284,6 +427,45 @@ public class UserServiceImpl implements UserService {
             .abookTitle(rs.getString("abook_title"))
             .physicianTitle(rs.getString("physician_title"))
             .physicianCode(rs.getString("physician_code"))
+            .build();
+  }
+
+  private RowMapper<UserDBRecord> personRowMapper() {
+    return (rs, rowNum) ->
+        UserDBRecord.builder()
+            .id(rs.getLong("id"))
+            .uuid(toUuid(rs.getBytes("uuid")))
+            .title(rs.getString("title"))
+            .fname(rs.getString("fname"))
+            .lname(rs.getString("lname"))
+            .mname(rs.getString("mname"))
+            .federaltaxid(rs.getString("federaltaxid"))
+            .federaldrugid(rs.getString("federaldrugid"))
+            .upin(rs.getString("upin"))
+            .facilityId(rs.getObject("facility_id") != null ? rs.getInt("facility_id") : null)
+            .facility(rs.getString("facility"))
+            .npi(rs.getString("npi"))
+            .email(rs.getString("email"))
+            .active(rs.getObject("active") != null ? rs.getInt("active") : null)
+            .specialty(rs.getString("specialty"))
+            .billname(rs.getString("billname"))
+            .url(rs.getString("url"))
+            .assistant(rs.getString("assistant"))
+            .organization(rs.getString("organization"))
+            .valedictory(rs.getString("valedictory"))
+            .street(rs.getString("street"))
+            .streetb(rs.getString("streetb"))
+            .city(rs.getString("city"))
+            .state(rs.getString("state"))
+            .zip(rs.getString("zip"))
+            .phone(rs.getString("phone"))
+            .fax(rs.getString("fax"))
+            .phonew1(rs.getString("phonew1"))
+            .phonecell(rs.getString("phonecell"))
+            .notes(rs.getString("notes"))
+            .stateLicenseNumber(rs.getString("state_license_number"))
+            .abookTitle(rs.getString("abook_title"))
+            .lastUpdated(getInstant(rs, "last_updated"))
             .build();
   }
 

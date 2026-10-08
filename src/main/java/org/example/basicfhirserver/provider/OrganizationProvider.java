@@ -77,7 +77,9 @@ public class OrganizationProvider implements IResourceProvider {
     Page<FacilityDBRecord> facilityDBRecords = organizationService.find(organizationSearchQuery);
 
     List<IBaseResource> primaryOrganizations =
-        facilityDBRecords.getContent().stream().<IBaseResource>map(organizationMapper::toR4).toList();
+        facilityDBRecords.getContent().stream()
+            .<IBaseResource>map(organizationMapper::toR4)
+            .toList();
 
     int currentOffset = offset != null ? offset : 0;
     int currentPageSize = facilityDBRecords.getContent().size();

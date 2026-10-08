@@ -65,16 +65,20 @@ public class ExportService {
   private static final String EXPORT_FILE_PATH = "export-job-files";
 
   public ExportService(
-          LegacyPatientMapper legacyPatientMapper,
-          PatientService patientService,
-          @Qualifier("ObservationServiceImpl") ObservationService observationService,
-          ObservationMapper observationMapper,
-          EncounterService encounterService,
-          EncounterMapper encounterMapper,
-          ConditionService conditionService,
-          ConditionMapper conditionMapper, PractitionerService practitionerService, PractitionerMapper practitionerMapper, OrganizationService organizationService, OrganizationMapper organizationMapper,
-          FhirContextConfig fhirContextConfig,
-          ExportJobFilesService exportJobFilesService) {
+      LegacyPatientMapper legacyPatientMapper,
+      PatientService patientService,
+      @Qualifier("ObservationServiceImpl") ObservationService observationService,
+      ObservationMapper observationMapper,
+      EncounterService encounterService,
+      EncounterMapper encounterMapper,
+      ConditionService conditionService,
+      ConditionMapper conditionMapper,
+      PractitionerService practitionerService,
+      PractitionerMapper practitionerMapper,
+      OrganizationService organizationService,
+      OrganizationMapper organizationMapper,
+      FhirContextConfig fhirContextConfig,
+      ExportJobFilesService exportJobFilesService) {
     this.legacyPatientMapper = legacyPatientMapper;
     this.patientService = patientService;
     this.observationService = observationService;
@@ -93,14 +97,14 @@ public class ExportService {
 
   public List<String> supportedPatientExportResources() {
     return Stream.of(PatientExportSupportedResources.values())
-            .map(PatientExportSupportedResources::getValue)
-            .toList();
+        .map(PatientExportSupportedResources::getValue)
+        .toList();
   }
 
   public List<String> supportedSystemExportResources() {
     return Stream.of(SystemExportSupportedResources.values())
-            .map(SystemExportSupportedResources::getValue)
-            .toList();
+        .map(SystemExportSupportedResources::getValue)
+        .toList();
   }
 
   @Job(name = "Patient Bulk Data Export Task")
@@ -112,7 +116,7 @@ public class ExportService {
 
   @Job(name = "System Bulk Data Export Task")
   public void executeSystemBulkExport(
-          JobContext jobContext, List<String> supportedResources, String since) {
+      JobContext jobContext, List<String> supportedResources, String since) {
     UUID jobID = jobContext.getJobId();
     handleSystemExport(jobID, supportedResources, since);
   }
@@ -405,14 +409,14 @@ public class ExportService {
     boolean hasMoreData = true;
 
     try (BufferedWriter writer =
-                 new BufferedWriter(new FileWriter(filePath.toFile()), FILE_BUFFER_SIZE)) {
+        new BufferedWriter(new FileWriter(filePath.toFile()), FILE_BUFFER_SIZE)) {
       while (hasMoreData) {
         OrganizationSearchQuery query =
-                OrganizationSearchQuery.builder()
-                        .lastUpdated(since)
-                        .count(BATCH_SIZE)
-                        .offset(offset)
-                        .build();
+            OrganizationSearchQuery.builder()
+                .lastUpdated(since)
+                .count(BATCH_SIZE)
+                .offset(offset)
+                .build();
 
         Page<FacilityDBRecord> page = organizationService.find(query);
 
@@ -428,24 +432,26 @@ public class ExportService {
           writer.newLine();
         }
         log.debug(
-                "JobID {}: Organization export job exported {} records (Current offset: {})",
-                jobID,
-                content.size(),
-                offset);
+            "JobID {}: Organization export job exported {} records (Current offset: {})",
+            jobID,
+            content.size(),
+            offset);
 
         offset += BATCH_SIZE;
         hasMoreData = page.hasNext();
       }
 
       log.info(
-              "JobID {}: Organization export job NDJSON file written successfully to {}", jobID, filePath);
+          "JobID {}: Organization export job NDJSON file written successfully to {}",
+          jobID,
+          filePath);
       ExportJobFilesEntity exportJobFilesEntity =
-              ExportJobFilesEntity.builder()
-                      .jobUuid(jobID)
-                      .fileId(filePath.toString())
-                      .resourceType(SystemExportSupportedResources.PRACTITIONER.getValue())
-                      .createdAt(LocalDateTime.now())
-                      .build();
+          ExportJobFilesEntity.builder()
+              .jobUuid(jobID)
+              .fileId(filePath.toString())
+              .resourceType(SystemExportSupportedResources.PRACTITIONER.getValue())
+              .createdAt(LocalDateTime.now())
+              .build();
 
       exportJobFilesService.save(exportJobFilesEntity);
       log.info("JobID {}: Organization export job metadata saved successfully.", jobID);
@@ -469,13 +475,10 @@ public class ExportService {
     boolean hasMoreData = true;
 
     try (BufferedWriter writer =
-                 new BufferedWriter(new FileWriter(filePath.toFile()), FILE_BUFFER_SIZE)) {
+        new BufferedWriter(new FileWriter(filePath.toFile()), FILE_BUFFER_SIZE)) {
       while (hasMoreData) {
         PractitionerSearchQuery query =
-                PractitionerSearchQuery.builder()
-                        .count(BATCH_SIZE)
-                        .offset(offset)
-                        .build();
+            PractitionerSearchQuery.builder().count(BATCH_SIZE).offset(offset).build();
 
         Page<Practitioner> page = practitionerService.find(query);
 
@@ -491,24 +494,26 @@ public class ExportService {
           writer.newLine();
         }
         log.debug(
-                "JobID {}: Practitioner export job exported {} records (Current offset: {})",
-                jobID,
-                content.size(),
-                offset);
+            "JobID {}: Practitioner export job exported {} records (Current offset: {})",
+            jobID,
+            content.size(),
+            offset);
 
         offset += BATCH_SIZE;
         hasMoreData = page.hasNext();
       }
 
       log.info(
-              "JobID {}: Practitioner export job NDJSON file written successfully to {}", jobID, filePath);
+          "JobID {}: Practitioner export job NDJSON file written successfully to {}",
+          jobID,
+          filePath);
       ExportJobFilesEntity exportJobFilesEntity =
-              ExportJobFilesEntity.builder()
-                      .jobUuid(jobID)
-                      .fileId(filePath.toString())
-                      .resourceType(SystemExportSupportedResources.PRACTITIONER.getValue())
-                      .createdAt(LocalDateTime.now())
-                      .build();
+          ExportJobFilesEntity.builder()
+              .jobUuid(jobID)
+              .fileId(filePath.toString())
+              .resourceType(SystemExportSupportedResources.PRACTITIONER.getValue())
+              .createdAt(LocalDateTime.now())
+              .build();
 
       exportJobFilesService.save(exportJobFilesEntity);
       log.info("JobID {}: Practitioner export job metadata saved successfully.", jobID);
@@ -521,7 +526,6 @@ public class ExportService {
       throw new RuntimeException(e);
     }
   }
-
 
   private void exportConditionCategory(
       UUID jobID, BufferedWriter writer, String category, IParser fhirJsonParser)

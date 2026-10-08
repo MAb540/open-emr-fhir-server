@@ -38,7 +38,8 @@ public class FacilityServiceImpl implements FacilityService {
     MapSqlParameterSource parameters = new MapSqlParameterSource();
     parameters.addValue("uuid", binaryUuid);
 
-    return namedParameterJdbcTemplate.query(sql.toString(), parameters, facilityDBRecordRowMapper());
+    return namedParameterJdbcTemplate.query(
+        sql.toString(), parameters, facilityDBRecordRowMapper());
   }
 
   @Override
@@ -122,7 +123,9 @@ public class FacilityServiceImpl implements FacilityService {
   }
 
   private void addFilter(
-      StringBuilder sql, MapSqlParameterSource params, OrganizationSearchQuery organizationSearchQuery) {
+      StringBuilder sql,
+      MapSqlParameterSource params,
+      OrganizationSearchQuery organizationSearchQuery) {
     if (organizationSearchQuery.getOrganizationId() != null
         && !organizationSearchQuery.getOrganizationId().isEmpty()) {
       List<byte[]> binaryUuids =
@@ -151,7 +154,9 @@ public class FacilityServiceImpl implements FacilityService {
   }
 
   private void addLastUpdatedFilter(
-      StringBuilder sql, MapSqlParameterSource params, OrganizationSearchQuery organizationSearchQuery) {
+      StringBuilder sql,
+      MapSqlParameterSource params,
+      OrganizationSearchQuery organizationSearchQuery) {
     if (organizationSearchQuery.getLastUpdated() == null
         || organizationSearchQuery.getLastUpdated().getValue() == null) {
       return;

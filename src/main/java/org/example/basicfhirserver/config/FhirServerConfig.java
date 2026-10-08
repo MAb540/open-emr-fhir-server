@@ -29,6 +29,7 @@ public class FhirServerConfig {
       AllergyIntoleranceProvider allergyIntoleranceProvider,
       ConditionResourceProvider conditionResourceProvider,
       OrganizationProvider organizationProvider,
+      PersonResourceProvider personResourceProvider,
       DiagnosticReportProvider diagnosticReportProvider,
       BulkExportPollProvider bulkExportPollProvider,
       FhirContextConfig fhirContextConfig,
@@ -48,7 +49,8 @@ public class FhirServerConfig {
             allergyIntoleranceProvider,
             diagnosticReportProvider,
             conditionResourceProvider,
-            organizationProvider));
+            organizationProvider,
+            personResourceProvider));
     servlet.registerProvider(bulkExportPollProvider);
 
     CustomSecurityInterceptor customSecurityInterceptor = new CustomSecurityInterceptor();

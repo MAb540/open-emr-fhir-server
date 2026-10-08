@@ -35,8 +35,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 class PatientResourceProviderIntegrationTest {
 
-//  @Container @ServiceConnection
-//  static final MariaDBContainer<?> MARIA_DB = new MariaDBContainer<>("mariadb:11.4");
+  //  @Container @ServiceConnection
+  //  static final MariaDBContainer<?> MARIA_DB = new MariaDBContainer<>("mariadb:11.4");
 
   @Container @ServiceConnection
   static final MariaDBContainer<?> MARIA_DB = new MariaDBContainer<>("mariadb:11.4");
@@ -84,7 +84,8 @@ class PatientResourceProviderIntegrationTest {
   @Test
   void searchPatients_returnsAllSeededPatients() {
     IBundleProvider bundle =
-        provider.searchPatients(null, null, null, null, null, null, null, null, null, null, null, null);
+        provider.searchPatients(
+            null, null, null, null, null, null, null, null, null, null, null, null);
 
     assertThat(bundle.size()).isEqualTo(1);
     assertThat(bundle.getResources(0, 10)).hasSize(1);
@@ -95,7 +96,8 @@ class PatientResourceProviderIntegrationTest {
     TokenParam id = new TokenParam(patientUuid.toString());
 
     IBundleProvider bundle =
-        provider.searchPatients(id, null, null, null, null, null, null, null, null, null, null, null);
+        provider.searchPatients(
+            id, null, null, null, null, null, null, null, null, null, null, null);
 
     assertThat(bundle.size()).isEqualTo(1);
     Patient patient = firstPatient(bundle);
@@ -117,7 +119,8 @@ class PatientResourceProviderIntegrationTest {
     StringParam family = new StringParam("Doe");
 
     IBundleProvider bundle =
-        provider.searchPatients(null, null, null, family, null, null, null, null, null, null, null, null);
+        provider.searchPatients(
+            null, null, null, family, null, null, null, null, null, null, null, null);
 
     assertThat(bundle.size()).isEqualTo(1);
     assertThat(firstPatient(bundle).getNameFirstRep().getFamily()).isEqualTo("Doe");
@@ -128,7 +131,8 @@ class PatientResourceProviderIntegrationTest {
     TokenParam identifier = new TokenParam("123-45-6789");
 
     IBundleProvider bundle =
-        provider.searchPatients(null, null, identifier, null, null, null, null, null, null, null, null, null);
+        provider.searchPatients(
+            null, null, identifier, null, null, null, null, null, null, null, null, null);
 
     assertThat(bundle.size()).isEqualTo(1);
     assertThat(firstPatient(bundle).getNameFirstRep().getFamily()).isEqualTo("Doe");

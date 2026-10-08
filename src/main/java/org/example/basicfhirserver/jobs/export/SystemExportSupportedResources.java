@@ -4,14 +4,13 @@ import lombok.Getter;
 
 @Getter
 public enum SystemExportSupportedResources {
+  ORGANIZATION("Organization"),
+  LOCATION("Location"),
+  PRACTITIONER("Practitioner");
 
-    ORGANIZATION("Organization"),
-    LOCATION("Location"),
-    PRACTITIONER("Practitioner");
+  private final String value;
 
-    private final String value;
-
-    SystemExportSupportedResources(String value) {
-        this.value = value;
-    }
+  SystemExportSupportedResources(String value) {
+    this.value = value;
+  }
 }

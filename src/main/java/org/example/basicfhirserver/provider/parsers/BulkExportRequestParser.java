@@ -29,7 +29,7 @@ public class BulkExportRequestParser {
 
     List<String> resourcesToExport = parseTypeParameter(requestDetails);
     String parsedSince = parseSinceParameter(requestDetails);
-    String parsedOutputFormat =  parseOutputFormatParameter(requestDetails);
+    String parsedOutputFormat = parseOutputFormatParameter(requestDetails);
 
     return new ParsedExportRequest(resourcesToExport, parsedSince, parsedOutputFormat);
   }
@@ -60,28 +60,32 @@ public class BulkExportRequestParser {
     return (sinceValues != null && sinceValues.length > 0) ? sinceValues[0] : null;
   }
 
- /**
-  *  <a href="https://build.fhir.org/ig/HL7/bulk-data/en/OperationDefinition-export.html">...</a>
-  */
+  /**
+   * <a href="https://build.fhir.org/ig/HL7/bulk-data/en/OperationDefinition-export.html">...</a>
+   */
   private String parseOutputFormatParameter(RequestDetails requestDetails) {
-      String[] outputFormatValues = requestDetails.getParameters().get("_outputFormat");
-      String rawOutputFormat = (outputFormatValues != null && outputFormatValues.length > 0) ? outputFormatValues[0] : null;
+    String[] outputFormatValues = requestDetails.getParameters().get("_outputFormat");
+    String rawOutputFormat =
+        (outputFormatValues != null && outputFormatValues.length > 0)
+            ? outputFormatValues[0]
+            : null;
 
-      if (rawOutputFormat == null || rawOutputFormat.trim().isEmpty()) {
-          return "application/fhir+ndjson";
-      }
+    if (rawOutputFormat == null || rawOutputFormat.trim().isEmpty()) {
+      return "application/fhir+ndjson";
+    }
 
-      String normalizedFormat = rawOutputFormat.trim().toLowerCase();
-      if (normalizedFormat.equals("application/fhir+ndjson") ||
-              normalizedFormat.equals("application/ndjson") ||
-              normalizedFormat.equals("ndjson")) {
-          return "application/fhir+ndjson";
-      }
+    String normalizedFormat = rawOutputFormat.trim().toLowerCase();
+    if (normalizedFormat.equals("application/fhir+ndjson")
+        || normalizedFormat.equals("application/ndjson")
+        || normalizedFormat.equals("ndjson")) {
+      return "application/fhir+ndjson";
+    }
 
-      throw new BulkExportValidationException(
-              HttpServletResponse.SC_BAD_REQUEST,
-              "Unsupported format in _outputFormat parameter: '" + rawOutputFormat + "'. Only 'application/fhir+ndjson', 'application/ndjson', or 'ndjson' are supported."
-      );
+    throw new BulkExportValidationException(
+        HttpServletResponse.SC_BAD_REQUEST,
+        "Unsupported format in _outputFormat parameter: '"
+            + rawOutputFormat
+            + "'. Only 'application/fhir+ndjson', 'application/ndjson', or 'ndjson' are supported.");
   }
 
   public static SearchValue<LocalDateTime> parseSinceParameter(String since) {
