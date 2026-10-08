@@ -7,6 +7,9 @@ public class ProfilesConstants {
   public static final String HL7_US_CORE_ENCOUNTER =
       "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter";
 
+  public static final String HL7_US_CORE_ORGANIZATION =
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-organization";
+
   public static final String HL7_US_CORE_ALLERGYINTOLERANCE =
       "http://hl7.org/fhir/us/core/StructureDefinition/us-core-allergyintolerance";
 

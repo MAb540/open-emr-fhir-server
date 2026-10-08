@@ -26,8 +26,10 @@ import org.example.basicfhirserver.query.resources.SearchValue;
 import org.example.basicfhirserver.query.resources.condition.ConditionSearchQuery;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
 import org.example.basicfhirserver.query.resources.observation.ObservationSearchQuery;
+import org.example.basicfhirserver.query.resources.organization.OrganizationSearchQuery;
 import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
 import org.example.basicfhirserver.query.resources.practitioner.PractitionerSearchQuery;
+import org.example.basicfhirserver.repository.jdbc.facility.FacilityDBRecord;
 import org.example.basicfhirserver.service.*;
 import org.example.basicfhirserver.service.assembler.condition.ConditionAssembler;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -51,6 +53,8 @@ public class ExportService {
   private final ConditionMapper conditionMapper;
   private final PractitionerService practitionerService;
   private final PractitionerMapper practitionerMapper;
+  private final OrganizationService organizationService;
+  private final OrganizationMapper organizationMapper;
 
   private final FhirContextConfig fhirContextConfig;
   private final ExportJobFilesService exportJobFilesService;
@@ -68,7 +72,7 @@ public class ExportService {
           EncounterService encounterService,
           EncounterMapper encounterMapper,
           ConditionService conditionService,
-          ConditionMapper conditionMapper, PractitionerService practitionerService, PractitionerMapper practitionerMapper,
+          ConditionMapper conditionMapper, PractitionerService practitionerService, PractitionerMapper practitionerMapper, OrganizationService organizationService, OrganizationMapper organizationMapper,
           FhirContextConfig fhirContextConfig,
           ExportJobFilesService exportJobFilesService) {
     this.legacyPatientMapper = legacyPatientMapper;
@@ -81,6 +85,8 @@ public class ExportService {
     this.conditionService = conditionService;
     this.practitionerService = practitionerService;
     this.practitionerMapper = practitionerMapper;
+    this.organizationService = organizationService;
+    this.organizationMapper = organizationMapper;
     this.fhirContextConfig = fhirContextConfig;
     this.exportJobFilesService = exportJobFilesService;
   }
@@ -142,6 +148,10 @@ public class ExportService {
     try {
       createExportFilesDir();
       SearchValue<LocalDateTime> parsedSince = parseSinceParameter(since);
+
+      if (supportedResources.contains(SystemExportSupportedResources.ORGANIZATION.getValue())) {
+        ExportOrganization(jobID, parsedSince);
+      }
 
       if (supportedResources.contains(SystemExportSupportedResources.PRACTITIONER.getValue())) {
         ExportPractitioner(jobID, parsedSince);
@@ -243,8 +253,8 @@ public class ExportService {
       }
 
       for (VitalObservation entity : observations) {
-        IBaseResource patient = observationMapper.toR4(entity);
-        String jsonLine = fhirJsonParser.encodeResourceToString(patient);
+        IBaseResource observation = observationMapper.toR4(entity);
+        String jsonLine = fhirJsonParser.encodeResourceToString(observation);
         writer.write(jsonLine);
         writer.newLine();
       }
@@ -308,8 +318,8 @@ public class ExportService {
         }
 
         for (FormEncounter entity : content) {
-          IBaseResource patient = encounterMapper.toR4(entity);
-          String jsonLine = fhirJsonParser.encodeResourceToString(patient);
+          IBaseResource encounter = encounterMapper.toR4(entity);
+          String jsonLine = fhirJsonParser.encodeResourceToString(encounter);
           writer.write(jsonLine);
           writer.newLine();
         }
@@ -385,6 +395,70 @@ public class ExportService {
     }
   }
 
+  private void ExportOrganization(UUID jobID, SearchValue<LocalDateTime> since) {
+
+    String fileName = jobID + "-organization" + ".ndjson";
+    Path filePath = getExportFileRootPath().resolve(fileName);
+    IParser fhirJsonParser = fhirContextConfig.fhirContext().newJsonParser().setPrettyPrint(false);
+
+    int offset = 0;
+    boolean hasMoreData = true;
+
+    try (BufferedWriter writer =
+                 new BufferedWriter(new FileWriter(filePath.toFile()), FILE_BUFFER_SIZE)) {
+      while (hasMoreData) {
+        OrganizationSearchQuery query =
+                OrganizationSearchQuery.builder()
+                        .lastUpdated(since)
+                        .count(BATCH_SIZE)
+                        .offset(offset)
+                        .build();
+
+        Page<FacilityDBRecord> page = organizationService.find(query);
+
+        List<FacilityDBRecord> content = page.getContent();
+        if (content.isEmpty()) {
+          log.info("JobID {}: Organization export job content is empty", jobID);
+          break;
+        }
+        for (FacilityDBRecord entity : content) {
+          IBaseResource organization = organizationMapper.toR4(entity);
+          String jsonLine = fhirJsonParser.encodeResourceToString(organization);
+          writer.write(jsonLine);
+          writer.newLine();
+        }
+        log.debug(
+                "JobID {}: Organization export job exported {} records (Current offset: {})",
+                jobID,
+                content.size(),
+                offset);
+
+        offset += BATCH_SIZE;
+        hasMoreData = page.hasNext();
+      }
+
+      log.info(
+              "JobID {}: Organization export job NDJSON file written successfully to {}", jobID, filePath);
+      ExportJobFilesEntity exportJobFilesEntity =
+              ExportJobFilesEntity.builder()
+                      .jobUuid(jobID)
+                      .fileId(filePath.toString())
+                      .resourceType(SystemExportSupportedResources.PRACTITIONER.getValue())
+                      .createdAt(LocalDateTime.now())
+                      .build();
+
+      exportJobFilesService.save(exportJobFilesEntity);
+      log.info("JobID {}: Organization export job metadata saved successfully.", jobID);
+
+    } catch (IOException e) {
+      log.error("JobID {}: Organization export job File writing failed", jobID, e);
+      throw new RuntimeException("Organization export task failed due to I/O error", e);
+    } catch (RuntimeException e) {
+      log.error("JobID {}: Organization export job Failed.", jobID, e);
+      throw new RuntimeException(e);
+    }
+  }
+
   private void ExportPractitioner(UUID jobID, SearchValue<LocalDateTime> since) {
 
     String fileName = jobID + "-practitioner" + ".ndjson";
@@ -411,8 +485,8 @@ public class ExportService {
           break;
         }
         for (Practitioner entity : content) {
-          IBaseResource patient = practitionerMapper.toR4(entity);
-          String jsonLine = fhirJsonParser.encodeResourceToString(patient);
+          IBaseResource practitioner = practitionerMapper.toR4(entity);
+          String jsonLine = fhirJsonParser.encodeResourceToString(practitioner);
           writer.write(jsonLine);
           writer.newLine();
         }
@@ -441,12 +515,13 @@ public class ExportService {
 
     } catch (IOException e) {
       log.error("JobID {}: Practitioner export job File writing failed", jobID, e);
-      throw new RuntimeException("Patient export task failed due to I/O error", e);
+      throw new RuntimeException("Practitioner export task failed due to I/O error", e);
     } catch (RuntimeException e) {
       log.error("JobID {}: Practitioner export job Failed.", jobID, e);
       throw new RuntimeException(e);
     }
   }
+
 
   private void exportConditionCategory(
       UUID jobID, BufferedWriter writer, String category, IParser fhirJsonParser)
