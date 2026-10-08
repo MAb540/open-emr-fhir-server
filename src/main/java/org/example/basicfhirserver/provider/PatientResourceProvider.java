@@ -17,7 +17,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.exceptions.BulkExportValidationException;
-import org.example.basicfhirserver.jobs.export.FhirExportService;
+import org.example.basicfhirserver.jobs.export.ExportService;
 import org.example.basicfhirserver.mapper.EncounterMapper;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.mapper.ObservationMapper;
@@ -60,7 +60,7 @@ public class PatientResourceProvider implements IResourceProvider {
   private final EncounterService encounterService;
   private final EncounterMapper encounterMapper;
 
-  private final FhirExportService fhirExportService;
+  private final ExportService exportService;
   private final JobScheduler jobScheduler;
 
   public PatientResourceProvider(
@@ -72,7 +72,7 @@ public class PatientResourceProvider implements IResourceProvider {
       ObservationMapper observationMapper,
       EncounterService encounterService,
       EncounterMapper encounterMapper,
-      FhirExportService fhirExportService,
+      ExportService exportService,
       JobScheduler jobScheduler) {
     this.legacyPatientMapper = legacyPatientMapper;
     this.patientSearchTranslator = patientSearchTranslator;
@@ -82,7 +82,7 @@ public class PatientResourceProvider implements IResourceProvider {
     this.observationMapper = observationMapper;
     this.encounterService = encounterService;
     this.encounterMapper = encounterMapper;
-    this.fhirExportService = fhirExportService;
+    this.exportService = exportService;
     this.jobScheduler = jobScheduler;
   }
 
@@ -200,14 +200,14 @@ public class PatientResourceProvider implements IResourceProvider {
 
     try {
       BulkExportRequestParser bulkExportRequestParser =
-          new BulkExportRequestParser(fhirExportService.supportedExportResources());
+          new BulkExportRequestParser(exportService.supportedPatientExportResources());
       ParsedExportRequest parsedRequest =
           bulkExportRequestParser.parseAndValidate(theRequestDetails);
 
       JobId jobId =
           jobScheduler.enqueue(
               () ->
-                  fhirExportService.executeBulkExport(
+                  exportService.executePatientBulkExport(
                       JobContext.Null,
                       parsedRequest.resourcesToExport(),
                       parsedRequest.parsedSince()));

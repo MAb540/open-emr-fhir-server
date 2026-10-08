@@ -1,6 +1,7 @@
 package org.example.basicfhirserver.provider;
 
 import static org.example.basicfhirserver.jobs.export.FhirExportServiceConstants.ExportPollEndpoint;
+import static org.example.basicfhirserver.jobs.export.FhirExportServiceConstants.ExportPollEndpointWithParams;
 
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
@@ -16,10 +17,16 @@ import java.util.StringJoiner;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.example.basicfhirserver.domain.entities.ExportJobFilesEntity;
-import org.example.basicfhirserver.jobs.export.FhirExportService;
+import org.example.basicfhirserver.exceptions.BulkExportValidationException;
+import org.example.basicfhirserver.jobs.export.ExportService;
+import org.example.basicfhirserver.provider.parsers.BulkExportRequestParser;
+import org.example.basicfhirserver.provider.parsers.ParsedExportRequest;
 import org.example.basicfhirserver.service.ExportJobFilesService;
 import org.jobrunr.jobs.Job;
+import org.jobrunr.jobs.JobId;
+import org.jobrunr.jobs.context.JobContext;
 import org.jobrunr.jobs.states.StateName;
+import org.jobrunr.scheduling.JobScheduler;
 import org.jobrunr.storage.JobNotFoundException;
 import org.jobrunr.storage.StorageProvider;
 import org.jspecify.annotations.NonNull;
@@ -31,15 +38,66 @@ public class BulkExportPollProvider {
 
   private final StorageProvider storageProvider;
   private final ExportJobFilesService exportJobFilesService;
-  private final FhirExportService fhirExportService;
+  private final ExportService exportService;
+  private final JobScheduler jobScheduler;
 
   public BulkExportPollProvider(
       StorageProvider storageProvider,
       ExportJobFilesService exportJobFilesService,
-      FhirExportService fhirExportService) {
+      ExportService exportService,
+      JobScheduler jobScheduler) {
     this.storageProvider = storageProvider;
     this.exportJobFilesService = exportJobFilesService;
-    this.fhirExportService = fhirExportService;
+    this.exportService = exportService;
+    this.jobScheduler = jobScheduler;
+  }
+
+  @Operation(name = "$export", idempotent = true, manualResponse = true)
+  public void systemExport(
+          RequestDetails theRequestDetails,
+          HttpServletResponse theServletResponse
+  ) throws Exception {
+    try {
+      BulkExportRequestParser bulkExportRequestParser =
+              new BulkExportRequestParser(exportService.supportedSystemExportResources());
+      ParsedExportRequest parsedRequest =
+              bulkExportRequestParser.parseAndValidate(theRequestDetails);
+
+
+
+      JobId jobId =
+              jobScheduler.enqueue(
+                      () ->
+                              exportService.executeSystemBulkExport(
+                                      JobContext.Null,
+                                      parsedRequest.resourcesToExport(),
+                                      parsedRequest.parsedSince()));
+
+      String serverBaseUrl = theRequestDetails.getFhirServerBase();
+      String pollingUrl = serverBaseUrl + ExportPollEndpointWithParams + jobId;
+
+      theServletResponse.setStatus(HttpServletResponse.SC_ACCEPTED);
+      theServletResponse.setHeader("Content-Location", pollingUrl);
+      theServletResponse.getWriter().close();
+
+    } catch (BulkExportValidationException e) {
+      theServletResponse.setStatus(e.getStatusCode());
+      theServletResponse.setContentType("application/fhir+json;charset=UTF-8");
+      String escapedError = e.getMessage().replace("\"", "\\\"");
+      theServletResponse
+              .getWriter()
+              .write(
+                      "{\"resourceType\":\"OperationOutcome\",\"issue\":[{\"severity\":\"error\",\"code\":\"value\",\"diagnostics\":\""
+                              + escapedError
+                              + "\"}]}");
+      theServletResponse.getWriter().close();
+
+    } catch (Exception e) {
+      theServletResponse.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+      theServletResponse.getWriter().close();
+    }
+
+
   }
 
   @Operation(name = "$" + ExportPollEndpoint, idempotent = true, manualResponse = true)
@@ -172,7 +230,7 @@ public class BulkExportPollProvider {
       return;
     }
 
-    Path fullFilePath = fhirExportService.getExportFileRootPath().resolve(fileId.getValue());
+    Path fullFilePath = exportService.getExportFileRootPath().resolve(fileId.getValue());
     List<ExportJobFilesEntity> exportJobFilesEntities =
         exportJobFilesService.findByFileId(fullFilePath.toString());
 

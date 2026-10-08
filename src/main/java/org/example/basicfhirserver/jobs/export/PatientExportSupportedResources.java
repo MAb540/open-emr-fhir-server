@@ -3,7 +3,7 @@ package org.example.basicfhirserver.jobs.export;
 import lombok.Getter;
 
 @Getter
-public enum FhirExportSupportedResources {
+public enum PatientExportSupportedResources {
   PATIENT("Patient"),
   OBSERVATION("Observation"),
   CONDITION("Condition"),
@@ -11,7 +11,7 @@ public enum FhirExportSupportedResources {
 
   private final String value;
 
-  FhirExportSupportedResources(String value) {
+  PatientExportSupportedResources(String value) {
     this.value = value;
   }
 }

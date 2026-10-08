@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
-import org.example.basicfhirserver.jobs.export.FhirExportService;
+import org.example.basicfhirserver.jobs.export.ExportService;
 import org.example.basicfhirserver.jobs.export.FhirExportServiceConstants;
 import org.example.basicfhirserver.mapper.EncounterMapper;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
@@ -62,7 +62,7 @@ class PatientResourceProviderTest {
   @Mock private ObservationMapper observationMapper;
   @Mock private EncounterService encounterService;
   @Mock private EncounterMapper encounterMapper;
-  @Mock private FhirExportService fhirExportService;
+  @Mock private ExportService exportService;
   @Mock private JobScheduler jobScheduler;
 
   @InjectMocks private PatientResourceProvider provider;
@@ -208,7 +208,7 @@ class PatientResourceProviderTest {
 
   @Test
   void patientExport_enqueuesJobAndReturnsAccepted() throws Exception {
-    when(fhirExportService.supportedExportResources())
+    when(exportService.supportedPatientExportResources())
         .thenReturn(List.of("Patient", "Observation", "Encounter"));
 
     RequestDetails details = mock(RequestDetails.class);
@@ -237,7 +237,7 @@ class PatientResourceProviderTest {
 
   @Test
   void patientExport_returnsBadRequestWhenPreferHeaderMissing() throws Exception {
-    when(fhirExportService.supportedExportResources())
+    when(exportService.supportedPatientExportResources())
         .thenReturn(List.of("Patient", "Observation", "Encounter"));
 
     RequestDetails details = mock(RequestDetails.class);
