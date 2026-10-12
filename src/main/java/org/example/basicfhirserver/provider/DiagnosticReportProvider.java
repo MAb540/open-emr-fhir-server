@@ -40,7 +40,7 @@ public class DiagnosticReportProvider implements IResourceProvider {
     return DiagnosticReport.class;
   }
 
-  private DiagnosticReportProvider(
+  public DiagnosticReportProvider(
       DiagnosticReportService diagnosticReportService,
       DiagnosticReportClinicalNotesMapper diagnosticReportClinicalNotesMapper,
       DiagnosticReportProcedureMapper diagnosticReportProcedureMapper,
