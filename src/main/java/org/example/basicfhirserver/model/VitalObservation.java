@@ -29,9 +29,5 @@ public class VitalObservation {
   String version;
   Map<String, VitalObservationComponent> components;
 
-  public record VitalObservationComponent(BigDecimal value
-      //            String unit,
-      //            String code,
-      //            String display
-      ) {}
+  public record VitalObservationComponent(BigDecimal value) {}
 }

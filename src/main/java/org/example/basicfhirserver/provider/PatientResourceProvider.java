@@ -22,8 +22,8 @@ import org.example.basicfhirserver.mapper.EncounterMapper;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.mapper.ObservationMapper;
 import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
+import org.example.basicfhirserver.model.CanonicalObservation;
 import org.example.basicfhirserver.model.FormEncounter;
-import org.example.basicfhirserver.model.VitalObservation;
 import org.example.basicfhirserver.provider.parsers.BulkExportRequestParser;
 import org.example.basicfhirserver.provider.parsers.ParsedExportRequest;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
@@ -160,7 +160,7 @@ public class PatientResourceProvider implements IResourceProvider {
         ObservationSearchQuery query =
             ObservationSearchQuery.builder().patientId(patientUuids).build();
 
-        List<VitalObservation> observations = observationService.find(query);
+        List<CanonicalObservation> observations = observationService.find(query);
         observations.stream().map(observationMapper::toR4).forEach(includedResources::add);
       }
 

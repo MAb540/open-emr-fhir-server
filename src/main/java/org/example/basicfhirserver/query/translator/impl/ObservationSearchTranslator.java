@@ -19,7 +19,12 @@ public class ObservationSearchTranslator
     return ObservationSearchQuery.builder()
         .patientId(
             criteria.getPatient() == null ? null : List.of(criteria.getPatient().getIdPart()))
-        .category(criteria.getCategory() == null ? null : criteria.getCategory().getValue())
+        .category(
+            criteria.getCategory() == null
+                ? List.of()
+                : criteria.getCategory().getValuesAsQueryTokens().stream()
+                    .map(TranslatorUtils::tokenWithSystem)
+                    .toList())
         .codes(
             criteria.getCodes() == null
                 ? List.of()

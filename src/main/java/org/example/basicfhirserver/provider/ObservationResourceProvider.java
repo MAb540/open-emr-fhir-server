@@ -6,19 +6,15 @@ import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.DateParam;
 import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.TokenOrListParam;
-import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.EncounterMapper;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.mapper.ObservationMapper;
 import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
+import org.example.basicfhirserver.model.CanonicalObservation;
 import org.example.basicfhirserver.model.FormEncounter;
-import org.example.basicfhirserver.model.VitalObservation;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
 import org.example.basicfhirserver.query.resources.observation.ObservationSearchCriteria;
@@ -78,15 +74,20 @@ public class ObservationResourceProvider implements IResourceProvider {
 
   @Read()
   public Observation getResourceById(@IdParam IdType theId) {
-    VitalObservation observation = observationService.findById(UUID.fromString(theId.getIdPart()));
+    UUID uuid = UUID.fromString(theId.getIdPart());
+    Optional<CanonicalObservation> canonicalObservation = observationService.findById(uuid);
 
-    return observationMapper.toR4(observation);
+    if (canonicalObservation.isEmpty()) {
+      throw new org.hl7.fhir.exceptions.FHIRException(
+          "Observation not found with ID: " + theId.getIdPart());
+    }
+    return observationMapper.toR4(canonicalObservation.get());
   }
 
   @Search()
   public IBundleProvider searchObservations(
       @OptionalParam(name = Observation.SP_PATIENT) ReferenceParam patient,
-      @OptionalParam(name = Observation.SP_CATEGORY) TokenParam category,
+      @OptionalParam(name = Observation.SP_CATEGORY) TokenOrListParam category,
       @OptionalParam(name = Observation.SP_CODE) TokenOrListParam codes,
       @OptionalParam(name = Observation.SP_DATE) DateParam date,
       @OptionalParam(name = Observation.SP_RES_LAST_UPDATED) DateParam lastUpdated,
@@ -108,7 +109,7 @@ public class ObservationResourceProvider implements IResourceProvider {
 
     var observationSearchQuery = observationSearchTranslator.translate(criteria);
 
-    List<VitalObservation> observations = observationService.find(observationSearchQuery);
+    List<CanonicalObservation> observations = observationService.find(observationSearchQuery);
 
     List<IBaseResource> primaryObservations =
         observations.stream().<IBaseResource>map(observationMapper::toR4).toList();
@@ -131,7 +132,7 @@ public class ObservationResourceProvider implements IResourceProvider {
 
       if (includeSubjects) {
         List<String> patientUuids =
-            observations.stream().map(VitalObservation::getPatientId).toList();
+            observations.stream().map(CanonicalObservation::getPatientUuid).toList();
         PatientSearchQuery query = PatientSearchQuery.builder().patientId(patientUuids).build();
 
         Page<LegacyPatientEntity> legacyPatientEntities = patientService.find(query);
@@ -142,7 +143,7 @@ public class ObservationResourceProvider implements IResourceProvider {
 
       if (includeEncounters) {
         List<String> encounterUuids =
-            observations.stream().map(VitalObservation::getEncounterId).toList();
+            observations.stream().map(CanonicalObservation::getEncounterUuid).toList();
         EncounterSearchQuery query =
             EncounterSearchQuery.builder().encounterId(encounterUuids).build();
         List<FormEncounter> formEncounters = encounterService.find(query).getContent();

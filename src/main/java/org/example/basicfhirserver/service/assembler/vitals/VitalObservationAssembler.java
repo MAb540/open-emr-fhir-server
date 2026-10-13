@@ -3,7 +3,6 @@ package org.example.basicfhirserver.service.assembler.vitals;
 import static org.example.basicfhirserver.service.assembler.vitals.VitalObservationType.*;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -263,24 +262,4 @@ public class VitalObservationAssembler {
         DIASTOLIC_BP.getCode(), diastolic);
   }
 
-  private static class MeasurementUtils {
-
-    private static final int MEASUREMENT_PRECISION = 6;
-
-    public static BigDecimal lbToKg(BigDecimal val) {
-      return val.multiply(BigDecimal.valueOf(0.45359237));
-    }
-
-    public static BigDecimal inchesToCm(BigDecimal val) {
-      return val.multiply(BigDecimal.valueOf(2.54));
-    }
-
-    public static BigDecimal fhToCelsius(BigDecimal val) {
-      BigDecimal start = val.subtract(BigDecimal.valueOf(32));
-      BigDecimal factor =
-          BigDecimal.valueOf(5)
-              .divide(BigDecimal.valueOf(9), MEASUREMENT_PRECISION + 2, RoundingMode.HALF_UP);
-      return start.multiply(factor);
-    }
-  }
 }

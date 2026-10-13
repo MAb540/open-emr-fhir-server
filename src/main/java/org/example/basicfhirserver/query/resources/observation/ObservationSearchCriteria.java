@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 public class ObservationSearchCriteria {
 
   private ReferenceParam patient;
-  private TokenParam category;
+  private TokenOrListParam category;
   private TokenOrListParam codes;
   private DateParam date;
   private DateParam lastUpdated;

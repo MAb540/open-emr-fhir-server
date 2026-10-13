@@ -18,10 +18,7 @@ import org.example.basicfhirserver.config.FhirContextConfig;
 import org.example.basicfhirserver.domain.entities.ExportJobFilesEntity;
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.*;
-import org.example.basicfhirserver.model.ConditionCanonical;
-import org.example.basicfhirserver.model.FormEncounter;
-import org.example.basicfhirserver.model.Practitioner;
-import org.example.basicfhirserver.model.VitalObservation;
+import org.example.basicfhirserver.model.*;
 import org.example.basicfhirserver.query.resources.SearchValue;
 import org.example.basicfhirserver.query.resources.condition.ConditionSearchQuery;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
@@ -250,13 +247,13 @@ public class ExportService {
               .offset(offset)
               .build();
 
-      List<VitalObservation> observations = observationService.find(query);
+      List<CanonicalObservation> observations = observationService.find(query);
       if (observations.isEmpty()) {
         log.info("JobID {}: Observation export job records are {}.", jobID, 0);
         return;
       }
 
-      for (VitalObservation entity : observations) {
+      for (CanonicalObservation entity : observations) {
         IBaseResource observation = observationMapper.toR4(entity);
         String jsonLine = fhirJsonParser.encodeResourceToString(observation);
         writer.write(jsonLine);

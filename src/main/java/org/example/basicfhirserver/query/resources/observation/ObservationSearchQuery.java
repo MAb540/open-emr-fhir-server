@@ -15,7 +15,7 @@ import org.example.basicfhirserver.query.resources.SearchValue;
 public class ObservationSearchQuery {
 
   private List<String> patientId;
-  private String category;
+  private List<SearchValue<String>> category;
   private List<SearchValue<String>> codes;
   private SearchValue<LocalDateTime> date;
   private SearchValue<LocalDateTime> lastUpdated;
