@@ -29,6 +29,7 @@ import org.example.basicfhirserver.query.resources.practitioner.PractitionerSear
 import org.example.basicfhirserver.repository.jdbc.facility.FacilityDBRecord;
 import org.example.basicfhirserver.service.*;
 import org.example.basicfhirserver.service.assembler.condition.ConditionAssembler;
+import org.example.basicfhirserver.service.impl.condition.ConditionSearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.jobrunr.jobs.annotations.Job;
 import org.jobrunr.jobs.context.JobContext;
@@ -47,7 +48,6 @@ public class ExportService {
   private final EncounterService encounterService;
   private final EncounterMapper encounterMapper;
   private final ConditionService conditionService;
-  private final ConditionMapper conditionMapper;
   private final PractitionerService practitionerService;
   private final PractitionerMapper practitionerMapper;
   private final OrganizationService organizationService;
@@ -69,7 +69,6 @@ public class ExportService {
       EncounterService encounterService,
       EncounterMapper encounterMapper,
       ConditionService conditionService,
-      ConditionMapper conditionMapper,
       PractitionerService practitionerService,
       PractitionerMapper practitionerMapper,
       OrganizationService organizationService,
@@ -82,7 +81,6 @@ public class ExportService {
     this.observationMapper = observationMapper;
     this.encounterService = encounterService;
     this.encounterMapper = encounterMapper;
-    this.conditionMapper = conditionMapper;
     this.conditionService = conditionService;
     this.practitionerService = practitionerService;
     this.practitionerMapper = practitionerMapper;
@@ -538,16 +536,15 @@ public class ExportService {
               .offset(offset)
               .build();
 
-      Page<ConditionCanonical> page = conditionService.find(query);
-      List<ConditionCanonical> content = page.getContent();
+      ConditionSearchResult result = conditionService.find(query);
+      List<IBaseResource> content = result.primaryResources();
 
-      if (page.isEmpty()) {
+      if (content.isEmpty()) {
         log.info("JobID {}: Condition export job content is empty", jobID);
         break;
       }
 
-      for (ConditionCanonical entity : content) {
-        IBaseResource condition = conditionMapper.toR4(entity);
+      for (IBaseResource condition : content) {
         String jsonLine = fhirJsonParser.encodeResourceToString(condition);
         writer.write(jsonLine);
         writer.newLine();
@@ -559,7 +556,7 @@ public class ExportService {
           offset);
 
       offset += BATCH_SIZE;
-      hasMoreData = page.hasNext();
+      hasMoreData = offset < result.totalElements();
     }
   }
 

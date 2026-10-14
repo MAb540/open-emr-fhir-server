@@ -1,17 +1,30 @@
-package org.example.basicfhirserver.service.impl;
+package org.example.basicfhirserver.service.impl.condition;
 
+import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
+import org.example.basicfhirserver.mapper.ConditionMapper;
+import org.example.basicfhirserver.mapper.EncounterMapper;
+import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.model.ConditionCanonical;
+import org.example.basicfhirserver.model.FormEncounter;
 import org.example.basicfhirserver.query.resources.condition.ConditionSearchQuery;
+import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
+import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
 import org.example.basicfhirserver.repository.jdbc.condition.ConditionEncounterDiagnosisDBRecord;
 import org.example.basicfhirserver.repository.jdbc.condition.ConditionHealthConcernDBRecord;
 import org.example.basicfhirserver.repository.jdbc.condition.ConditionProblemListItemDBRecord;
 import org.example.basicfhirserver.repository.jdbc.condition.ConditionRepository;
 import org.example.basicfhirserver.service.ConditionService;
+import org.example.basicfhirserver.service.EncounterService;
+import org.example.basicfhirserver.service.PatientService;
 import org.example.basicfhirserver.service.assembler.condition.ConditionAssembler;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Condition;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -25,16 +38,31 @@ public class ConditionServiceImpl implements ConditionService {
 
   private final ConditionRepository conditionRepository;
   private final ConditionAssembler conditionAssembler;
+  private final ConditionMapper conditionMapper;
+  private final PatientService patientService;
+  private final LegacyPatientMapper legacyPatientMapper;
+  private final EncounterService encounterService;
+  private final EncounterMapper encounterMapper;
 
   public ConditionServiceImpl(
-      ConditionRepository conditionRepository, ConditionAssembler conditionAssembler) {
+      ConditionRepository conditionRepository,
+      ConditionAssembler conditionAssembler,
+      ConditionMapper conditionMapper,
+      PatientService patientService,
+      LegacyPatientMapper legacyPatientMapper,
+      EncounterService encounterService,
+      EncounterMapper encounterMapper) {
     this.conditionRepository = conditionRepository;
     this.conditionAssembler = conditionAssembler;
+    this.conditionMapper = conditionMapper;
+    this.patientService = patientService;
+    this.legacyPatientMapper = legacyPatientMapper;
+    this.encounterService = encounterService;
+    this.encounterMapper = encounterMapper;
   }
 
   @Override
-  public ConditionCanonical findById(UUID uuid) {
-
+  public Condition findById(UUID uuid) {
     List<ConditionProblemListItemDBRecord> problemLists =
         conditionRepository.findConditionProblemListItemById(uuid);
     List<ConditionEncounterDiagnosisDBRecord> encounterDiag =
@@ -47,18 +75,32 @@ public class ConditionServiceImpl implements ConditionService {
     }
 
     if (!problemLists.isEmpty()) {
-      return conditionAssembler.toCanonical(problemLists.get(0));
+      return conditionMapper.toR4(conditionAssembler.toCanonical(problemLists.get(0)));
     }
     if (!encounterDiag.isEmpty()) {
-      return conditionAssembler.toCanonical(encounterDiag.get(0));
+      return conditionMapper.toR4(conditionAssembler.toCanonical(encounterDiag.get(0)));
     }
 
-    return conditionAssembler.toCanonical(healthConcerns.get(0));
+    return conditionMapper.toR4(conditionAssembler.toCanonical(healthConcerns.get(0)));
   }
 
   @Override
-  public Page<ConditionCanonical> find(ConditionSearchQuery conditionSearchQuery) {
+  public ConditionSearchResult find(ConditionSearchQuery conditionSearchQuery) {
+    Page<ConditionCanonical> conditionsCanonical = findCanonical(conditionSearchQuery);
 
+    List<IBaseResource> primaryConditions =
+        conditionsCanonical.getContent().stream()
+            .<IBaseResource>map(conditionMapper::toR4)
+            .toList();
+
+    List<IBaseResource> includedResources =
+        includeResources(conditionsCanonical, conditionSearchQuery.getIncludes());
+
+    return new ConditionSearchResult(
+        primaryConditions, includedResources, conditionsCanonical.getTotalElements());
+  }
+
+  private Page<ConditionCanonical> findCanonical(ConditionSearchQuery conditionSearchQuery) {
     int limit =
         conditionSearchQuery.getCount() != null
             ? conditionSearchQuery.getCount()
@@ -118,6 +160,60 @@ public class ConditionServiceImpl implements ConditionService {
 
     return toCanonicalPage(
         new ArrayList<>(canonicalConditions.subList(fromIndex, toIndex)), pageable, total);
+  }
+
+  private List<IBaseResource> includeResources(
+      Page<ConditionCanonical> conditionsCanonical, Set<Include> includes) {
+    boolean includeSubjects =
+        includes != null
+            && includes.stream().anyMatch(inc -> "Condition:subject".equals(inc.getValue()));
+
+    boolean includeEncounters =
+        includes != null
+            && includes.stream().anyMatch(inc -> "Condition:encounter".equals(inc.getValue()));
+
+    List<IBaseResource> includedResources = new ArrayList<>();
+
+    if (conditionsCanonical.isEmpty()) {
+      return includedResources;
+    }
+
+    if (includeSubjects) {
+      List<String> patientUuids =
+          conditionsCanonical.getContent().stream()
+              .map(ConditionCanonical::getPatientUuid)
+              .filter(uuid -> uuid != null && !uuid.isEmpty())
+              .distinct()
+              .toList();
+
+      if (!patientUuids.isEmpty()) {
+        PatientSearchQuery query = PatientSearchQuery.builder().patientId(patientUuids).build();
+
+        Page<LegacyPatientEntity> legacyPatientEntities = patientService.find(query);
+        legacyPatientEntities.getContent().stream()
+            .<IBaseResource>map(legacyPatientMapper::toR4)
+            .forEach(includedResources::add);
+      }
+    }
+
+    if (includeEncounters) {
+      List<String> encounterUuids =
+          conditionsCanonical.getContent().stream()
+              .map(ConditionCanonical::getEncounterUuid)
+              .filter(uuid -> uuid != null && !uuid.isEmpty())
+              .distinct()
+              .toList();
+
+      if (!encounterUuids.isEmpty()) {
+        EncounterSearchQuery query =
+            EncounterSearchQuery.builder().encounterId(encounterUuids).build();
+
+        List<FormEncounter> formEncounters = encounterService.find(query).getContent();
+        formEncounters.stream().map(encounterMapper::toR4).forEach(includedResources::add);
+      }
+    }
+
+    return includedResources;
   }
 
   private Page<ConditionCanonical> toCanonicalPage(

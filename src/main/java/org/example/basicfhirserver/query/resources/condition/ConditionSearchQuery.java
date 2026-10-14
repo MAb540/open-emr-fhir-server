@@ -1,6 +1,9 @@
 package org.example.basicfhirserver.query.resources.condition;
 
 import java.time.LocalDateTime;
+import java.util.Set;
+
+import ca.uhn.fhir.model.api.Include;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,4 +20,5 @@ public class ConditionSearchQuery {
   private SearchValue<LocalDateTime> lastUpdated;
   private Integer count;
   private Integer offset;
+  private Set<Include> includes;
 }

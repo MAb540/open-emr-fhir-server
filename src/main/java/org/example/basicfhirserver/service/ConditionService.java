@@ -1,13 +1,13 @@
 package org.example.basicfhirserver.service;
 
 import java.util.UUID;
-import org.example.basicfhirserver.model.ConditionCanonical;
 import org.example.basicfhirserver.query.resources.condition.ConditionSearchQuery;
-import org.springframework.data.domain.Page;
+import org.example.basicfhirserver.service.impl.condition.ConditionSearchResult;
+import org.hl7.fhir.r4.model.Condition;
 
 public interface ConditionService {
 
-  ConditionCanonical findById(UUID uuid);
+  Condition findById(UUID uuid);
 
-  Page<ConditionCanonical> find(ConditionSearchQuery conditionSearchQuery);
+  ConditionSearchResult find(ConditionSearchQuery conditionSearchQuery);
 }
