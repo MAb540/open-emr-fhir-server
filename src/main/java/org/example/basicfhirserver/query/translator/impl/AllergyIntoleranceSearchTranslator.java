@@ -27,6 +27,7 @@ public class AllergyIntoleranceSearchTranslator
                         : d.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()))
         .count(criteria.getCount())
         .offset(criteria.getOffset())
+        .includes(criteria.getIncludes())
         .build();
   }
 }

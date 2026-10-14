@@ -2,12 +2,15 @@ package org.example.basicfhirserver.service;
 
 import java.util.UUID;
 import org.example.basicfhirserver.query.resources.allergyintolerance.AllergyIntoleranceSearchQuery;
-import org.example.basicfhirserver.repository.jdbc.allergy.AllergyDBRecord;
-import org.springframework.data.domain.Page;
+import org.example.basicfhirserver.service.impl.allergyIntolerance.AllergySearchResult;
+import org.hl7.fhir.r4.model.AllergyIntolerance;
 
 public interface AllergyIntoleranceService {
 
-  AllergyDBRecord findById(UUID uuid);
+  AllergyIntolerance findById(UUID uuid);
 
-  Page<AllergyDBRecord> find(AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery);
+  AllergySearchResult find(AllergyIntoleranceSearchQuery searchQuery);
+
+  //  Page<AllergyDBRecord> find(AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery);
+
 }

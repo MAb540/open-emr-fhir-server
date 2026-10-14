@@ -5,7 +5,7 @@ import java.util.UUID;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
 import org.springframework.data.domain.Page;
 
-public interface FormEncounterService {
+public interface FormEncounterRepository {
 
   List<FormEncounterDBRecord> findById(UUID uuid);
 

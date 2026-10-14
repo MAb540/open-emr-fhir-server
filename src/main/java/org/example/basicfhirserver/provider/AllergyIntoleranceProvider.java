@@ -7,26 +7,18 @@ import ca.uhn.fhir.rest.param.DateParam;
 import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
-import org.example.basicfhirserver.mapper.AllergyIntoleranceMapper;
-import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.allergyintolerance.AllergyIntoleranceSearchCriteria;
-import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
 import org.example.basicfhirserver.query.translator.impl.AllergyIntoleranceSearchTranslator;
-import org.example.basicfhirserver.repository.jdbc.allergy.AllergyDBRecord;
 import org.example.basicfhirserver.service.AllergyIntoleranceService;
-import org.example.basicfhirserver.service.PatientService;
+import org.example.basicfhirserver.service.impl.allergyIntolerance.AllergySearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.AllergyIntolerance;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.MedicationRequest;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -35,22 +27,13 @@ import org.springframework.stereotype.Component;
     supported = {ProfilesConstants.HL7_US_CORE_ALLERGYINTOLERANCE})
 public class AllergyIntoleranceProvider implements IResourceProvider {
   private final AllergyIntoleranceService allergyIntoleranceService;
-  private final AllergyIntoleranceMapper allergyIntoleranceMapper;
   private final AllergyIntoleranceSearchTranslator allergyIntoleranceSearchTranslator;
-  private final PatientService patientService;
-  private final LegacyPatientMapper legacyPatientMapper;
 
   public AllergyIntoleranceProvider(
       AllergyIntoleranceService allergyIntoleranceService,
-      AllergyIntoleranceMapper allergyIntoleranceMapper,
-      AllergyIntoleranceSearchTranslator allergyIntoleranceSearchTranslator,
-      PatientService patientService,
-      LegacyPatientMapper legacyPatientMapper) {
+      AllergyIntoleranceSearchTranslator allergyIntoleranceSearchTranslator) {
     this.allergyIntoleranceService = allergyIntoleranceService;
-    this.allergyIntoleranceMapper = allergyIntoleranceMapper;
     this.allergyIntoleranceSearchTranslator = allergyIntoleranceSearchTranslator;
-    this.patientService = patientService;
-    this.legacyPatientMapper = legacyPatientMapper;
   }
 
   @Override
@@ -60,9 +43,7 @@ public class AllergyIntoleranceProvider implements IResourceProvider {
 
   @Read()
   public AllergyIntolerance getResourceById(@IdParam IdType theId) {
-    AllergyDBRecord allergyDBRecord =
-        allergyIntoleranceService.findById(UUID.fromString(theId.getIdPart()));
-    return allergyIntoleranceMapper.toR4(allergyDBRecord);
+    return allergyIntoleranceService.findById(UUID.fromString(theId.getIdPart()));
   }
 
   @Search()
@@ -70,7 +51,7 @@ public class AllergyIntoleranceProvider implements IResourceProvider {
       @OptionalParam(name = AllergyIntolerance.SP_RES_ID) TokenParam id,
       @OptionalParam(name = MedicationRequest.SP_PATIENT) ReferenceParam patient,
       @OptionalParam(name = AllergyIntolerance.SP_RES_LAST_UPDATED) DateParam lastUpdated,
-      @IncludeParam(allow = {"AllergyIntolerance:patient"}) Set<Include> theIncludes,
+      @IncludeParam(allow = {"AllergyIntolerance:patient"}) Set<Include> includes,
       @Count Integer count,
       @Offset Integer offset) {
     AllergyIntoleranceSearchCriteria criteria =
@@ -80,48 +61,20 @@ public class AllergyIntoleranceProvider implements IResourceProvider {
             .lastUpdated(lastUpdated)
             .count(count)
             .offset(offset)
+            .includes(includes)
             .build();
 
     var allergyIntoleranceSearchQuery = allergyIntoleranceSearchTranslator.translate(criteria);
-    Page<AllergyDBRecord> allergyDBRecords =
+    AllergySearchResult searchResult =
         allergyIntoleranceService.find(allergyIntoleranceSearchQuery);
 
-    List<IBaseResource> primaryAllergyIntolerances =
-        allergyDBRecords.getContent().stream()
-            .<IBaseResource>map(allergyIntoleranceMapper::toR4)
-            .toList();
-
-    boolean includePatients =
-        theIncludes != null
-            && theIncludes.stream()
-                .anyMatch(inc -> "AllergyIntolerance:patient".equals(inc.getValue()));
-
-    List<IBaseResource> includedResources = new ArrayList<>();
-
-    if (!allergyDBRecords.isEmpty()) {
-      if (includePatients) {
-        List<String> patientUuids =
-            allergyDBRecords.getContent().stream()
-                .map(record -> record.getPatientUuid().toString())
-                .toList();
-
-        PatientSearchQuery query = PatientSearchQuery.builder().patientId(patientUuids).build();
-
-        Page<LegacyPatientEntity> legacyPatientEntities = patientService.find(query);
-        legacyPatientEntities.getContent().stream()
-            .<IBaseResource>map(legacyPatientMapper::toR4)
-            .forEach(includedResources::add);
-      }
-    }
-
     int currentOffset = offset != null ? offset : 0;
-    int currentPageSize = allergyDBRecords.getContent().size();
 
     return new BundleProvider(
-        primaryAllergyIntolerances,
-        includedResources,
-        Math.toIntExact(allergyDBRecords.getTotalElements()),
+        searchResult.primaryResources(),
+        searchResult.includedResources(),
+        Math.toIntExact(searchResult.totalElements()),
         currentOffset,
-        currentPageSize);
+        searchResult.primaryResources().size());
   }
 }

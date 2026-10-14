@@ -15,14 +15,14 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class AllergyServiceImpl implements AllergyService {
+public class AllergyRepositoryImpl implements AllergyRepository {
 
   private static final int DEFAULT_PAGE_SIZE = 5;
   private static final int DEFAULT_PAGE_OFFSET = 0;
 
   private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-  public AllergyServiceImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+  public AllergyRepositoryImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
     this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
   }
 
