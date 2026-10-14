@@ -17,14 +17,14 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class FacilityServiceImpl implements FacilityService {
+public class FacilityRepositoryImpl implements FacilityRepository {
 
   private static final int DEFAULT_PAGE_SIZE = 5;
   private static final int DEFAULT_PAGE_OFFSET = 0;
 
   private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-  public FacilityServiceImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+  public FacilityRepositoryImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
     this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
   }
 

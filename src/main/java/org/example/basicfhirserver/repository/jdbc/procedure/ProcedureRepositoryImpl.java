@@ -1,4 +1,4 @@
-package org.example.basicfhirserver.repository.jdbc.diagnosticreport;
+package org.example.basicfhirserver.repository.jdbc.procedure;
 
 import static org.example.basicfhirserver.repository.jdbc.utils.DBUtils.*;
 
@@ -507,26 +507,19 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
       return Collections.emptyList();
     }
 
-    List<String> procedureOrderUuuids = new ArrayList<>();
-
-    // Maps to track and reduce duplicate parent structures and report nodes
-    Map<String, ProcedureDBRecord> procedureByUuid = new HashMap<>();
     Map<String, ProcedureDBRecord.ReportBlock> reportsByUuid = new HashMap<>();
 
-    // =========================================================================
-    // PASS 1: Build the tree structure and collect relational nodes
-    // =========================================================================
+    List<String> proceduresUuids = new ArrayList<>();
+    Map<String, ProcedureDBRecord> procedures = new HashMap<>();
+
     for (RawProcedureRecord row : rawRows) {
-      // Safe assignment preventing NullPointerException if orderUuid is null
       String procedureUuid = row.getOrderUuid() != null ? row.getOrderUuid().toString() : null;
       if (procedureUuid == null) {
         continue;
       }
 
-      // Create the parent root record container if we haven't seen this order yet
-      if (!procedureByUuid.containsKey(procedureUuid)) {
-        procedureOrderUuuids.add(procedureUuid);
-        ProcedureDBRecord parentRecord =
+      if (!procedures.containsKey(procedureUuid)) {
+        ProcedureDBRecord procedureDBRecord =
             ProcedureDBRecord.builder()
                 .orderUuid(row.getOrderUuid())
                 .uuid(row.getUuid())
@@ -605,10 +598,11 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
                 .reports(new ArrayList<>())
                 .build();
 
-        procedureByUuid.put(procedureUuid, parentRecord);
+        proceduresUuids.add(procedureUuid);
+        procedures.put(procedureUuid, procedureDBRecord);
       }
 
-      ProcedureDBRecord currentProcedure = procedureByUuid.get(procedureUuid);
+      ProcedureDBRecord currentProcedure = procedures.get(procedureUuid);
       String reportUuid = row.getReportUuid() != null ? row.getReportUuid().toString() : null;
 
       if (reportUuid != null && !reportUuid.isEmpty()) {
@@ -628,7 +622,6 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
         }
 
         ProcedureDBRecord.ReportBlock currentReport = reportsByUuid.get(reportUuid);
-
         if (row.getProcedureResultId() != null) {
           ProcedureDBRecord.ResultBlock result =
               ProcedureDBRecord.ResultBlock.builder()
@@ -648,11 +641,7 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
       }
     }
 
-    // =========================================================================
-    // PASS 2: Fetch dependent specimens for accumulated report nodes
-    // =========================================================================
     String orderIdSql = "SELECT procedure_order_id FROM procedure_report WHERE uuid = :reportUuid";
-
     String specimenSql =
         """
                 SELECT uuid AS specimen_uuid, specimen_identifier, accession_identifier,
@@ -721,8 +710,8 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
     }
 
     List<ProcedureDBRecord> finalRecords = new ArrayList<>();
-    for (String uuid : procedureOrderUuuids) {
-      finalRecords.add(procedureByUuid.get(uuid));
+    for (String uuid : proceduresUuids) {
+      finalRecords.add(procedures.get(uuid));
     }
 
     return finalRecords;

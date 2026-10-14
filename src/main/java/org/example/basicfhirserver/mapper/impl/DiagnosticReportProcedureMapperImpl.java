@@ -8,7 +8,7 @@ import java.util.Date;
 import java.util.List;
 import org.example.basicfhirserver.mapper.DiagnosticReportProcedureMapper;
 import org.example.basicfhirserver.mapper.utils.FhirCodeSystemConstants;
-import org.example.basicfhirserver.repository.jdbc.diagnosticreport.ProcedureDBRecord;
+import org.example.basicfhirserver.repository.jdbc.procedure.ProcedureDBRecord;
 import org.hl7.fhir.r4.model.*;
 import org.springframework.stereotype.Component;
 

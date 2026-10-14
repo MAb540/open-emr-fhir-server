@@ -6,7 +6,7 @@ import org.example.basicfhirserver.query.resources.person.PersonSearchQuery;
 import org.example.basicfhirserver.query.resources.practitioner.PractitionerSearchQuery;
 import org.springframework.data.domain.Page;
 
-public interface UserService {
+public interface UserRepository {
 
   List<UserDBRecord> findById(UUID uuid);
 

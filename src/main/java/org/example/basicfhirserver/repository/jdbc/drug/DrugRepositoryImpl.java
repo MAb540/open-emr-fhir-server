@@ -14,14 +14,14 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class DrugServiceImpl implements DrugService {
+public class DrugRepositoryImpl implements DrugRepository {
 
   private static final int DEFAULT_PAGE_SIZE = 5;
   private static final int DEFAULT_PAGE_OFFSET = 0;
 
   private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-  public DrugServiceImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+  public DrugRepositoryImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
     this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
   }
 

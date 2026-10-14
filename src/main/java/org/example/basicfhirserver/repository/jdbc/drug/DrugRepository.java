@@ -5,7 +5,7 @@ import java.util.UUID;
 import org.example.basicfhirserver.query.resources.medication.MedicationSearchQuery;
 import org.springframework.data.domain.Page;
 
-public interface DrugService {
+public interface DrugRepository {
 
   List<DrugDBRecord> findById(UUID uuid);
 

@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 import org.example.basicfhirserver.model.CanonicalObservation;
 import org.example.basicfhirserver.query.resources.observation.ObservationSearchQuery;
 import org.example.basicfhirserver.repository.jdbc.vitals.VitalsDBRecord;
-import org.example.basicfhirserver.repository.jdbc.vitals.VitalsService;
+import org.example.basicfhirserver.repository.jdbc.vitals.VitalsRepository;
 import org.example.basicfhirserver.repository.jdbc.vitals.VitalsUuidMappingDBRecord;
 import org.example.basicfhirserver.service.assembler.vitals.ObservationUuidUtil;
 import org.example.basicfhirserver.service.assembler.vitals.VitalObservationProviderAssembler;
@@ -15,12 +15,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class VitalObservationProvider implements ObservationProvider {
 
-    private final VitalsService vitalService;
+    private final VitalsRepository vitalService;
     private final VitalObservationProviderAssembler vitalObservationAssembler;
 
     private static final String CATEGORY_VITAL_SIGNS = "vital-signs";
 
-    public VitalObservationProvider(VitalsService vitalService, VitalObservationProviderAssembler vitalObservationAssembler) {
+    public VitalObservationProvider(VitalsRepository vitalService, VitalObservationProviderAssembler vitalObservationAssembler) {
         this.vitalService = vitalService;
         this.vitalObservationAssembler = vitalObservationAssembler;
     }

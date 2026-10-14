@@ -2,7 +2,7 @@ package org.example.basicfhirserver.model;
 
 import lombok.Value;
 import org.example.basicfhirserver.repository.jdbc.diagnosticreport.ClinicalNotesDBRecord;
-import org.example.basicfhirserver.repository.jdbc.diagnosticreport.ProcedureDBRecord;
+import org.example.basicfhirserver.repository.jdbc.procedure.ProcedureDBRecord;
 import org.springframework.data.domain.Page;
 
 @Value

@@ -6,7 +6,7 @@ import java.util.UUID;
 import org.example.basicfhirserver.model.FormEncounter;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
 import org.example.basicfhirserver.repository.jdbc.formencounter.FormEncounterDBRecord;
-import org.example.basicfhirserver.repository.jdbc.formencounter.FormEncounterService;
+import org.example.basicfhirserver.repository.jdbc.formencounter.FormEncounterRepository;
 import org.example.basicfhirserver.service.EncounterService;
 import org.example.basicfhirserver.service.assembler.formencounter.FormEncounterAssembler;
 import org.springframework.data.domain.Page;
@@ -17,17 +17,17 @@ import org.springframework.stereotype.Service;
 public class EncounterServiceImpl implements EncounterService {
 
   private final FormEncounterAssembler formEncounterAssembler;
-  private final FormEncounterService formEncounterService;
+  private final FormEncounterRepository formEncounterRepository;
 
   public EncounterServiceImpl(
-      FormEncounterService formEncounterService, FormEncounterAssembler formEncounterAssembler) {
-    this.formEncounterService = formEncounterService;
+          FormEncounterRepository formEncounterRepository, FormEncounterAssembler formEncounterAssembler) {
+    this.formEncounterRepository = formEncounterRepository;
     this.formEncounterAssembler = formEncounterAssembler;
   }
 
   @Override
   public FormEncounter findById(UUID uuid) {
-    List<FormEncounterDBRecord> formEncountersDBRecords = formEncounterService.findById(uuid);
+    List<FormEncounterDBRecord> formEncountersDBRecords = formEncounterRepository.findById(uuid);
     if (formEncountersDBRecords.isEmpty()) {
       throw new ResourceNotFoundException("Encounter with given ID " + uuid + " not found.");
     }
@@ -38,7 +38,7 @@ public class EncounterServiceImpl implements EncounterService {
   @Override
   public Page<FormEncounter> find(EncounterSearchQuery encounterSearchQuery) {
     Page<FormEncounterDBRecord> formEncountersDBRecords =
-        formEncounterService.find(encounterSearchQuery);
+        formEncounterRepository.find(encounterSearchQuery);
     List<FormEncounter> canonical =
         formEncountersDBRecords.getContent().stream()
             .map(formEncounterAssembler::toCanonical)

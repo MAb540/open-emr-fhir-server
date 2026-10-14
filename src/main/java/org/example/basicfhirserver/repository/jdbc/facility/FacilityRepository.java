@@ -5,7 +5,7 @@ import java.util.UUID;
 import org.example.basicfhirserver.query.resources.organization.OrganizationSearchQuery;
 import org.springframework.data.domain.Page;
 
-public interface FacilityService {
+public interface FacilityRepository {
 
   List<FacilityDBRecord> findById(UUID uuid);
 

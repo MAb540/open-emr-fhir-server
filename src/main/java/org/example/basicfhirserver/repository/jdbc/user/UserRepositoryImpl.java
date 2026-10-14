@@ -20,14 +20,14 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
-public class UserServiceImpl implements UserService {
+public class UserRepositoryImpl implements UserRepository {
 
   private static final int DEFAULT_PAGE_SIZE = 5;
   private static final int DEFAULT_PAGE_OFFSET = 0;
 
   private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-  public UserServiceImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+  public UserRepositoryImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
     this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
   }
 

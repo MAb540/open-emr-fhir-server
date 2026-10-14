@@ -13,11 +13,11 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class VitalsServiceImpl implements VitalsService {
+public class VitalsRepositoryImpl implements VitalsRepository {
 
   private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-  public VitalsServiceImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+  public VitalsRepositoryImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
     this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
   }
 

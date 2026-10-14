@@ -6,23 +6,23 @@ import org.example.basicfhirserver.model.CanonicalObservation;
 import org.example.basicfhirserver.query.resources.SearchValue;
 import org.example.basicfhirserver.query.resources.observation.ObservationSearchQuery;
 import org.example.basicfhirserver.repository.jdbc.socialhistory.HistoryDBRecord;
-import org.example.basicfhirserver.repository.jdbc.socialhistory.HistoryService;
+import org.example.basicfhirserver.repository.jdbc.socialhistory.HistoryRepository;
 import org.springframework.stereotype.Component;
 
 @Component
 public class HistoryObservationProvider implements ObservationProvider {
-  private final HistoryService historyService;
+  private final HistoryRepository historyRepository;
 
   private static final String SMOKING_STATUS_LOINC_CODE = "72166-2";
   private static final String CATEGORY_SOCIAL_HISTORY = "social-history";
 
-  public HistoryObservationProvider(HistoryService historyService) {
-    this.historyService = historyService;
+  public HistoryObservationProvider(HistoryRepository historyRepository) {
+    this.historyRepository = historyRepository;
   }
 
   @Override
   public Optional<CanonicalObservation> fetchById(UUID uuid) {
-    List<HistoryDBRecord> historyRecords = historyService.findHistoryById(uuid);
+    List<HistoryDBRecord> historyRecords = historyRepository.findHistoryById(uuid);
     if (historyRecords.isEmpty()) {
       return Optional.empty();
     }
@@ -49,7 +49,7 @@ public class HistoryObservationProvider implements ObservationProvider {
 
   @Override
   public List<CanonicalObservation> fetch(ObservationSearchQuery searchQuery) {
-    List<HistoryDBRecord> records = historyService.findHistory(searchQuery);
+    List<HistoryDBRecord> records = historyRepository.findHistory(searchQuery);
     if (records == null || records.isEmpty()) {
       return Collections.emptyList();
     }
@@ -74,7 +74,7 @@ public class HistoryObservationProvider implements ObservationProvider {
               .patientUuid(record.getPuuid() != null ? record.getPuuid().toString() : null)
               .practitionerUuid(
                   record.getProviderUuid() != null ? record.getProviderUuid().toString() : null)
-              .profile("http://hl7.org")
+              .profile("http://hl7.org/fhir/us/core/StructureDefinition/us-core-smokingstatus")
               .categories(List.of(CATEGORY_SOCIAL_HISTORY))
               .code(SMOKING_STATUS_LOINC_CODE)
               .display("Tobacco smoking status NHIS")

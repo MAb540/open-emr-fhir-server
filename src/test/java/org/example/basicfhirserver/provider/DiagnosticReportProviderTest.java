@@ -18,7 +18,7 @@ import org.example.basicfhirserver.query.resources.diagnosticreport.DiagnosticRe
 import org.example.basicfhirserver.query.resources.diagnosticreport.DiagnosticReportSearchQuery;
 import org.example.basicfhirserver.query.translator.impl.DiagnosticReportSearchTranslator;
 import org.example.basicfhirserver.repository.jdbc.diagnosticreport.ClinicalNotesDBRecord;
-import org.example.basicfhirserver.repository.jdbc.diagnosticreport.ProcedureDBRecord;
+import org.example.basicfhirserver.repository.jdbc.procedure.ProcedureDBRecord;
 import org.example.basicfhirserver.service.DiagnosticReportService;
 import org.hl7.fhir.r4.model.DiagnosticReport;
 import org.junit.jupiter.api.Test;

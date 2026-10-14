@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.UUID;
 import org.example.basicfhirserver.query.resources.observation.ObservationSearchQuery;
 
-public interface VitalsService {
+public interface VitalsRepository {
 
   List<VitalsUuidMappingDBRecord> findVitalsUuidMappings(List<UUID> vitalUuid);
 

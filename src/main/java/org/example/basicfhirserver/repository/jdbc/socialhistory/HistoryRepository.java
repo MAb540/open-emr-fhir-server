@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.UUID;
 import org.example.basicfhirserver.query.resources.observation.ObservationSearchQuery;
 
-public interface HistoryService {
+public interface HistoryRepository {
 
   List<HistoryDBRecord> findHistoryById(UUID uuid);
 

@@ -1,4 +1,4 @@
-package org.example.basicfhirserver.repository.jdbc.diagnosticreport;
+package org.example.basicfhirserver.repository.jdbc.procedure;
 
 import java.util.List;
 import java.util.UUID;

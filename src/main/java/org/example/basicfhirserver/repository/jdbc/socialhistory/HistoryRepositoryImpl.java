@@ -14,7 +14,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class HistoryServiceImpl implements HistoryService {
+public class HistoryRepositoryImpl implements HistoryRepository {
 
   private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
@@ -31,7 +31,7 @@ public class HistoryServiceImpl implements HistoryService {
   private static final String CODE_TYPE_RXNORM = "RXNORM";
   private static final String CODE_TYPE_ICD10 = "ICD10";
 
-  public HistoryServiceImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+  public HistoryRepositoryImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
     this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
   }
 

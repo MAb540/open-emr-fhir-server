@@ -1,4 +1,4 @@
-package org.example.basicfhirserver.repository.jdbc.diagnosticreport;
+package org.example.basicfhirserver.repository.jdbc.procedure;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

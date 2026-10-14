@@ -15,14 +15,14 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class FormEncounterServiceImpl implements FormEncounterService {
+public class FormEncounterRepositoryImpl implements FormEncounterRepository {
 
   private static final int DEFAULT_PAGE_SIZE = 5;
   private static final int DEFAULT_PAGE_OFFSET = 0;
 
   private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-  public FormEncounterServiceImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+  public FormEncounterRepositoryImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
     this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
   }
 

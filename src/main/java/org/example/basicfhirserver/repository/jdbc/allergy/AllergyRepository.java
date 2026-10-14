@@ -5,7 +5,7 @@ import java.util.UUID;
 import org.example.basicfhirserver.query.resources.allergyintolerance.AllergyIntoleranceSearchQuery;
 import org.springframework.data.domain.Page;
 
-public interface AllergyService {
+public interface AllergyRepository {
 
   List<AllergyDBRecord> findById(UUID uuid);
 

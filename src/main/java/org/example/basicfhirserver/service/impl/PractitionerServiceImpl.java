@@ -6,7 +6,7 @@ import java.util.UUID;
 import org.example.basicfhirserver.model.Practitioner;
 import org.example.basicfhirserver.query.resources.practitioner.PractitionerSearchQuery;
 import org.example.basicfhirserver.repository.jdbc.user.UserDBRecord;
-import org.example.basicfhirserver.repository.jdbc.user.UserService;
+import org.example.basicfhirserver.repository.jdbc.user.UserRepository;
 import org.example.basicfhirserver.service.PractitionerService;
 import org.example.basicfhirserver.service.assembler.users.UserAssembler;
 import org.springframework.data.domain.Page;
@@ -16,17 +16,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class PractitionerServiceImpl implements PractitionerService {
 
-  private final UserService userService;
+  private final UserRepository userRepository;
   private final UserAssembler userAssembler;
 
-  private PractitionerServiceImpl(UserService userService, UserAssembler userAssembler) {
-    this.userService = userService;
+  private PractitionerServiceImpl(UserRepository userRepository, UserAssembler userAssembler) {
+    this.userRepository = userRepository;
     this.userAssembler = userAssembler;
   }
 
   @Override
   public Practitioner findById(UUID uuid) {
-    List<UserDBRecord> userDBRecords = userService.findById(uuid);
+    List<UserDBRecord> userDBRecords = userRepository.findById(uuid);
     if (userDBRecords.isEmpty()) {
       throw new ResourceNotFoundException("Practitioner with given ID " + uuid + " not found.");
     }
@@ -36,7 +36,7 @@ public class PractitionerServiceImpl implements PractitionerService {
 
   @Override
   public Page<Practitioner> find(PractitionerSearchQuery practitionerSearchQuery) {
-    Page<UserDBRecord> userDBRecords = userService.find(practitionerSearchQuery);
+    Page<UserDBRecord> userDBRecords = userRepository.find(practitionerSearchQuery);
     List<Practitioner> practitioners =
         userDBRecords.getContent().stream().map(userAssembler::toCanonical).toList();
 
