@@ -14,16 +14,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class ObservationMapperImpl implements ObservationMapper {
 
-  // Unique standard lookups for Blood Pressure panels matching your constant tracking tools
   private static final String BLOOD_PRESSURE_CODE = "85354-9";
-  private static final String SYSTOLIC_CODE = "8480-6";
-  private static final String DIASTOLIC_CODE = "8462-4";
 
   @Override
   public Observation toR4(CanonicalObservation canonicalObservation) {
     Observation observation = new Observation();
 
-    // 1. Map Meta Parameters
     if (canonicalObservation.getProfile() != null) {
       observation.getMeta().addProfile(canonicalObservation.getProfile());
     }
@@ -43,7 +39,6 @@ public class ObservationMapperImpl implements ObservationMapper {
 
     observation.setId(canonicalObservation.getId());
 
-    // Map dynamic or fallback tracking states safely
     if (canonicalObservation.getStatus() != null) {
       try {
         observation.setStatus(
@@ -55,32 +50,42 @@ public class ObservationMapperImpl implements ObservationMapper {
       observation.setStatus(Observation.ObservationStatus.FINAL);
     }
 
-    // 2. Map Dynamic Multiple Categories (Unified Strategy Pattern Resolution)
     if (canonicalObservation.getCategories() != null
         && !canonicalObservation.getCategories().isEmpty()) {
       for (String catCode : canonicalObservation.getCategories()) {
-        String display =
-            "social-history".equalsIgnoreCase(catCode) ? "Social History" : "Vital Signs";
+        String display;
+        switch (catCode.toLowerCase()) {
+          case "social-history":
+            display = "Social History";
+            break;
+          case "vital-signs":
+            display = "Vital Signs";
+            break;
+          case "laboratory":
+            display = "Laboratory";
+            break;
+          default:
+            display = catCode.substring(0, 1).toUpperCase() + catCode.substring(1).toLowerCase();
+            break;
+        }
         observation.addCategory(
             new CodeableConcept()
                 .addCoding(
                     new Coding()
-                        .setSystem("http://terminology.hl7.org/CodeSystem/observation-category")
+                        .setSystem("http://hl7.org") //
                         .setCode(catCode.toLowerCase())
                         .setDisplay(display)));
       }
     } else {
-      // Default structural safety fallback context
       observation.addCategory(
           new CodeableConcept()
               .addCoding(
                   new Coding()
-                      .setSystem("http://terminology.hl7.org/CodeSystem/observation-category")
+                      .setSystem("http://hl7.org")
                       .setCode("vital-signs")
                       .setDisplay("Vital Signs")));
     }
 
-    // 3. Map Identifying Codes
     String systemUri =
         canonicalObservation.getCodeSystem() != null
             ? canonicalObservation.getCodeSystem()
@@ -93,13 +98,17 @@ public class ObservationMapperImpl implements ObservationMapper {
                     .setCode(canonicalObservation.getCode())
                     .setDisplay(canonicalObservation.getDisplay())));
 
-    // 4. Map Contextual Subject References
     if (canonicalObservation.getPatientUuid() != null) {
       observation.setSubject(new Reference("Patient/" + canonicalObservation.getPatientUuid()));
     }
     if (canonicalObservation.getEffectiveDateTime() != null) {
-      observation.setEffective(
-          new DateTimeType(canonicalObservation.getEffectiveDateTime().toString()));
+      java.util.Date effectiveDate =
+          java.util.Date.from(
+              canonicalObservation
+                  .getEffectiveDateTime()
+                  .atZone(ZoneId.systemDefault())
+                  .toInstant());
+      observation.setEffective(new DateTimeType(effectiveDate));
     }
     if (canonicalObservation.getEncounterUuid() != null) {
       observation.setEncounter(
@@ -110,9 +119,68 @@ public class ObservationMapperImpl implements ObservationMapper {
           List.of(new Reference("Practitioner/" + canonicalObservation.getPractitionerUuid())));
     }
 
-    // =====================================================================
-    // 5. Handle Multi-Component Panels (e.g. Blood Pressure)
-    // =====================================================================
+    if (canonicalObservation.getReferenceRanges() != null
+        && !canonicalObservation.getReferenceRanges().isEmpty()) {
+      List<Observation.ObservationReferenceRangeComponent> hapiRanges = new ArrayList<>();
+
+      for (CanonicalObservation.ReferenceRange canonicalRange :
+          canonicalObservation.getReferenceRanges()) {
+        Observation.ObservationReferenceRangeComponent hapiRange =
+            new Observation.ObservationReferenceRangeComponent();
+        UnitMapping rangeUnitMapping = mapUnitAndCode(canonicalRange.getUnit());
+
+        if (canonicalRange.getLow() != null && !canonicalRange.getLow().isEmpty()) {
+          try {
+            hapiRange.setLow(
+                new SimpleQuantity()
+                    .setValue(new BigDecimal(canonicalRange.getLow()))
+                    .setUnit(rangeUnitMapping.unit())
+                    .setSystem("http://unitsofmeasure.org") //
+                    .setCode(rangeUnitMapping.code()));
+          } catch (NumberFormatException e) {
+            hapiRange.setText(canonicalRange.getLow());
+          }
+        }
+
+        if (canonicalRange.getHigh() != null && !canonicalRange.getHigh().isEmpty()) {
+          try {
+            hapiRange.setHigh(
+                new SimpleQuantity()
+                    .setValue(new BigDecimal(canonicalRange.getHigh()))
+                    .setUnit(rangeUnitMapping.unit())
+                    .setSystem("http://unitsofmeasure.org") //
+                    .setCode(rangeUnitMapping.code()));
+          } catch (NumberFormatException ignored) {
+          }
+        }
+        hapiRanges.add(hapiRange);
+      }
+      if (!hapiRanges.isEmpty()) {
+        observation.setReferenceRange(hapiRanges);
+      }
+    }
+
+    if (canonicalObservation.getInterpretation() != null) {
+      CanonicalObservation.InterpretationInfo interp = canonicalObservation.getInterpretation();
+      String interpSys = interp.getCodeSystem() != null ? interp.getCodeSystem() : "http://hl7.org";
+      observation.addInterpretation(
+          new CodeableConcept()
+              .addCoding(
+                  new Coding()
+                      .setSystem(interpSys)
+                      .setCode(interp.getCode())
+                      .setDisplay(interp.getDisplay())));
+    }
+
+    if (canonicalObservation.getSpecimenUuid() != null) {
+      observation.setSpecimen(new Reference("Specimen/" + canonicalObservation.getSpecimenUuid()));
+    }
+    if (canonicalObservation.getNotes() != null && !canonicalObservation.getNotes().isEmpty()) {
+      for (String noteText : canonicalObservation.getNotes()) {
+        observation.addNote(new Annotation().setText(noteText));
+      }
+    }
+
     if (BLOOD_PRESSURE_CODE.equals(canonicalObservation.getCode())
         || (canonicalObservation.getComponents() != null
             && !canonicalObservation.getComponents().isEmpty())) {
@@ -156,27 +224,17 @@ public class ObservationMapperImpl implements ObservationMapper {
           }
         }
       }
-
-      // Apply strict Data Absent Reason flags if composite analytics equate to zero
       if (isAllZero && !hapiComponents.isEmpty()) {
         observation.setDataAbsentReason(
             new CodeableConcept()
                 .setText("Unknown")
-                .addCoding(
-                    new Coding()
-                        .setSystem("http://terminology.hl7.org/CodeSystem/data-absent-reason")
-                        .setCode("unknown")));
+                .addCoding(new Coding().setSystem("hl7.org").setCode("unknown")));
       } else {
         observation.setComponent(hapiComponents);
       }
 
-      // =====================================================================
-      // 6. Handle Polymorphic Singular Values (Quantity vs. CodeableConcept)
-      // =====================================================================
     } else if (canonicalObservation.getValue() != null) {
       CanonicalObservation.ObservationValue obsVal = canonicalObservation.getValue();
-
-      // Type A: Numeric Quantities (Vitals Metrics)
       if (obsVal.getNumericValue() != null) {
         UnitMapping uMap = mapUnitAndCode(obsVal.getUnit());
         observation.setValue(
@@ -188,28 +246,20 @@ public class ObservationMapperImpl implements ObservationMapper {
                         ? obsVal.getUnitSystem()
                         : "http://unitsofmeasure.org")
                 .setCode(uMap.code()));
-
-        // Type B: Coded Concepts (Social History matrix maps)
       } else if (obsVal.getCodedValues() != null && !obsVal.getCodedValues().isEmpty()) {
         CodeableConcept codeableConceptVal = new CodeableConcept();
-
-        // Loop 1-to-1 matching out your nested Map<String, Map<String, String>> addCoding structure
         for (Map.Entry<String, Map<String, String>> entry : obsVal.getCodedValues().entrySet()) {
           Map<String, String> codingData = entry.getValue();
-
           Coding fhirCoding = new Coding();
           fhirCoding.setCode(codingData.get("code"));
           fhirCoding.setDisplay(codingData.get("description"));
           fhirCoding.setSystem(codingData.get("system"));
-
           codeableConceptVal.addCoding(fhirCoding);
           if (codingData.get("description") != null) {
             codeableConceptVal.setText(codingData.get("description"));
           }
         }
         observation.setValue(codeableConceptVal);
-
-        // Type C: Plain narrative string fallbacks
       } else if (obsVal.getStringValue() != null) {
         observation.setValue(new StringType(obsVal.getStringValue()));
       }

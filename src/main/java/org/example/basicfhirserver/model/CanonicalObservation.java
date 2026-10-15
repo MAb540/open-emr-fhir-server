@@ -10,19 +10,16 @@ import java.util.Map;
 @Value
 @Builder(toBuilder = true)
 public class CanonicalObservation {
-
     String id;
     String version;
     String status;
     LocalDateTime lastUpdated;
-
     String patientUuid;
     String encounterUuid;
     String practitionerUuid;
-
+    String specimenUuid;
     String profile;
     List<String> categories;
-
     String code;
     String display;
     String codeSystem;
@@ -31,6 +28,10 @@ public class CanonicalObservation {
 
     ObservationValue value;
 
+    InterpretationInfo interpretation;
+    List<String> notes;
+    List<ReferenceRange> referenceRanges;
+
     List<ObservationComponent> components;
 
     @Value
@@ -38,8 +39,7 @@ public class CanonicalObservation {
     public static class ObservationValue {
         Double numericValue;
         String unit;
-        String unitSystem; // e.g., "http://unitsofmeasure.org" (UCUM)
-
+        String unitSystem;
         String stringValue;
         Map<String, Map<String, String>> codedValues;
     }
@@ -51,5 +51,21 @@ public class CanonicalObservation {
         String display;
         String codeSystem;
         ObservationValue value;
+    }
+
+    @Value
+    @Builder
+    public static class ReferenceRange {
+        String low;
+        String high;
+        String unit;
+    }
+
+    @Value
+    @Builder
+    public static class InterpretationInfo {
+        String code;
+        String display;
+        String codeSystem;
     }
 }

@@ -10,4 +10,6 @@ public interface ProcedureRepository {
   List<ProcedureDBRecord> findProcedureById(UUID uuid);
 
   Page<ProcedureDBRecord> findProcedures(DiagnosticReportSearchQuery diagnosticReportSearchQuery);
+
+  Page<ProcedureDBRecord> findLaboratory(DiagnosticReportSearchQuery diagnosticReportSearchQuery);
 }
