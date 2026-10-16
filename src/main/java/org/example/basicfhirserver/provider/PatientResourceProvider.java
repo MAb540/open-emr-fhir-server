@@ -23,7 +23,6 @@ import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.mapper.ObservationMapper;
 import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.model.CanonicalObservation;
-import org.example.basicfhirserver.model.FormEncounter;
 import org.example.basicfhirserver.provider.parsers.BulkExportRequestParser;
 import org.example.basicfhirserver.provider.parsers.ParsedExportRequest;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
@@ -35,6 +34,7 @@ import org.example.basicfhirserver.query.translator.impl.PatientSearchTranslator
 import org.example.basicfhirserver.service.EncounterService;
 import org.example.basicfhirserver.service.ObservationService;
 import org.example.basicfhirserver.service.PatientService;
+import org.example.basicfhirserver.service.impl.encounter.EncounterSearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Patient;
@@ -58,7 +58,6 @@ public class PatientResourceProvider implements IResourceProvider {
   private final ObservationService observationService;
   private final ObservationMapper observationMapper;
   private final EncounterService encounterService;
-  private final EncounterMapper encounterMapper;
 
   private final ExportService exportService;
   private final JobScheduler jobScheduler;
@@ -81,7 +80,6 @@ public class PatientResourceProvider implements IResourceProvider {
     this.observationService = observationService;
     this.observationMapper = observationMapper;
     this.encounterService = encounterService;
-    this.encounterMapper = encounterMapper;
     this.exportService = exportService;
     this.jobScheduler = jobScheduler;
   }
@@ -166,8 +164,8 @@ public class PatientResourceProvider implements IResourceProvider {
 
       if (includeEncounters) {
         EncounterSearchQuery query = EncounterSearchQuery.builder().patientId(patientUuids).build();
-        List<FormEncounter> formEncounters = encounterService.find(query).getContent();
-        formEncounters.stream().map(encounterMapper::toR4).forEach(includedResources::add);
+        EncounterSearchResult encounterSearchResult = encounterService.search(query);
+        includedResources.addAll(encounterSearchResult.primaryResources());
       }
     }
 

@@ -23,6 +23,7 @@ import org.example.basicfhirserver.query.translator.impl.ObservationSearchTransl
 import org.example.basicfhirserver.service.EncounterService;
 import org.example.basicfhirserver.service.ObservationService;
 import org.example.basicfhirserver.service.PatientService;
+import org.example.basicfhirserver.service.impl.encounter.EncounterSearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Observation;
@@ -48,7 +49,6 @@ public class ObservationResourceProvider implements IResourceProvider {
   private final PatientService patientService;
   private final LegacyPatientMapper legacyPatientMapper;
   private final EncounterService encounterService;
-  private final EncounterMapper encounterMapper;
 
   public ObservationResourceProvider(
       @Qualifier("ObservationServiceImpl") ObservationService observationService,
@@ -56,15 +56,13 @@ public class ObservationResourceProvider implements IResourceProvider {
       ObservationSearchTranslator observationSearchTranslator,
       PatientService patientService,
       LegacyPatientMapper legacyPatientMapper,
-      EncounterService encounterService,
-      EncounterMapper encounterMapper) {
+      EncounterService encounterService) {
     this.observationService = observationService;
     this.observationMapper = observationMapper;
     this.observationSearchTranslator = observationSearchTranslator;
     this.patientService = patientService;
     this.legacyPatientMapper = legacyPatientMapper;
     this.encounterService = encounterService;
-    this.encounterMapper = encounterMapper;
   }
 
   @Override
@@ -146,8 +144,8 @@ public class ObservationResourceProvider implements IResourceProvider {
             observations.stream().map(CanonicalObservation::getEncounterUuid).toList();
         EncounterSearchQuery query =
             EncounterSearchQuery.builder().encounterId(encounterUuids).build();
-        List<FormEncounter> formEncounters = encounterService.find(query).getContent();
-        formEncounters.stream().map(encounterMapper::toR4).forEach(includedResources::add);
+        EncounterSearchResult encounterSearchResult = encounterService.search(query);
+        includedResources.addAll(encounterSearchResult.primaryResources());
       }
     }
 

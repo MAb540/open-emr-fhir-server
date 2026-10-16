@@ -31,6 +31,7 @@ import org.example.basicfhirserver.service.*;
 import org.example.basicfhirserver.service.assembler.condition.ConditionAssembler;
 import org.example.basicfhirserver.service.impl.condition.ConditionSearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Encounter;
 import org.jobrunr.jobs.annotations.Job;
 import org.jobrunr.jobs.context.JobContext;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -308,16 +309,13 @@ public class ExportService {
                 .offset(offset)
                 .build();
 
-        Page<FormEncounter> page = encounterService.find(query);
-        List<FormEncounter> content = page.getContent();
-
+        Page<Encounter> page = encounterService.find(query);
         if (page.isEmpty()) {
           log.info("JobID {}: Encounter export job content is empty", jobID);
           break;
         }
 
-        for (FormEncounter entity : content) {
-          IBaseResource encounter = encounterMapper.toR4(entity);
+        for (Encounter encounter : page.getContent()) {
           String jsonLine = fhirJsonParser.encodeResourceToString(encounter);
           writer.write(jsonLine);
           writer.newLine();
@@ -325,7 +323,7 @@ public class ExportService {
         log.debug(
             "JobID {}: Encounter export job exported {} records (Current offset: {})",
             jobID,
-            content.size(),
+            page.getContent().size(),
             offset);
 
         offset += BATCH_SIZE;

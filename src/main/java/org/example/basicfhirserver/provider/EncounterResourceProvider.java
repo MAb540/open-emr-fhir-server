@@ -8,17 +8,15 @@ import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import java.util.List;
 import java.util.UUID;
-import org.example.basicfhirserver.mapper.EncounterMapper;
 import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
-import org.example.basicfhirserver.model.FormEncounter;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchCriteria;
 import org.example.basicfhirserver.query.translator.impl.EncounterSearchTranslator;
 import org.example.basicfhirserver.service.EncounterService;
+import org.example.basicfhirserver.service.impl.encounter.EncounterSearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.IdType;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -28,15 +26,11 @@ import org.springframework.stereotype.Component;
 public class EncounterResourceProvider implements IResourceProvider {
 
   private final EncounterService encounterService;
-  private final EncounterMapper encounterMapper;
   private final EncounterSearchTranslator encounterSearchTranslator;
 
   public EncounterResourceProvider(
-      EncounterService encounterService,
-      EncounterMapper encounterMapper,
-      EncounterSearchTranslator encounterSearchTranslator) {
+      EncounterService encounterService, EncounterSearchTranslator encounterSearchTranslator) {
     this.encounterService = encounterService;
-    this.encounterMapper = encounterMapper;
     this.encounterSearchTranslator = encounterSearchTranslator;
   }
 
@@ -47,8 +41,7 @@ public class EncounterResourceProvider implements IResourceProvider {
 
   @Read()
   public Encounter getResourceById(@IdParam IdType theId) {
-    FormEncounter formEncounter = encounterService.findById(UUID.fromString(theId.getIdPart()));
-    return encounterMapper.toR4(formEncounter);
+    return encounterService.findById(UUID.fromString(theId.getIdPart()));
   }
 
   @Search()
@@ -70,19 +63,15 @@ public class EncounterResourceProvider implements IResourceProvider {
             .build();
 
     var encounterSearchQuery = encounterSearchTranslator.translate(criteria);
-    Page<FormEncounter> formEncounters = encounterService.find(encounterSearchQuery);
-
-    List<IBaseResource> primaryEncounters =
-        formEncounters.getContent().stream().<IBaseResource>map(encounterMapper::toR4).toList();
+    EncounterSearchResult searchResult = encounterService.search(encounterSearchQuery);
 
     int currentOffset = offset != null ? offset : 0;
-    int currentPageSize = formEncounters.getContent().size();
 
     return new BundleProvider(
-        primaryEncounters,
+        searchResult.primaryResources(),
         List.of(),
-        Math.toIntExact(formEncounters.getTotalElements()),
+        Math.toIntExact(searchResult.totalElements()),
         currentOffset,
-        currentPageSize);
+        searchResult.primaryResources().size());
   }
 }
