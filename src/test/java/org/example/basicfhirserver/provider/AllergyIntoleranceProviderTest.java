@@ -42,7 +42,7 @@ class AllergyIntoleranceProviderTest {
     AllergyIntolerance primary = new AllergyIntolerance();
     Patient includedPatient = new Patient();
     SearchResult serviceResult =
-        new SearchResult(List.of(primary), List.of(includedPatient), 0, 0);
+        new SearchResult(List.of(primary), List.of(includedPatient), 2, 5);
     when(allergyIntoleranceService.search(query)).thenReturn(serviceResult);
 
     IBundleProvider bundle = provider.searchAllergyIntolerance(null, null, null, null, 10, 5);
@@ -75,7 +75,7 @@ class AllergyIntoleranceProviderTest {
     AllergyIntoleranceSearchQuery query = AllergyIntoleranceSearchQuery.builder().build();
     when(allergyIntoleranceSearchTranslator.translate(any(AllergyIntoleranceSearchCriteria.class)))
         .thenReturn(query);
-    SearchResult serviceResult = new SearchResult(List.of(), List.of(), 0, 0);
+    SearchResult serviceResult = new SearchResult(List.of(), List.of(), 5, 0);
     when(allergyIntoleranceService.search(query)).thenReturn(serviceResult);
 
     TokenParam id = new TokenParam("123");
