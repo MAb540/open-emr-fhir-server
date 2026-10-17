@@ -22,6 +22,7 @@ import org.example.basicfhirserver.service.ConditionService;
 import org.example.basicfhirserver.service.EncounterService;
 import org.example.basicfhirserver.service.PatientService;
 import org.example.basicfhirserver.service.assembler.condition.ConditionAssembler;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.example.basicfhirserver.service.impl.encounter.EncounterSearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Condition;
@@ -85,7 +86,7 @@ public class ConditionServiceImpl implements ConditionService {
   }
 
   @Override
-  public ConditionSearchResult find(ConditionSearchQuery conditionSearchQuery) {
+  public SearchResult find(ConditionSearchQuery conditionSearchQuery) {
     Page<ConditionCanonical> conditionsCanonical = findCanonical(conditionSearchQuery);
 
     List<IBaseResource> primaryConditions =
@@ -96,8 +97,12 @@ public class ConditionServiceImpl implements ConditionService {
     List<IBaseResource> includedResources =
         includeResources(conditionsCanonical, conditionSearchQuery.getIncludes());
 
-    return new ConditionSearchResult(
-        primaryConditions, includedResources, conditionsCanonical.getTotalElements());
+    int currentOffset = conditionSearchQuery.getOffset() != null ? conditionSearchQuery.getOffset() : 0;
+    return new SearchResult(
+        primaryConditions, includedResources,
+            (int)conditionsCanonical.getTotalElements(),
+            currentOffset
+            );
   }
 
   private Page<ConditionCanonical> findCanonical(ConditionSearchQuery conditionSearchQuery) {

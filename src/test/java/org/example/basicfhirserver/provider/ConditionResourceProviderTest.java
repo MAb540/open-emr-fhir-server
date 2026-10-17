@@ -18,7 +18,7 @@ import org.example.basicfhirserver.query.resources.condition.ConditionSearchCrit
 import org.example.basicfhirserver.query.resources.condition.ConditionSearchQuery;
 import org.example.basicfhirserver.query.translator.impl.ConditionTranslator;
 import org.example.basicfhirserver.service.ConditionService;
-import org.example.basicfhirserver.service.impl.condition.ConditionSearchResult;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Patient;
@@ -69,8 +69,8 @@ class ConditionResourceProviderTest {
 
     Condition primary = new Condition();
     Patient includedPatient = new Patient();
-    ConditionSearchResult serviceResult =
-        new ConditionSearchResult(List.of(primary), List.of(includedPatient), 2L);
+    SearchResult serviceResult =
+        new SearchResult(List.of(primary), List.of(includedPatient), 2, 5);
     when(conditionService.find(query)).thenReturn(serviceResult);
 
     IBundleProvider bundle = provider.searchConditions(null, null, null, null, 10, 5);
@@ -86,7 +86,7 @@ class ConditionResourceProviderTest {
   void searchConditions_returnsEmptyBundleWithZeroOffset() {
     ConditionSearchQuery query = ConditionSearchQuery.builder().build();
     when(conditionTranslator.translate(any(ConditionSearchCriteria.class))).thenReturn(query);
-    ConditionSearchResult serviceResult = new ConditionSearchResult(List.of(), List.of(), 0L);
+    SearchResult serviceResult = new SearchResult(List.of(), List.of(), 0, 0);
     when(conditionService.find(query)).thenReturn(serviceResult);
 
     IBundleProvider bundle = provider.searchConditions(null, null, null, null, null, null);
@@ -101,7 +101,7 @@ class ConditionResourceProviderTest {
   void searchConditions_buildsCriteriaFromSearchParams() {
     ConditionSearchQuery query = ConditionSearchQuery.builder().build();
     when(conditionTranslator.translate(any(ConditionSearchCriteria.class))).thenReturn(query);
-    ConditionSearchResult serviceResult = new ConditionSearchResult(List.of(), List.of(), 0L);
+    SearchResult serviceResult = new SearchResult(List.of(), List.of(), 0, 5);
     when(conditionService.find(query)).thenReturn(serviceResult);
 
     ReferenceParam patient = new ReferenceParam("Patient/abc");

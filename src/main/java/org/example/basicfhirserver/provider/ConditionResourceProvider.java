@@ -14,7 +14,7 @@ import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.condition.ConditionSearchCriteria;
 import org.example.basicfhirserver.query.translator.impl.ConditionTranslator;
 import org.example.basicfhirserver.service.ConditionService;
-import org.example.basicfhirserver.service.impl.condition.ConditionSearchResult;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.IdType;
@@ -69,15 +69,13 @@ public class ConditionResourceProvider implements IResourceProvider {
             .build();
 
     var conditionSearchQuery = conditionTranslator.translate(criteria);
-    ConditionSearchResult searchResult = conditionService.find(conditionSearchQuery);
-
-    int currentOffset = offset != null ? offset : 0;
+    SearchResult searchResult = conditionService.find(conditionSearchQuery);
 
     return new BundleProvider(
         searchResult.primaryResources(),
         searchResult.includedResources(),
         Math.toIntExact(searchResult.totalElements()),
-        currentOffset,
+        searchResult.currentOffset(),
         searchResult.primaryResources().size());
   }
 }

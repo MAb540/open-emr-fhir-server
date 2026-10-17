@@ -29,7 +29,7 @@ import org.example.basicfhirserver.query.resources.practitioner.PractitionerSear
 import org.example.basicfhirserver.repository.jdbc.facility.FacilityDBRecord;
 import org.example.basicfhirserver.service.*;
 import org.example.basicfhirserver.service.assembler.condition.ConditionAssembler;
-import org.example.basicfhirserver.service.impl.condition.ConditionSearchResult;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Encounter;
 import org.jobrunr.jobs.annotations.Job;
@@ -534,7 +534,7 @@ public class ExportService {
               .offset(offset)
               .build();
 
-      ConditionSearchResult result = conditionService.find(query);
+      SearchResult result = conditionService.find(query);
       List<IBaseResource> content = result.primaryResources();
 
       if (content.isEmpty()) {
