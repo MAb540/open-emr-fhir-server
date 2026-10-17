@@ -21,6 +21,7 @@ import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
 import org.example.basicfhirserver.repository.jdbc.allergy.AllergyDBRecord;
 import org.example.basicfhirserver.repository.jdbc.allergy.AllergyRepository;
 import org.example.basicfhirserver.service.PatientService;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.r4.model.AllergyIntolerance;
 import org.hl7.fhir.r4.model.Patient;
 import org.junit.jupiter.api.Test;
@@ -80,7 +81,7 @@ class AllergyIntoleranceServiceImplTest {
     AllergyIntolerance allergy = new AllergyIntolerance();
     when(allergyIntoleranceMapper.toR4(record)).thenReturn(allergy);
 
-    AllergySearchResult result = service.find(query);
+    SearchResult result = service.search(query);
 
     assertThat(result.primaryResources()).containsExactly(allergy);
     assertThat(result.includedResources()).isEmpty();
@@ -111,7 +112,7 @@ class AllergyIntoleranceServiceImplTest {
     Patient patient = new Patient();
     when(legacyPatientMapper.toR4(patientEntity)).thenReturn(patient);
 
-    AllergySearchResult result = service.find(query);
+    SearchResult result = service.search(query);
 
     assertThat(result.primaryResources()).containsExactly(allergy);
     assertThat(result.includedResources()).containsExactly(patient);
@@ -132,7 +133,7 @@ class AllergyIntoleranceServiceImplTest {
     when(page.getTotalElements()).thenReturn(0L);
     when(allergyRepository.find(query)).thenReturn(page);
 
-    AllergySearchResult result = service.find(query);
+    SearchResult result = service.search(query);
 
     assertThat(result.primaryResources()).isEmpty();
     assertThat(result.includedResources()).isEmpty();

@@ -15,7 +15,7 @@ import org.example.basicfhirserver.query.resources.allergyintolerance.AllergyInt
 import org.example.basicfhirserver.query.resources.allergyintolerance.AllergyIntoleranceSearchQuery;
 import org.example.basicfhirserver.query.translator.impl.AllergyIntoleranceSearchTranslator;
 import org.example.basicfhirserver.service.AllergyIntoleranceService;
-import org.example.basicfhirserver.service.impl.allergyIntolerance.AllergySearchResult;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.r4.model.AllergyIntolerance;
 import org.hl7.fhir.r4.model.Patient;
 import org.junit.jupiter.api.Test;
@@ -41,9 +41,9 @@ class AllergyIntoleranceProviderTest {
 
     AllergyIntolerance primary = new AllergyIntolerance();
     Patient includedPatient = new Patient();
-    AllergySearchResult serviceResult =
-        new AllergySearchResult(List.of(primary), List.of(includedPatient), 2L);
-    when(allergyIntoleranceService.find(query)).thenReturn(serviceResult);
+    SearchResult serviceResult =
+        new SearchResult(List.of(primary), List.of(includedPatient), 0, 0);
+    when(allergyIntoleranceService.search(query)).thenReturn(serviceResult);
 
     IBundleProvider bundle = provider.searchAllergyIntolerance(null, null, null, null, 10, 5);
 
@@ -51,7 +51,7 @@ class AllergyIntoleranceProviderTest {
     assertThat(bundle.getResources(0, 10)).containsExactly(primary, includedPatient);
     assertThat(bundle.getCurrentPageOffset()).isEqualTo(5);
     assertThat(bundle.getCurrentPageSize()).isEqualTo(1);
-    verify(allergyIntoleranceService).find(query);
+    verify(allergyIntoleranceService).search(query);
   }
 
   @Test
@@ -59,8 +59,8 @@ class AllergyIntoleranceProviderTest {
     AllergyIntoleranceSearchQuery query = AllergyIntoleranceSearchQuery.builder().build();
     when(allergyIntoleranceSearchTranslator.translate(any(AllergyIntoleranceSearchCriteria.class)))
         .thenReturn(query);
-    AllergySearchResult serviceResult = new AllergySearchResult(List.of(), List.of(), 0L);
-    when(allergyIntoleranceService.find(query)).thenReturn(serviceResult);
+    SearchResult serviceResult = new SearchResult(List.of(), List.of(), 0, 0);
+    when(allergyIntoleranceService.search(query)).thenReturn(serviceResult);
 
     IBundleProvider bundle = provider.searchAllergyIntolerance(null, null, null, null, null, null);
 
@@ -75,8 +75,8 @@ class AllergyIntoleranceProviderTest {
     AllergyIntoleranceSearchQuery query = AllergyIntoleranceSearchQuery.builder().build();
     when(allergyIntoleranceSearchTranslator.translate(any(AllergyIntoleranceSearchCriteria.class)))
         .thenReturn(query);
-    AllergySearchResult serviceResult = new AllergySearchResult(List.of(), List.of(), 0L);
-    when(allergyIntoleranceService.find(query)).thenReturn(serviceResult);
+    SearchResult serviceResult = new SearchResult(List.of(), List.of(), 0, 0);
+    when(allergyIntoleranceService.search(query)).thenReturn(serviceResult);
 
     TokenParam id = new TokenParam("123");
     ReferenceParam patient = new ReferenceParam("Patient/abc");

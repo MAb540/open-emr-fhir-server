@@ -14,7 +14,7 @@ import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.allergyintolerance.AllergyIntoleranceSearchCriteria;
 import org.example.basicfhirserver.query.translator.impl.AllergyIntoleranceSearchTranslator;
 import org.example.basicfhirserver.service.AllergyIntoleranceService;
-import org.example.basicfhirserver.service.impl.allergyIntolerance.AllergySearchResult;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.AllergyIntolerance;
 import org.hl7.fhir.r4.model.IdType;
@@ -65,16 +65,13 @@ public class AllergyIntoleranceProvider implements IResourceProvider {
             .build();
 
     var allergyIntoleranceSearchQuery = allergyIntoleranceSearchTranslator.translate(criteria);
-    AllergySearchResult searchResult =
-        allergyIntoleranceService.find(allergyIntoleranceSearchQuery);
-
-    int currentOffset = offset != null ? offset : 0;
+    SearchResult searchResult = allergyIntoleranceService.search(allergyIntoleranceSearchQuery);
 
     return new BundleProvider(
         searchResult.primaryResources(),
         searchResult.includedResources(),
-        Math.toIntExact(searchResult.totalElements()),
-        currentOffset,
+        searchResult.totalElements(),
+        searchResult.currentOffset(),
         searchResult.primaryResources().size());
   }
 }

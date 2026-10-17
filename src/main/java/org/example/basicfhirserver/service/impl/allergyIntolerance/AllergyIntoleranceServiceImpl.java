@@ -15,6 +15,7 @@ import org.example.basicfhirserver.repository.jdbc.allergy.AllergyDBRecord;
 import org.example.basicfhirserver.repository.jdbc.allergy.AllergyRepository;
 import org.example.basicfhirserver.service.AllergyIntoleranceService;
 import org.example.basicfhirserver.service.PatientService;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.AllergyIntolerance;
 import org.springframework.data.domain.Page;
@@ -50,7 +51,7 @@ public class AllergyIntoleranceServiceImpl implements AllergyIntoleranceService 
   }
 
   @Override
-  public AllergySearchResult find(AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery) {
+  public SearchResult search(AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery) {
 
     Page<AllergyDBRecord> allergyDBRecords = allergyRepository.find(allergyIntoleranceSearchQuery);
     List<IBaseResource> primaryAllergies =
@@ -80,7 +81,14 @@ public class AllergyIntoleranceServiceImpl implements AllergyIntoleranceService 
           .forEach(includedResources::add);
     }
 
-    return new AllergySearchResult(
-        primaryAllergies, includedResources, allergyDBRecords.getTotalElements());
+    int currentOffset =
+        allergyIntoleranceSearchQuery.getOffset() != null
+            ? allergyIntoleranceSearchQuery.getOffset()
+            : 0;
+    return new SearchResult(
+        primaryAllergies,
+        includedResources,
+        (int) allergyDBRecords.getTotalElements(),
+        currentOffset);
   }
 }

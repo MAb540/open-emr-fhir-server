@@ -2,12 +2,12 @@ package org.example.basicfhirserver.service;
 
 import java.util.UUID;
 import org.example.basicfhirserver.query.resources.person.PersonSearchQuery;
-import org.example.basicfhirserver.repository.jdbc.user.UserDBRecord;
-import org.springframework.data.domain.Page;
+import org.example.basicfhirserver.service.impl.person.PersonSearchResult;
+import org.hl7.fhir.r4.model.Person;
 
 public interface PersonService {
 
-  UserDBRecord findById(UUID uuid);
+  Person findById(UUID uuid);
 
-  Page<UserDBRecord> find(PersonSearchQuery personSearchQuery);
+  PersonSearchResult find(PersonSearchQuery personSearchQuery);
 }
