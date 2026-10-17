@@ -1,14 +1,13 @@
 package org.example.basicfhirserver.service.assembler.vitals;
 
+import static org.example.basicfhirserver.service.assembler.vitals.VitalObservationType.*;
+
+import java.util.ArrayList;
+import java.util.List;
 import org.example.basicfhirserver.model.CanonicalObservation;
 import org.example.basicfhirserver.repository.jdbc.vitals.VitalsDBRecord;
 import org.example.basicfhirserver.repository.jdbc.vitals.VitalsUuidMappingDBRecord;
 import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.example.basicfhirserver.service.assembler.vitals.VitalObservationType.*;
 
 @Component
 public class VitalObservationProviderAssembler {

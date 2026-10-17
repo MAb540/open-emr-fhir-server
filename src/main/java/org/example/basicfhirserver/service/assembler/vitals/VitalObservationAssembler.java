@@ -261,5 +261,4 @@ public class VitalObservationAssembler {
         SYSTOLIC_BP.getCode(), systolic,
         DIASTOLIC_BP.getCode(), diastolic);
   }
-
 }

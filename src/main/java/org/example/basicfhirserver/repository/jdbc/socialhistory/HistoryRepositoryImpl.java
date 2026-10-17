@@ -45,10 +45,11 @@ public class HistoryRepositoryImpl implements HistoryRepository {
     StringBuilder sql = vitalsQuery();
     MapSqlParameterSource params = new MapSqlParameterSource();
 
-    List<HistoryDBRecord> historyDBRecords = namedParameterJdbcTemplate.query(
-            sql.toString(), params, historyObservationRowMapper());
+    List<HistoryDBRecord> historyDBRecords =
+        namedParameterJdbcTemplate.query(sql.toString(), params, historyObservationRowMapper());
 
-    // Strict 1-to-1 loop mutation matching: historyDBRecords.forEach(r -> createResultRecordFromDatabaseResult(r));
+    // Strict 1-to-1 loop mutation matching: historyDBRecords.forEach(r ->
+    // createResultRecordFromDatabaseResult(r));
     historyDBRecords.forEach(this::createResultRecordFromDatabaseResult);
 
     return historyDBRecords;
@@ -64,13 +65,25 @@ public class HistoryRepositoryImpl implements HistoryRepository {
     return null;
   }
 
-  public List<Map<String, Object>> getOptionsByListName(String listName, Map<String, Object> search) {
+  public List<Map<String, Object>> getOptionsByListName(
+      String listName, Map<String, Object> search) {
     StringBuilder sql = new StringBuilder("SELECT * FROM list_options WHERE list_id = :listId ");
     MapSqlParameterSource params = new MapSqlParameterSource("listId", listName);
 
-    List<String> whitelistedColumns = List.of(
-            "option_id", "seq", "is_default", "option_value", "mapping", "notes", "codes", "activity", "edit_options", "toggle_setting_1", "toggle_setting_2", "subtype"
-    );
+    List<String> whitelistedColumns =
+        List.of(
+            "option_id",
+            "seq",
+            "is_default",
+            "option_value",
+            "mapping",
+            "notes",
+            "codes",
+            "activity",
+            "edit_options",
+            "toggle_setting_1",
+            "toggle_setting_2",
+            "subtype");
     for (String column : whitelistedColumns) {
       if (search.get(column) != null && !search.get(column).toString().isEmpty()) {
         sql.append(" AND ").append(column).append(" = :").append(column).append(" ");
@@ -79,22 +92,26 @@ public class HistoryRepositoryImpl implements HistoryRepository {
     }
     sql.append(" ORDER BY `seq` ");
 
-    return namedParameterJdbcTemplate.query(sql.toString(), params, (rs, rowNum) -> {
-      Map<String, Object> row = new HashMap<>();
-      row.put("option_id", rs.getString("option_id"));
-      row.put("codes", rs.getString("codes"));
-      row.put("seq", rs.getInt("seq"));
-      return row;
-    });
+    return namedParameterJdbcTemplate.query(
+        sql.toString(),
+        params,
+        (rs, rowNum) -> {
+          Map<String, Object> row = new HashMap<>();
+          row.put("option_id", rs.getString("option_id"));
+          row.put("codes", rs.getString("codes"));
+          row.put("seq", rs.getInt("seq"));
+          return row;
+        });
   }
 
   protected void createResultRecordFromDatabaseResult(HistoryDBRecord record) {
-      String tobaccoColumn = record.getTobacco() != null ? record.getTobacco() : "";
-      String[] tobacco = tobaccoColumn.split("\\|", -1);
+    String tobaccoColumn = record.getTobacco() != null ? record.getTobacco() : "";
+    String[] tobacco = tobaccoColumn.split("\\|", -1);
 
     Map<String, Object> listOption = null;
 
-    if (tobacco.length > COLUMN_TOBACCO_INDEX_SMOKING_STATUS && !tobacco[COLUMN_TOBACCO_INDEX_SMOKING_STATUS].isEmpty()) {
+    if (tobacco.length > COLUMN_TOBACCO_INDEX_SMOKING_STATUS
+        && !tobacco[COLUMN_TOBACCO_INDEX_SMOKING_STATUS].isEmpty()) {
       listOption = getListOption("smoking_status", tobacco[COLUMN_TOBACCO_INDEX_SMOKING_STATUS]);
       if (listOption == null) {
         listOption = new HashMap<>();
@@ -105,9 +122,12 @@ public class HistoryRepositoryImpl implements HistoryRepository {
       }
     }
 
-    if (tobacco.length > COLUMN_TOBACCO_INDEX_SMOKING_PACK_COUNT && !tobacco[COLUMN_TOBACCO_INDEX_SMOKING_PACK_COUNT].isEmpty()) {
+    if (tobacco.length > COLUMN_TOBACCO_INDEX_SMOKING_PACK_COUNT
+        && !tobacco[COLUMN_TOBACCO_INDEX_SMOKING_PACK_COUNT].isEmpty()) {
       record.setPacksPerDay(0); // Equiv to: $record[self::COLUMN_SMOKING_PACKS_PER_DAY] = 0;
-      if (listOption != null && listOption.get("codes") != null && !listOption.get("codes").toString().isEmpty()) {
+      if (listOption != null
+          && listOption.get("codes") != null
+          && !listOption.get("codes").toString().isEmpty()) {
         try {
           record.setPacksPerDay(Integer.parseInt(tobacco[COLUMN_TOBACCO_INDEX_SMOKING_PACK_COUNT]));
         } catch (NumberFormatException e) {
@@ -149,7 +169,11 @@ public class HistoryRepositoryImpl implements HistoryRepository {
   private static class ParsedCodeResult {
     final String code;
     final String codeType;
-    ParsedCodeResult(String code, String codeType) { this.code = code; this.codeType = codeType; }
+
+    ParsedCodeResult(String code, String codeType) {
+      this.code = code;
+      this.codeType = codeType;
+    }
   }
 
   private ParsedCodeResult parseCode(String code) {
@@ -167,11 +191,16 @@ public class HistoryRepositoryImpl implements HistoryRepository {
     if (codeType == null) return null;
     switch (codeType) {
       case CODE_TYPE_SNOMED_CT:
-      case CODE_TYPE_SNOMED:   return "http://snomed.info";
-      case CODE_TYPE_LOINC:     return "http://loinc.org";
-      case CODE_TYPE_RXNORM:    return "http://nih.gov";
-      case CODE_TYPE_ICD10:     return "http://hl7.org";
-      default:                  return null;
+      case CODE_TYPE_SNOMED:
+        return "http://snomed.info";
+      case CODE_TYPE_LOINC:
+        return "http://loinc.org";
+      case CODE_TYPE_RXNORM:
+        return "http://nih.gov";
+      case CODE_TYPE_ICD10:
+        return "http://hl7.org";
+      default:
+        return null;
     }
   }
 
@@ -181,7 +210,8 @@ public class HistoryRepositoryImpl implements HistoryRepository {
   }
 
   private StringBuilder vitalsQuery() {
-    return new StringBuilder("""
+    return new StringBuilder(
+        """
                    SELECT
                    history.id
                   ,history.uuid
@@ -226,17 +256,22 @@ public class HistoryRepositoryImpl implements HistoryRepository {
   }
 
   private RowMapper<HistoryDBRecord> historyObservationRowMapper() {
-    return (rs, rowNum) -> HistoryDBRecord.builder()
+    return (rs, rowNum) ->
+        HistoryDBRecord.builder()
             .id(rs.getLong("id"))
             .uuid(toUuid(rs.getBytes("uuid")))
             .date(toLocalDateTime(rs.getTimestamp("date")))
             .tobacco(rs.getString("tobacco"))
             .alcohol(rs.getString("alcohol"))
-            .exercisePatterns(rs.getString("exercise_patterns")).recreationalDrugs(rs.getString("recreational_drugs"))
+            .exercisePatterns(rs.getString("exercise_patterns"))
+            .recreationalDrugs(rs.getString("recreational_drugs"))
             .createdBy(rs.getObject("created_by") != null ? rs.getLong("created_by") : null)
             .pid(rs.getObject("pid") != null ? rs.getLong("pid") : null)
             .puuid(toUuid(rs.getBytes("puuid")))
-            .providerUuid(rs.getString("provider_uuid") != null ? UUID.fromString(rs.getString("provider_uuid")) : null)
+            .providerUuid(
+                rs.getString("provider_uuid") != null
+                    ? UUID.fromString(rs.getString("provider_uuid"))
+                    : null)
             .providerNpi(rs.getString("provider_npi"))
             .providerUsername(rs.getString("provider_username"))
             .build();
