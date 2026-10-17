@@ -2,12 +2,10 @@ package org.example.basicfhirserver.service.impl.allergyIntolerance;
 
 import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.AllergyIntoleranceMapper;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
