@@ -1,9 +1,8 @@
 package org.example.basicfhirserver.query.resources.condition;
 
+import ca.uhn.fhir.model.api.Include;
 import java.time.LocalDateTime;
 import java.util.Set;
-
-import ca.uhn.fhir.model.api.Include;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

@@ -11,7 +11,6 @@ import org.example.basicfhirserver.mapper.ConditionMapper;
 import org.example.basicfhirserver.mapper.EncounterMapper;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.model.ConditionCanonical;
-import org.example.basicfhirserver.model.FormEncounter;
 import org.example.basicfhirserver.query.resources.condition.ConditionSearchQuery;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
 import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;

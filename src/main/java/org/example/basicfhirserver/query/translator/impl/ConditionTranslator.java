@@ -26,7 +26,7 @@ public class ConditionTranslator
                         : d.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()))
         .count(criteria.getCount())
         .offset(criteria.getOffset())
-            .includes(criteria.getIncludes())
+        .includes(criteria.getIncludes())
         .build();
   }
 }
