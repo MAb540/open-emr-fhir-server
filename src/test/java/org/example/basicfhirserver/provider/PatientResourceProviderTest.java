@@ -26,8 +26,7 @@ import org.example.basicfhirserver.jobs.export.FhirExportServiceConstants;
 import org.example.basicfhirserver.mapper.EncounterMapper;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.mapper.ObservationMapper;
-import org.example.basicfhirserver.model.FormEncounter;
-import org.example.basicfhirserver.model.VitalObservation;
+import org.example.basicfhirserver.model.CanonicalObservation;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
 import org.example.basicfhirserver.query.resources.observation.ObservationSearchQuery;
 import org.example.basicfhirserver.query.resources.patient.PatientSearchCriteria;
@@ -36,6 +35,7 @@ import org.example.basicfhirserver.query.translator.impl.PatientSearchTranslator
 import org.example.basicfhirserver.service.EncounterService;
 import org.example.basicfhirserver.service.ObservationService;
 import org.example.basicfhirserver.service.PatientService;
+import org.example.basicfhirserver.service.impl.encounter.EncounterSearchResult;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Observation;
@@ -121,7 +121,7 @@ class PatientResourceProviderTest {
     assertThat(bundle.getCurrentPageOffset()).isZero();
     assertThat(bundle.getCurrentPageSize()).isEqualTo(1);
     verify(observationService, never()).find(any(ObservationSearchQuery.class));
-    verify(encounterService, never()).find(any(EncounterSearchQuery.class));
+    verify(encounterService, never()).search(any(EncounterSearchQuery.class));
   }
 
   @Test
@@ -140,18 +140,16 @@ class PatientResourceProviderTest {
     Patient patient = new Patient();
     when(legacyPatientMapper.toR4(entity)).thenReturn(patient);
 
-    VitalObservation vitalObservation = mock(VitalObservation.class);
+    CanonicalObservation canonicalObservation = mock(CanonicalObservation.class);
     when(observationService.find(any(ObservationSearchQuery.class)))
-        .thenReturn(List.of(vitalObservation));
+        .thenReturn(List.of(canonicalObservation));
     Observation observation = new Observation();
-    when(observationMapper.toR4(vitalObservation)).thenReturn(observation);
+    when(observationMapper.toR4(canonicalObservation)).thenReturn(observation);
 
-    FormEncounter formEncounter = mock(FormEncounter.class);
-    Page<FormEncounter> encounterPage = mock(Page.class);
-    when(encounterPage.getContent()).thenReturn(List.of(formEncounter));
-    when(encounterService.find(any(EncounterSearchQuery.class))).thenReturn(encounterPage);
     Encounter encounter = new Encounter();
-    when(encounterMapper.toR4(formEncounter)).thenReturn(encounter);
+    EncounterSearchResult encounterSearchResult = new EncounterSearchResult(List.of(encounter), 1L);
+    when(encounterService.search(any(EncounterSearchQuery.class)))
+        .thenReturn(encounterSearchResult);
 
     Set<Include> revIncludes =
         Set.of(new Include("Observation:patient"), new Include("Encounter:patient"));
@@ -162,7 +160,7 @@ class PatientResourceProviderTest {
 
     assertThat(bundle.getResources(0, 10)).containsExactly(patient, observation, encounter);
     verify(observationService).find(any(ObservationSearchQuery.class));
-    verify(encounterService).find(any(EncounterSearchQuery.class));
+    verify(encounterService).search(any(EncounterSearchQuery.class));
   }
 
   @Test

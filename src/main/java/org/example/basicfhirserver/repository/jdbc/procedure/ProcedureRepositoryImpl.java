@@ -66,12 +66,12 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
 
   @Override
   public Page<ProcedureDBRecord> findLaboratory(
-          DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
+      DiagnosticReportSearchQuery diagnosticReportSearchQuery) {
     StringBuilder sql = procedureOrderListItemQuery();
     MapSqlParameterSource params = new MapSqlParameterSource();
     addFilter(sql, params, diagnosticReportSearchQuery);
     String countSql =
-            """
+        """
                             SELECT COUNT(*)
                             FROM procedure_order porder
                             WHERE porder.activity = 1
@@ -80,21 +80,21 @@ public class ProcedureRepositoryImpl implements ProcedureRepository {
     total = (total != null) ? total : 0L;
 
     int limit =
-            (diagnosticReportSearchQuery.getCount() != null)
-                    ? diagnosticReportSearchQuery.getCount()
-                    : 5;
+        (diagnosticReportSearchQuery.getCount() != null)
+            ? diagnosticReportSearchQuery.getCount()
+            : 5;
     int offset =
-            (diagnosticReportSearchQuery.getOffset() != null)
-                    ? diagnosticReportSearchQuery.getOffset()
-                    : 0;
+        (diagnosticReportSearchQuery.getOffset() != null)
+            ? diagnosticReportSearchQuery.getOffset()
+            : 0;
 
     sql.append(" AND preport.report_uuid IS NOT NULL ");
-//    sql.append(" LIMIT :limit OFFSET :offset ");
-//    params.addValue("limit", limit);
-//    params.addValue("offset", offset);
+    //    sql.append(" LIMIT :limit OFFSET :offset ");
+    //    params.addValue("limit", limit);
+    //    params.addValue("offset", offset);
 
     List<RawProcedureRecord> rawProcedureRecords =
-            namedParameterJdbcTemplate.query(sql.toString(), params, proceduresListDBRecordRowMapper());
+        namedParameterJdbcTemplate.query(sql.toString(), params, proceduresListDBRecordRowMapper());
 
     Pageable pageable = PageRequest.of(offset / limit, limit);
     return new PageImpl<>(hydrateSearchResults(rawProcedureRecords), pageable, total);

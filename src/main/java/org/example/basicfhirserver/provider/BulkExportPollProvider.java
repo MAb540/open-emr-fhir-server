@@ -67,7 +67,7 @@ public class BulkExportPollProvider {
                   exportService.executeSystemBulkExport(
                       JobContext.Null,
                       parsedRequest.resourcesToExport(),
-                                  parsedRequest.parsedSince()));
+                      parsedRequest.parsedSince()));
 
       String serverBaseUrl = theRequestDetails.getFhirServerBase();
       String pollingUrl = serverBaseUrl + ExportPollEndpointWithParams + jobId;
