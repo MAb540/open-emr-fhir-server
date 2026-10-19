@@ -42,7 +42,6 @@ public class ConditionServiceImpl implements ConditionService {
   private final PatientService patientService;
   private final LegacyPatientMapper legacyPatientMapper;
   private final EncounterService encounterService;
-  private final EncounterMapper encounterMapper;
 
   public ConditionServiceImpl(
       ConditionRepository conditionRepository,
@@ -50,15 +49,13 @@ public class ConditionServiceImpl implements ConditionService {
       ConditionMapper conditionMapper,
       PatientService patientService,
       LegacyPatientMapper legacyPatientMapper,
-      EncounterService encounterService,
-      EncounterMapper encounterMapper) {
+      EncounterService encounterService) {
     this.conditionRepository = conditionRepository;
     this.conditionAssembler = conditionAssembler;
     this.conditionMapper = conditionMapper;
     this.patientService = patientService;
     this.legacyPatientMapper = legacyPatientMapper;
     this.encounterService = encounterService;
-    this.encounterMapper = encounterMapper;
   }
 
   @Override
@@ -96,12 +93,13 @@ public class ConditionServiceImpl implements ConditionService {
     List<IBaseResource> includedResources =
         includeResources(conditionsCanonical, conditionSearchQuery.getIncludes());
 
-    int currentOffset = conditionSearchQuery.getOffset() != null ? conditionSearchQuery.getOffset() : 0;
+    int currentOffset =
+        conditionSearchQuery.getOffset() != null ? conditionSearchQuery.getOffset() : 0;
     return new SearchResult(
-        primaryConditions, includedResources,
-            (int)conditionsCanonical.getTotalElements(),
-            currentOffset
-            );
+        primaryConditions,
+        includedResources,
+        (int) conditionsCanonical.getTotalElements(),
+        currentOffset);
   }
 
   private Page<ConditionCanonical> findCanonical(ConditionSearchQuery conditionSearchQuery) {
