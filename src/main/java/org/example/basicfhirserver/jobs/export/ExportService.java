@@ -31,7 +31,6 @@ import org.example.basicfhirserver.service.*;
 import org.example.basicfhirserver.service.assembler.condition.ConditionAssembler;
 import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Encounter;
 import org.jobrunr.jobs.annotations.Job;
 import org.jobrunr.jobs.context.JobContext;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -47,7 +46,6 @@ public class ExportService {
   private final ObservationService observationService;
   private final ObservationMapper observationMapper;
   private final EncounterService encounterService;
-  private final EncounterMapper encounterMapper;
   private final ConditionService conditionService;
   private final PractitionerService practitionerService;
   private final PractitionerMapper practitionerMapper;
@@ -68,7 +66,6 @@ public class ExportService {
       @Qualifier("ObservationServiceImpl") ObservationService observationService,
       ObservationMapper observationMapper,
       EncounterService encounterService,
-      EncounterMapper encounterMapper,
       ConditionService conditionService,
       PractitionerService practitionerService,
       PractitionerMapper practitionerMapper,
@@ -81,7 +78,6 @@ public class ExportService {
     this.observationService = observationService;
     this.observationMapper = observationMapper;
     this.encounterService = encounterService;
-    this.encounterMapper = encounterMapper;
     this.conditionService = conditionService;
     this.practitionerService = practitionerService;
     this.practitionerMapper = practitionerMapper;
@@ -309,13 +305,14 @@ public class ExportService {
                 .offset(offset)
                 .build();
 
-        Page<Encounter> page = encounterService.find(query);
-        if (page.isEmpty()) {
+        SearchResult result = encounterService.search(query);
+        List<IBaseResource> content = result.primaryResources();
+        if (content.isEmpty()) {
           log.info("JobID {}: Encounter export job content is empty", jobID);
           break;
         }
 
-        for (Encounter encounter : page.getContent()) {
+        for (IBaseResource encounter : content) {
           String jsonLine = fhirJsonParser.encodeResourceToString(encounter);
           writer.write(jsonLine);
           writer.newLine();
@@ -323,11 +320,11 @@ public class ExportService {
         log.debug(
             "JobID {}: Encounter export job exported {} records (Current offset: {})",
             jobID,
-            page.getContent().size(),
+            content.size(),
             offset);
 
         offset += BATCH_SIZE;
-        hasMoreData = page.hasNext();
+        hasMoreData = offset < result.totalElements();
       }
 
       log.info(

@@ -9,10 +9,10 @@ import org.example.basicfhirserver.repository.jdbc.formencounter.FormEncounterDB
 import org.example.basicfhirserver.repository.jdbc.formencounter.FormEncounterRepository;
 import org.example.basicfhirserver.service.EncounterService;
 import org.example.basicfhirserver.service.assembler.formencounter.FormEncounterAssembler;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Encounter;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -42,26 +42,7 @@ public class EncounterServiceImpl implements EncounterService {
   }
 
   @Override
-  public Page<Encounter> find(EncounterSearchQuery encounterSearchQuery) {
-
-    Page<FormEncounterDBRecord> formEncountersDBRecords =
-        formEncounterRepository.find(encounterSearchQuery);
-
-    List<Encounter> encounters =
-        formEncountersDBRecords.getContent().stream()
-            .map(formEncounterAssembler::toCanonical)
-            .map(encounterMapper::toR4)
-            .toList();
-
-    return new PageImpl<>(
-        encounters,
-        formEncountersDBRecords.getPageable(),
-        formEncountersDBRecords.getTotalElements());
-  }
-
-  @Override
-  public EncounterSearchResult search(EncounterSearchQuery encounterSearchQuery) {
-
+  public SearchResult search(EncounterSearchQuery encounterSearchQuery) {
     Page<FormEncounterDBRecord> formEncountersDBRecords =
         formEncounterRepository.find(encounterSearchQuery);
 
@@ -71,6 +52,13 @@ public class EncounterServiceImpl implements EncounterService {
             .<IBaseResource>map(encounterMapper::toR4)
             .toList();
 
-    return new EncounterSearchResult(primaryEncounters, formEncountersDBRecords.getTotalElements());
+    int currentOffset =
+        encounterSearchQuery.getOffset() != null ? encounterSearchQuery.getOffset() : 0;
+
+    return new SearchResult(
+        primaryEncounters,
+        List.of(),
+        (int) formEncountersDBRecords.getTotalElements(),
+        currentOffset);
   }
 }

@@ -6,14 +6,13 @@ import ca.uhn.fhir.rest.param.DateParam;
 import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
-import java.util.List;
 import java.util.UUID;
 import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchCriteria;
 import org.example.basicfhirserver.query.translator.impl.EncounterSearchTranslator;
 import org.example.basicfhirserver.service.EncounterService;
-import org.example.basicfhirserver.service.impl.encounter.EncounterSearchResult;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.IdType;
@@ -63,15 +62,13 @@ public class EncounterResourceProvider implements IResourceProvider {
             .build();
 
     var encounterSearchQuery = encounterSearchTranslator.translate(criteria);
-    EncounterSearchResult searchResult = encounterService.search(encounterSearchQuery);
-
-    int currentOffset = offset != null ? offset : 0;
+    SearchResult searchResult = encounterService.search(encounterSearchQuery);
 
     return new BundleProvider(
         searchResult.primaryResources(),
-        List.of(),
-        Math.toIntExact(searchResult.totalElements()),
-        currentOffset,
+        searchResult.includedResources(),
+        searchResult.totalElements(),
+        searchResult.currentOffset(),
         searchResult.primaryResources().size());
   }
 }

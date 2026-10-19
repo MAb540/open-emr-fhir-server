@@ -23,7 +23,6 @@ import org.example.basicfhirserver.service.EncounterService;
 import org.example.basicfhirserver.service.PatientService;
 import org.example.basicfhirserver.service.assembler.condition.ConditionAssembler;
 import org.example.basicfhirserver.service.impl.SearchResult;
-import org.example.basicfhirserver.service.impl.encounter.EncounterSearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Condition;
 import org.springframework.data.domain.Page;
@@ -213,7 +212,7 @@ public class ConditionServiceImpl implements ConditionService {
         EncounterSearchQuery query =
             EncounterSearchQuery.builder().encounterId(encounterUuids).build();
 
-        EncounterSearchResult encounterSearchResult = encounterService.search(query);
+        SearchResult encounterSearchResult = encounterService.search(query);
         includedResources.addAll(encounterSearchResult.primaryResources());
       }
     }

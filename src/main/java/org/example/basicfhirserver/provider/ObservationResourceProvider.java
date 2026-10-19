@@ -21,7 +21,7 @@ import org.example.basicfhirserver.query.translator.impl.ObservationSearchTransl
 import org.example.basicfhirserver.service.EncounterService;
 import org.example.basicfhirserver.service.ObservationService;
 import org.example.basicfhirserver.service.PatientService;
-import org.example.basicfhirserver.service.impl.encounter.EncounterSearchResult;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Observation;
@@ -142,7 +142,7 @@ public class ObservationResourceProvider implements IResourceProvider {
             observations.stream().map(CanonicalObservation::getEncounterUuid).toList();
         EncounterSearchQuery query =
             EncounterSearchQuery.builder().encounterId(encounterUuids).build();
-        EncounterSearchResult encounterSearchResult = encounterService.search(query);
+        SearchResult encounterSearchResult = encounterService.search(query);
         includedResources.addAll(encounterSearchResult.primaryResources());
       }
     }

@@ -35,7 +35,7 @@ import org.example.basicfhirserver.query.translator.impl.PatientSearchTranslator
 import org.example.basicfhirserver.service.EncounterService;
 import org.example.basicfhirserver.service.ObservationService;
 import org.example.basicfhirserver.service.PatientService;
-import org.example.basicfhirserver.service.impl.encounter.EncounterSearchResult;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Observation;
@@ -147,7 +147,7 @@ class PatientResourceProviderTest {
     when(observationMapper.toR4(canonicalObservation)).thenReturn(observation);
 
     Encounter encounter = new Encounter();
-    EncounterSearchResult encounterSearchResult = new EncounterSearchResult(List.of(encounter), 1L);
+    SearchResult encounterSearchResult = new SearchResult(List.of(encounter), List.of(), 1, 0);
     when(encounterService.search(any(EncounterSearchQuery.class)))
         .thenReturn(encounterSearchResult);
 

@@ -34,7 +34,7 @@ import org.example.basicfhirserver.query.translator.impl.PatientSearchTranslator
 import org.example.basicfhirserver.service.EncounterService;
 import org.example.basicfhirserver.service.ObservationService;
 import org.example.basicfhirserver.service.PatientService;
-import org.example.basicfhirserver.service.impl.encounter.EncounterSearchResult;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Patient;
@@ -164,7 +164,7 @@ public class PatientResourceProvider implements IResourceProvider {
 
       if (includeEncounters) {
         EncounterSearchQuery query = EncounterSearchQuery.builder().patientId(patientUuids).build();
-        EncounterSearchResult encounterSearchResult = encounterService.search(query);
+        SearchResult encounterSearchResult = encounterService.search(query);
         includedResources.addAll(encounterSearchResult.primaryResources());
       }
     }
