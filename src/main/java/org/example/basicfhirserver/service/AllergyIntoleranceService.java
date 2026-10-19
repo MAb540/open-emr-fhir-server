@@ -10,7 +10,4 @@ public interface AllergyIntoleranceService {
   AllergyIntolerance findById(UUID uuid);
 
   SearchResult search(AllergyIntoleranceSearchQuery searchQuery);
-
-  //  Page<AllergyDBRecord> find(AllergyIntoleranceSearchQuery allergyIntoleranceSearchQuery);
-
 }

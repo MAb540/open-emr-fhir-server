@@ -69,7 +69,7 @@ public class ConditionResourceProvider implements IResourceProvider {
             .build();
 
     var conditionSearchQuery = conditionTranslator.translate(criteria);
-    SearchResult searchResult = conditionService.find(conditionSearchQuery);
+    SearchResult searchResult = conditionService.search(conditionSearchQuery);
 
     return new BundleProvider(
         searchResult.primaryResources(),

@@ -71,7 +71,7 @@ class ConditionResourceProviderTest {
     Patient includedPatient = new Patient();
     SearchResult serviceResult =
         new SearchResult(List.of(primary), List.of(includedPatient), 2, 5);
-    when(conditionService.find(query)).thenReturn(serviceResult);
+    when(conditionService.search(query)).thenReturn(serviceResult);
 
     IBundleProvider bundle = provider.searchConditions(null, null, null, null, 10, 5);
 
@@ -79,7 +79,7 @@ class ConditionResourceProviderTest {
     assertThat(bundle.getResources(0, 10)).containsExactly(primary, includedPatient);
     assertThat(bundle.getCurrentPageOffset()).isEqualTo(5);
     assertThat(bundle.getCurrentPageSize()).isEqualTo(1);
-    verify(conditionService).find(query);
+    verify(conditionService).search(query);
   }
 
   @Test
@@ -87,7 +87,7 @@ class ConditionResourceProviderTest {
     ConditionSearchQuery query = ConditionSearchQuery.builder().build();
     when(conditionTranslator.translate(any(ConditionSearchCriteria.class))).thenReturn(query);
     SearchResult serviceResult = new SearchResult(List.of(), List.of(), 0, 0);
-    when(conditionService.find(query)).thenReturn(serviceResult);
+    when(conditionService.search(query)).thenReturn(serviceResult);
 
     IBundleProvider bundle = provider.searchConditions(null, null, null, null, null, null);
 
@@ -102,7 +102,7 @@ class ConditionResourceProviderTest {
     ConditionSearchQuery query = ConditionSearchQuery.builder().build();
     when(conditionTranslator.translate(any(ConditionSearchCriteria.class))).thenReturn(query);
     SearchResult serviceResult = new SearchResult(List.of(), List.of(), 0, 5);
-    when(conditionService.find(query)).thenReturn(serviceResult);
+    when(conditionService.search(query)).thenReturn(serviceResult);
 
     ReferenceParam patient = new ReferenceParam("Patient/abc");
     TokenParam category = new TokenParam("problem-list-item");

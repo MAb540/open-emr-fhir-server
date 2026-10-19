@@ -534,7 +534,7 @@ public class ExportService {
               .offset(offset)
               .build();
 
-      SearchResult result = conditionService.find(query);
+      SearchResult result = conditionService.search(query);
       List<IBaseResource> content = result.primaryResources();
 
       if (content.isEmpty()) {

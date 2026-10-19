@@ -86,7 +86,7 @@ public class ConditionServiceImpl implements ConditionService {
   }
 
   @Override
-  public SearchResult find(ConditionSearchQuery conditionSearchQuery) {
+  public SearchResult search(ConditionSearchQuery conditionSearchQuery) {
     Page<ConditionCanonical> conditionsCanonical = findCanonical(conditionSearchQuery);
 
     List<IBaseResource> primaryConditions =

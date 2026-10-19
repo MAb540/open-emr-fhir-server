@@ -6,13 +6,12 @@ import ca.uhn.fhir.rest.param.DateParam;
 import ca.uhn.fhir.rest.param.StringParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
-import java.util.List;
 import java.util.UUID;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.person.PersonSearchCriteria;
 import org.example.basicfhirserver.query.translator.impl.PersonSearchTranslator;
 import org.example.basicfhirserver.service.PersonService;
-import org.example.basicfhirserver.service.impl.person.PersonSearchResult;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Person;
@@ -57,15 +56,13 @@ public class PersonResourceProvider implements IResourceProvider {
             .build();
 
     var personSearchQuery = personSearchTranslator.translate(criteria);
-    PersonSearchResult searchResult = personService.find(personSearchQuery);
-
-    int currentOffset = offset != null ? offset : 0;
+    SearchResult searchResult = personService.search(personSearchQuery);
 
     return new BundleProvider(
         searchResult.primaryResources(),
-        List.of(),
-        Math.toIntExact(searchResult.totalElements()),
-        currentOffset,
+        searchResult.includedResources(),
+        searchResult.totalElements(),
+        searchResult.currentOffset(),
         searchResult.primaryResources().size());
   }
 }

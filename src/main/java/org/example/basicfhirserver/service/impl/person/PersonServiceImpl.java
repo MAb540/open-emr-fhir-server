@@ -8,6 +8,7 @@ import org.example.basicfhirserver.query.resources.person.PersonSearchQuery;
 import org.example.basicfhirserver.repository.jdbc.user.UserDBRecord;
 import org.example.basicfhirserver.repository.jdbc.user.UserRepository;
 import org.example.basicfhirserver.service.PersonService;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Person;
 import org.springframework.data.domain.Page;
@@ -34,7 +35,7 @@ public class PersonServiceImpl implements PersonService {
   }
 
   @Override
-  public PersonSearchResult find(PersonSearchQuery personSearchQuery) {
+  public SearchResult search(PersonSearchQuery personSearchQuery) {
     Page<UserDBRecord> personDBRecords = userRepository.find(personSearchQuery);
 
     List<IBaseResource> primaryPersons =
@@ -42,6 +43,10 @@ public class PersonServiceImpl implements PersonService {
             .<IBaseResource>map(personMapper::toR4)
             .toList();
 
-    return new PersonSearchResult(primaryPersons, personDBRecords.getTotalElements());
+    int currentOffset =
+        personSearchQuery.getOffset() != null ? personSearchQuery.getOffset() : 0;
+
+    return new SearchResult(
+        primaryPersons, List.of(), (int) personDBRecords.getTotalElements(), currentOffset);
   }
 }

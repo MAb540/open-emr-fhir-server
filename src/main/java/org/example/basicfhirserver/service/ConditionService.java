@@ -9,5 +9,5 @@ public interface ConditionService {
 
   Condition findById(UUID uuid);
 
-  SearchResult find(ConditionSearchQuery conditionSearchQuery);
+  SearchResult search(ConditionSearchQuery conditionSearchQuery);
 }
