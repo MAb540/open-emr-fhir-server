@@ -39,9 +39,7 @@ public class MedicationServiceImpl implements MedicationService {
     Page<DrugDBRecord> drugDBRecords = drugRepository.find(medicationSearchQuery);
 
     List<IBaseResource> primaryMedications =
-        drugDBRecords.getContent().stream()
-            .<IBaseResource>map(medicationMapper::toR4)
-            .toList();
+        drugDBRecords.getContent().stream().<IBaseResource>map(medicationMapper::toR4).toList();
 
     int currentOffset =
         medicationSearchQuery.getOffset() != null ? medicationSearchQuery.getOffset() : 0;

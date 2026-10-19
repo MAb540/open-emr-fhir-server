@@ -41,8 +41,7 @@ class AllergyIntoleranceProviderTest {
 
     AllergyIntolerance primary = new AllergyIntolerance();
     Patient includedPatient = new Patient();
-    SearchResult serviceResult =
-        new SearchResult(List.of(primary), List.of(includedPatient), 2, 5);
+    SearchResult serviceResult = new SearchResult(List.of(primary), List.of(includedPatient), 2, 5);
     when(allergyIntoleranceService.search(query)).thenReturn(serviceResult);
 
     IBundleProvider bundle = provider.searchAllergyIntolerance(null, null, null, null, 10, 5);

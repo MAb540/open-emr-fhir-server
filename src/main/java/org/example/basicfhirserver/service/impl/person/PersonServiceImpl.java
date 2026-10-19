@@ -39,12 +39,9 @@ public class PersonServiceImpl implements PersonService {
     Page<UserDBRecord> personDBRecords = userRepository.find(personSearchQuery);
 
     List<IBaseResource> primaryPersons =
-        personDBRecords.getContent().stream()
-            .<IBaseResource>map(personMapper::toR4)
-            .toList();
+        personDBRecords.getContent().stream().<IBaseResource>map(personMapper::toR4).toList();
 
-    int currentOffset =
-        personSearchQuery.getOffset() != null ? personSearchQuery.getOffset() : 0;
+    int currentOffset = personSearchQuery.getOffset() != null ? personSearchQuery.getOffset() : 0;
 
     return new SearchResult(
         primaryPersons, List.of(), (int) personDBRecords.getTotalElements(), currentOffset);

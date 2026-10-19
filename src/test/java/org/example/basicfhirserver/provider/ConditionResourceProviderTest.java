@@ -69,8 +69,7 @@ class ConditionResourceProviderTest {
 
     Condition primary = new Condition();
     Patient includedPatient = new Patient();
-    SearchResult serviceResult =
-        new SearchResult(List.of(primary), List.of(includedPatient), 2, 5);
+    SearchResult serviceResult = new SearchResult(List.of(primary), List.of(includedPatient), 2, 5);
     when(conditionService.search(query)).thenReturn(serviceResult);
 
     IBundleProvider bundle = provider.searchConditions(null, null, null, null, 10, 5);
