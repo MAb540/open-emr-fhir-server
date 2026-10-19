@@ -6,19 +6,16 @@ import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.StringParam;
 import ca.uhn.fhir.rest.param.TokenOrListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
-import java.util.List;
 import java.util.UUID;
-import org.example.basicfhirserver.mapper.MedicationRequestMapper;
 import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.medicationrequest.MedicationRequestSearchCriteria;
 import org.example.basicfhirserver.query.translator.impl.MedicationRequestSearchTranslator;
-import org.example.basicfhirserver.repository.jdbc.prescription.PrescriptionDBRecord;
 import org.example.basicfhirserver.service.MedicationRequestService;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.MedicationRequest;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -28,15 +25,12 @@ import org.springframework.stereotype.Component;
 public class MedicationRequestResourceProvider implements IResourceProvider {
 
   private final MedicationRequestService medicationRequestService;
-  private final MedicationRequestMapper medicationRequestMapper;
   private final MedicationRequestSearchTranslator medicationRequestSearchTranslator;
 
   public MedicationRequestResourceProvider(
       MedicationRequestService medicationRequestService,
-      MedicationRequestMapper medicationRequestMapper,
       MedicationRequestSearchTranslator medicationRequestSearchTranslator) {
     this.medicationRequestService = medicationRequestService;
-    this.medicationRequestMapper = medicationRequestMapper;
     this.medicationRequestSearchTranslator = medicationRequestSearchTranslator;
   }
 
@@ -47,9 +41,7 @@ public class MedicationRequestResourceProvider implements IResourceProvider {
 
   @Read()
   public MedicationRequest getResourceById(@IdParam IdType theId) {
-    PrescriptionDBRecord prescriptionDBRecord =
-        medicationRequestService.findById(UUID.fromString(theId.getIdPart()));
-    return medicationRequestMapper.toR4(prescriptionDBRecord);
+    return medicationRequestService.findById(UUID.fromString(theId.getIdPart()));
   }
 
   @Search()
@@ -59,7 +51,6 @@ public class MedicationRequestResourceProvider implements IResourceProvider {
       @OptionalParam(name = MedicationRequest.SP_STATUS) StringParam status,
       @Count Integer count,
       @Offset Integer offset) {
-
     MedicationRequestSearchCriteria criteria =
         MedicationRequestSearchCriteria.builder()
             .patient(patient)
@@ -70,22 +61,13 @@ public class MedicationRequestResourceProvider implements IResourceProvider {
             .build();
 
     var medicationRequestSearchQuery = medicationRequestSearchTranslator.translate(criteria);
-    Page<PrescriptionDBRecord> prescriptionDBRecords =
-        medicationRequestService.find(medicationRequestSearchQuery);
-
-    List<IBaseResource> primaryMedicationRequests =
-        prescriptionDBRecords.getContent().stream()
-            .<IBaseResource>map(medicationRequestMapper::toR4)
-            .toList();
-
-    int currentOffset = offset != null ? offset : 0;
-    int currentPageSize = prescriptionDBRecords.getContent().size();
+    SearchResult searchResult = medicationRequestService.search(medicationRequestSearchQuery);
 
     return new BundleProvider(
-        primaryMedicationRequests,
-        List.of(),
-        Math.toIntExact(prescriptionDBRecords.getTotalElements()),
-        currentOffset,
-        currentPageSize);
+        searchResult.primaryResources(),
+        searchResult.includedResources(),
+        searchResult.totalElements(),
+        searchResult.currentOffset(),
+        searchResult.primaryResources().size());
   }
 }

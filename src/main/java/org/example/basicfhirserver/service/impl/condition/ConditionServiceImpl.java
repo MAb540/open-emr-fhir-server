@@ -8,7 +8,6 @@ import java.util.Set;
 import java.util.UUID;
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.ConditionMapper;
-import org.example.basicfhirserver.mapper.EncounterMapper;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.model.ConditionCanonical;
 import org.example.basicfhirserver.query.resources.condition.ConditionSearchQuery;
