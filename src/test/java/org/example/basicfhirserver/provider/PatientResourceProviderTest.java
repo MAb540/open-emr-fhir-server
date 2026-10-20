@@ -3,7 +3,6 @@ package org.example.basicfhirserver.provider;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -20,20 +19,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.jobs.export.ExportService;
 import org.example.basicfhirserver.jobs.export.FhirExportServiceConstants;
-import org.example.basicfhirserver.mapper.EncounterMapper;
-import org.example.basicfhirserver.mapper.LegacyPatientMapper;
-import org.example.basicfhirserver.mapper.ObservationMapper;
-import org.example.basicfhirserver.model.CanonicalObservation;
-import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
-import org.example.basicfhirserver.query.resources.observation.ObservationSearchQuery;
 import org.example.basicfhirserver.query.resources.patient.PatientSearchCriteria;
 import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
 import org.example.basicfhirserver.query.translator.impl.PatientSearchTranslator;
-import org.example.basicfhirserver.service.EncounterService;
-import org.example.basicfhirserver.service.ObservationService;
 import org.example.basicfhirserver.service.PatientService;
 import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.r4.model.Encounter;
@@ -49,19 +39,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
 
 @ExtendWith(MockitoExtension.class)
-@SuppressWarnings("unchecked")
 class PatientResourceProviderTest {
 
-  @Mock private LegacyPatientMapper legacyPatientMapper;
-  @Mock private PatientSearchTranslator patientSearchTranslator;
   @Mock private PatientService patientService;
-  @Mock private ObservationService observationService;
-  @Mock private ObservationMapper observationMapper;
-  @Mock private EncounterService encounterService;
-  @Mock private EncounterMapper encounterMapper;
+  @Mock private PatientSearchTranslator patientSearchTranslator;
   @Mock private ExportService exportService;
   @Mock private JobScheduler jobScheduler;
 
@@ -72,16 +55,13 @@ class PatientResourceProviderTest {
   @Test
   void getResourceById_returnsMappedPatient() {
     IdType id = new IdType(PATIENT_UUID.toString());
-    LegacyPatientEntity entity = mock(LegacyPatientEntity.class);
     Patient patient = new Patient();
-    when(patientService.findById(PATIENT_UUID)).thenReturn(entity);
-    when(legacyPatientMapper.toR4(entity)).thenReturn(patient);
+    when(patientService.findById(PATIENT_UUID)).thenReturn(patient);
 
     Patient result = provider.getResourceById(id);
 
     assertThat(result).isSameAs(patient);
     verify(patientService).findById(PATIENT_UUID);
-    verify(legacyPatientMapper).toR4(entity);
   }
 
   @Test
@@ -92,25 +72,17 @@ class PatientResourceProviderTest {
 
     assertThatThrownBy(() -> provider.getResourceById(id))
         .isInstanceOf(ResourceNotFoundException.class);
-
-    verify(legacyPatientMapper, never()).toR4(any(LegacyPatientEntity.class));
+    verify(patientService).findById(PATIENT_UUID);
   }
 
   @Test
-  void searchPatients_returnsMappedPatientsWithoutIncludes() {
+  void searchPatients_returnsPrimaryPatientsWithoutIncludes() {
     PatientSearchQuery query = PatientSearchQuery.builder().build();
     when(patientSearchTranslator.translate(any(PatientSearchCriteria.class))).thenReturn(query);
 
-    LegacyPatientEntity entity = mock(LegacyPatientEntity.class);
-    when(entity.getUuid()).thenReturn(PATIENT_UUID);
-    Page<LegacyPatientEntity> page = mock(Page.class);
-    when(page.getContent()).thenReturn(List.of(entity));
-    when(page.getTotalElements()).thenReturn(1L);
-    when(page.isEmpty()).thenReturn(false);
-    when(patientService.find(query)).thenReturn(page);
-
     Patient patient = new Patient();
-    when(legacyPatientMapper.toR4(entity)).thenReturn(patient);
+    SearchResult searchResult = new SearchResult(List.of(patient), List.of(), 1, 0);
+    when(patientService.search(query)).thenReturn(searchResult);
 
     IBundleProvider bundle =
         provider.searchPatients(
@@ -120,36 +92,19 @@ class PatientResourceProviderTest {
     assertThat(bundle.getResources(0, 10)).containsExactly(patient);
     assertThat(bundle.getCurrentPageOffset()).isZero();
     assertThat(bundle.getCurrentPageSize()).isEqualTo(1);
-    verify(observationService, never()).find(any(ObservationSearchQuery.class));
-    verify(encounterService, never()).search(any(EncounterSearchQuery.class));
   }
 
   @Test
-  void searchPatients_includesReverseIncludedResources() {
+  void searchPatients_returnsIncludedResourcesFromService() {
     PatientSearchQuery query = PatientSearchQuery.builder().build();
     when(patientSearchTranslator.translate(any(PatientSearchCriteria.class))).thenReturn(query);
 
-    LegacyPatientEntity entity = mock(LegacyPatientEntity.class);
-    when(entity.getUuid()).thenReturn(PATIENT_UUID);
-    Page<LegacyPatientEntity> page = mock(Page.class);
-    when(page.getContent()).thenReturn(List.of(entity));
-    when(page.getTotalElements()).thenReturn(1L);
-    when(page.isEmpty()).thenReturn(false);
-    when(patientService.find(query)).thenReturn(page);
-
     Patient patient = new Patient();
-    when(legacyPatientMapper.toR4(entity)).thenReturn(patient);
-
-    CanonicalObservation canonicalObservation = mock(CanonicalObservation.class);
-    when(observationService.find(any(ObservationSearchQuery.class)))
-        .thenReturn(List.of(canonicalObservation));
     Observation observation = new Observation();
-    when(observationMapper.toR4(canonicalObservation)).thenReturn(observation);
-
     Encounter encounter = new Encounter();
-    SearchResult encounterSearchResult = new SearchResult(List.of(encounter), List.of(), 1, 0);
-    when(encounterService.search(any(EncounterSearchQuery.class)))
-        .thenReturn(encounterSearchResult);
+    SearchResult searchResult =
+        new SearchResult(List.of(patient), List.of(observation, encounter), 3, 0);
+    when(patientService.search(query)).thenReturn(searchResult);
 
     Set<Include> revIncludes =
         Set.of(new Include("Observation:patient"), new Include("Encounter:patient"));
@@ -158,9 +113,9 @@ class PatientResourceProviderTest {
         provider.searchPatients(
             null, null, null, null, null, null, null, null, null, revIncludes, null, null);
 
+    assertThat(bundle.size()).isEqualTo(3);
     assertThat(bundle.getResources(0, 10)).containsExactly(patient, observation, encounter);
-    verify(observationService).find(any(ObservationSearchQuery.class));
-    verify(encounterService).search(any(EncounterSearchQuery.class));
+    verify(patientService).search(query);
   }
 
   @Test
@@ -168,11 +123,8 @@ class PatientResourceProviderTest {
     PatientSearchQuery query = PatientSearchQuery.builder().build();
     when(patientSearchTranslator.translate(any(PatientSearchCriteria.class))).thenReturn(query);
 
-    Page<LegacyPatientEntity> page = mock(Page.class);
-    when(page.getContent()).thenReturn(List.of());
-    when(page.getTotalElements()).thenReturn(0L);
-    when(page.isEmpty()).thenReturn(true);
-    when(patientService.find(query)).thenReturn(page);
+    SearchResult searchResult = new SearchResult(List.of(), List.of(), 0, 0);
+    when(patientService.search(query)).thenReturn(searchResult);
 
     IBundleProvider bundle =
         provider.searchPatients(
@@ -186,15 +138,12 @@ class PatientResourceProviderTest {
   void searchPatients_buildsCriteriaFromSearchParams() {
     PatientSearchQuery query = PatientSearchQuery.builder().build();
     when(patientSearchTranslator.translate(any(PatientSearchCriteria.class))).thenReturn(query);
-
-    Page<LegacyPatientEntity> page = mock(Page.class);
-    when(page.getContent()).thenReturn(List.of());
-    when(page.getTotalElements()).thenReturn(0L);
-    when(page.isEmpty()).thenReturn(true);
-    when(patientService.find(query)).thenReturn(page);
+    SearchResult searchResult = new SearchResult(List.of(), List.of(), 0, 0);
+    when(patientService.search(query)).thenReturn(searchResult);
 
     TokenParam id = new TokenParam("123");
-    provider.searchPatients(id, null, null, null, null, null, null, null, null, null, 10, 5);
+    Set<Include> revIncludes = Set.of(new Include("Observation:patient"));
+    provider.searchPatients(id, null, null, null, null, null, null, null, null, revIncludes, 10, 5);
 
     ArgumentCaptor<PatientSearchCriteria> captor =
         ArgumentCaptor.forClass(PatientSearchCriteria.class);
@@ -202,6 +151,7 @@ class PatientResourceProviderTest {
     assertThat(captor.getValue().getId()).isSameAs(id);
     assertThat(captor.getValue().getCount()).isEqualTo(10);
     assertThat(captor.getValue().getOffset()).isEqualTo(5);
+    assertThat(captor.getValue().getRevIncludes()).isEqualTo(revIncludes);
   }
 
   @Test
@@ -209,15 +159,15 @@ class PatientResourceProviderTest {
     when(exportService.supportedPatientExportResources())
         .thenReturn(List.of("Patient", "Observation", "Encounter"));
 
-    RequestDetails details = mock(RequestDetails.class);
+    RequestDetails details = org.mockito.Mockito.mock(RequestDetails.class);
     when(details.getHeader("Prefer")).thenReturn("respond-async");
     when(details.getParameters()).thenReturn(Map.<String, String[]>of());
     when(details.getFhirServerBase()).thenReturn("http://localhost:8080/fhir");
 
-    HttpServletResponse response = mock(HttpServletResponse.class);
+    HttpServletResponse response = org.mockito.Mockito.mock(HttpServletResponse.class);
     when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
 
-    JobId jobId = mock(JobId.class);
+    JobId jobId = org.mockito.Mockito.mock(JobId.class);
     when(jobId.toString()).thenReturn("job-123");
     when(jobScheduler.enqueue(any(JobLambda.class))).thenReturn(jobId);
 
@@ -238,10 +188,10 @@ class PatientResourceProviderTest {
     when(exportService.supportedPatientExportResources())
         .thenReturn(List.of("Patient", "Observation", "Encounter"));
 
-    RequestDetails details = mock(RequestDetails.class);
+    RequestDetails details = org.mockito.Mockito.mock(RequestDetails.class);
     when(details.getHeader("Prefer")).thenReturn(null);
 
-    HttpServletResponse response = mock(HttpServletResponse.class);
+    HttpServletResponse response = org.mockito.Mockito.mock(HttpServletResponse.class);
     when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
 
     provider.patientExport(details, response);

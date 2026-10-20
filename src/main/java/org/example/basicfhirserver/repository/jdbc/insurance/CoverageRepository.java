@@ -6,7 +6,7 @@ import org.example.basicfhirserver.query.resources.coverage.CoverageSearchQuery;
 import org.springframework.data.domain.Page;
 
 public interface CoverageRepository {
-    List<CoverageDBRecord> findById(UUID uuid);
+  List<CoverageDBRecord> findById(UUID uuid);
 
-    Page<CoverageDBRecord> find(CoverageSearchQuery coverageSearchQuery);
+  Page<CoverageDBRecord> find(CoverageSearchQuery coverageSearchQuery);
 }

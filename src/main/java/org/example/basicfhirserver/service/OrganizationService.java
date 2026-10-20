@@ -2,12 +2,12 @@ package org.example.basicfhirserver.service;
 
 import java.util.UUID;
 import org.example.basicfhirserver.query.resources.organization.OrganizationSearchQuery;
-import org.example.basicfhirserver.repository.jdbc.facility.FacilityDBRecord;
-import org.springframework.data.domain.Page;
+import org.example.basicfhirserver.service.impl.SearchResult;
+import org.hl7.fhir.r4.model.Organization;
 
 public interface OrganizationService {
 
-  FacilityDBRecord findById(UUID uuid);
+  Organization findById(UUID uuid);
 
-  Page<FacilityDBRecord> find(OrganizationSearchQuery organizationSearchQuery);
+  SearchResult search(OrganizationSearchQuery organizationSearchQuery);
 }

@@ -44,4 +44,7 @@ public class ProfilesConstants {
       "http://hl7.org/fhir/us/core/StructureDefinition/us-core-blood-pressure";
 
   public static final String HL7_MEDICATION = "http://hl7.org/fhir/StructureDefinition/Medication";
+
+  public static final String HL7_US_CORE_COVERAGE =
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-coverage";
 }

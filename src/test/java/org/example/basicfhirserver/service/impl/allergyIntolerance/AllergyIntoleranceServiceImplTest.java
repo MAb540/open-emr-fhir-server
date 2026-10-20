@@ -13,9 +13,7 @@ import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.AllergyIntoleranceMapper;
-import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.query.resources.allergyintolerance.AllergyIntoleranceSearchQuery;
 import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
 import org.example.basicfhirserver.repository.jdbc.allergy.AllergyDBRecord;
@@ -39,7 +37,6 @@ class AllergyIntoleranceServiceImplTest {
   @Mock private AllergyRepository allergyRepository;
   @Mock private AllergyIntoleranceMapper allergyIntoleranceMapper;
   @Mock private PatientService patientService;
-  @Mock private LegacyPatientMapper legacyPatientMapper;
 
   @InjectMocks private AllergyIntoleranceServiceImpl service;
 
@@ -69,7 +66,7 @@ class AllergyIntoleranceServiceImplTest {
   }
 
   @Test
-  void find_returnsPrimaryAllergiesWithoutIncludes() {
+  void search_returnsPrimaryAllergiesWithoutIncludes() {
     AllergyIntoleranceSearchQuery query = AllergyIntoleranceSearchQuery.builder().build();
 
     AllergyDBRecord record = mock(AllergyDBRecord.class);
@@ -85,12 +82,12 @@ class AllergyIntoleranceServiceImplTest {
 
     assertThat(result.primaryResources()).containsExactly(allergy);
     assertThat(result.includedResources()).isEmpty();
-    assertThat(result.totalElements()).isEqualTo(1L);
-    verify(patientService, never()).find(any(PatientSearchQuery.class));
+    assertThat(result.totalElements()).isEqualTo(1);
+    verify(patientService, never()).search(any(PatientSearchQuery.class));
   }
 
   @Test
-  void find_includesPatientResourcesWhenRequested() {
+  void search_includesPatientResourcesWhenRequested() {
     Set<Include> includes = Set.of(new Include("AllergyIntolerance:patient"));
     AllergyIntoleranceSearchQuery query =
         AllergyIntoleranceSearchQuery.builder().includes(includes).build();
@@ -105,27 +102,24 @@ class AllergyIntoleranceServiceImplTest {
     AllergyIntolerance allergy = new AllergyIntolerance();
     when(allergyIntoleranceMapper.toR4(record)).thenReturn(allergy);
 
-    LegacyPatientEntity patientEntity = mock(LegacyPatientEntity.class);
-    Page<LegacyPatientEntity> patientPage = mock(Page.class);
-    when(patientPage.getContent()).thenReturn(List.of(patientEntity));
-    when(patientService.find(any(PatientSearchQuery.class))).thenReturn(patientPage);
     Patient patient = new Patient();
-    when(legacyPatientMapper.toR4(patientEntity)).thenReturn(patient);
+    SearchResult patientSearchResult = new SearchResult(List.of(patient), List.of(), 1, 0);
+    when(patientService.search(any(PatientSearchQuery.class))).thenReturn(patientSearchResult);
 
     SearchResult result = service.search(query);
 
     assertThat(result.primaryResources()).containsExactly(allergy);
     assertThat(result.includedResources()).containsExactly(patient);
-    assertThat(result.totalElements()).isEqualTo(1L);
+    assertThat(result.totalElements()).isEqualTo(1);
 
     ArgumentCaptor<PatientSearchQuery> queryCaptor =
         ArgumentCaptor.forClass(PatientSearchQuery.class);
-    verify(patientService).find(queryCaptor.capture());
+    verify(patientService).search(queryCaptor.capture());
     assertThat(queryCaptor.getValue().getPatientId()).containsExactly(PATIENT_UUID.toString());
   }
 
   @Test
-  void find_returnsEmptyResultWhenNoRecords() {
+  void search_returnsEmptyResultWhenNoRecords() {
     AllergyIntoleranceSearchQuery query = AllergyIntoleranceSearchQuery.builder().build();
 
     Page<AllergyDBRecord> page = mock(Page.class);
@@ -138,6 +132,6 @@ class AllergyIntoleranceServiceImplTest {
     assertThat(result.primaryResources()).isEmpty();
     assertThat(result.includedResources()).isEmpty();
     assertThat(result.totalElements()).isZero();
-    verify(patientService, never()).find(any(PatientSearchQuery.class));
+    verify(patientService, never()).search(any(PatientSearchQuery.class));
   }
 }

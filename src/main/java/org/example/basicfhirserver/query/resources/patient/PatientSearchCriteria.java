@@ -1,9 +1,14 @@
 package org.example.basicfhirserver.query.resources.patient;
 
+import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.param.DateParam;
 import ca.uhn.fhir.rest.param.StringParam;
 import ca.uhn.fhir.rest.param.TokenParam;
-import lombok.*;
+import java.util.Set;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
@@ -26,4 +31,6 @@ public class PatientSearchCriteria {
   private StringParam email;
   private Integer count;
   private Integer offset;
+  private Set<Include> includes;
+  private Set<Include> revIncludes;
 }

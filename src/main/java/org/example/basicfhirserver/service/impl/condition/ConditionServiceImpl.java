@@ -6,9 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.ConditionMapper;
-import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.model.ConditionCanonical;
 import org.example.basicfhirserver.query.resources.condition.ConditionSearchQuery;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
@@ -39,7 +37,6 @@ public class ConditionServiceImpl implements ConditionService {
   private final ConditionAssembler conditionAssembler;
   private final ConditionMapper conditionMapper;
   private final PatientService patientService;
-  private final LegacyPatientMapper legacyPatientMapper;
   private final EncounterService encounterService;
 
   public ConditionServiceImpl(
@@ -47,13 +44,11 @@ public class ConditionServiceImpl implements ConditionService {
       ConditionAssembler conditionAssembler,
       ConditionMapper conditionMapper,
       PatientService patientService,
-      LegacyPatientMapper legacyPatientMapper,
       EncounterService encounterService) {
     this.conditionRepository = conditionRepository;
     this.conditionAssembler = conditionAssembler;
     this.conditionMapper = conditionMapper;
     this.patientService = patientService;
-    this.legacyPatientMapper = legacyPatientMapper;
     this.encounterService = encounterService;
   }
 
@@ -190,10 +185,8 @@ public class ConditionServiceImpl implements ConditionService {
       if (!patientUuids.isEmpty()) {
         PatientSearchQuery query = PatientSearchQuery.builder().patientId(patientUuids).build();
 
-        Page<LegacyPatientEntity> legacyPatientEntities = patientService.find(query);
-        legacyPatientEntities.getContent().stream()
-            .<IBaseResource>map(legacyPatientMapper::toR4)
-            .forEach(includedResources::add);
+        SearchResult patientSearchResult = patientService.search(query);
+        includedResources.addAll(patientSearchResult.primaryResources());
       }
     }
 
@@ -208,7 +201,6 @@ public class ConditionServiceImpl implements ConditionService {
       if (!encounterUuids.isEmpty()) {
         EncounterSearchQuery query =
             EncounterSearchQuery.builder().encounterId(encounterUuids).build();
-
         SearchResult encounterSearchResult = encounterService.search(query);
         includedResources.addAll(encounterSearchResult.primaryResources());
       }
