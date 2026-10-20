@@ -63,6 +63,10 @@ You are running inside a **git worktree**, not the main checkout. Your branch is
 own directory, their own index and their own branch, so your edits cannot
 collide with theirs.
 
+Worktrees live in `<repo>/.worktrees/<name>` and are created with
+`./scripts/worktree.sh add <name>` from the main checkout. That script is the
+human's tool — do not run it, and do not run it from inside a worktree.
+
 **Do**
 
 - Commit to your own branch, early and often. Your branch is yours alone.

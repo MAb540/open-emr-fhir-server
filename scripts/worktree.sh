@@ -13,13 +13,13 @@
 #
 # Environment overrides:
 #   WORKTREE_ROOT   where worktrees live
-#                   (default: <repo-parent>/basic-fhir-server-wt)
+#                   (default: <repo>/.worktrees)
 #   BASE_BRANCH     branch new worktrees fork from (default: main)
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WT_ROOT="${WORKTREE_ROOT:-$(dirname "$REPO_ROOT")/basic-fhir-server-wt}"
+WT_ROOT="${WORKTREE_ROOT:-$REPO_ROOT/.worktrees}"
 BRANCH_PREFIX="agent"
 
 die() {

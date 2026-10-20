@@ -35,6 +35,9 @@ build/
 ### Command Code ###
 .commandcode/
 
+## Git worktrees for parallel agent sessions ###
+.worktrees/
+
 ## File Upload
 export-job-files
 
