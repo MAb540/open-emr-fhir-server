@@ -1,0 +1,26 @@
+# Test-scope configuration.
+#
+# This file shadows src/main/resources/application.yaml for every test run
+# (test classes come first on the classpath). It exists so that parallel agent
+# sessions running `mvn test` in separate git worktrees cannot collide:
+#
+#   - JobRunr's background job server is off, so a test run never starts a job
+#     server against the shared OpenEMR database.
+#   - JobRunr's dashboard is off, so a test run never binds port 8000 (two
+#     concurrent runs would fail to bind).
+#   - The datasource points at a throwaway database name, so a test that
+#     unexpectedly reaches for a connection fails loudly instead of quietly
+#     writing into the shared OpenEMR data.
+#
+# The Testcontainers integration test is unaffected: @ServiceConnection on the
+# MariaDBContainer overrides spring.datasource.url, so it still gets its own
+# container.
+spring:
+  datasource:
+    url: jdbc:mariadb://localhost:8320/openemr_test
+
+jobrunr:
+  background-job-server:
+    enabled: false
+  dashboard:
+    enabled: false
