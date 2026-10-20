@@ -8,8 +8,6 @@ import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.TokenOrListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import java.util.*;
-import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
-import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.mapper.ObservationMapper;
 import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.model.CanonicalObservation;
@@ -26,7 +24,6 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Observation;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -45,7 +42,6 @@ public class ObservationResourceProvider implements IResourceProvider {
   private final ObservationMapper observationMapper;
   private final ObservationSearchTranslator observationSearchTranslator;
   private final PatientService patientService;
-  private final LegacyPatientMapper legacyPatientMapper;
   private final EncounterService encounterService;
 
   public ObservationResourceProvider(
@@ -53,13 +49,11 @@ public class ObservationResourceProvider implements IResourceProvider {
       ObservationMapper observationMapper,
       ObservationSearchTranslator observationSearchTranslator,
       PatientService patientService,
-      LegacyPatientMapper legacyPatientMapper,
       EncounterService encounterService) {
     this.observationService = observationService;
     this.observationMapper = observationMapper;
     this.observationSearchTranslator = observationSearchTranslator;
     this.patientService = patientService;
-    this.legacyPatientMapper = legacyPatientMapper;
     this.encounterService = encounterService;
   }
 
@@ -131,10 +125,8 @@ public class ObservationResourceProvider implements IResourceProvider {
             observations.stream().map(CanonicalObservation::getPatientUuid).toList();
         PatientSearchQuery query = PatientSearchQuery.builder().patientId(patientUuids).build();
 
-        Page<LegacyPatientEntity> legacyPatientEntities = patientService.find(query);
-        legacyPatientEntities.getContent().stream()
-            .<IBaseResource>map(legacyPatientMapper::toR4)
-            .forEach(includedResources::add);
+        SearchResult patientSearchResult = patientService.search(query);
+        includedResources.addAll(patientSearchResult.primaryResources());
       }
 
       if (includeEncounters) {

@@ -1,13 +1,13 @@
 package org.example.basicfhirserver.service;
 
 import java.util.UUID;
-import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
-import org.springframework.data.domain.Page;
+import org.example.basicfhirserver.service.impl.SearchResult;
+import org.hl7.fhir.r4.model.Patient;
 
 public interface PatientService {
 
-  LegacyPatientEntity findById(UUID uuid);
+  Patient findById(UUID uuid);
 
-  Page<LegacyPatientEntity> find(PatientSearchQuery query);
+  SearchResult search(PatientSearchQuery patientSearchQuery);
 }

@@ -1,8 +1,10 @@
 package org.example.basicfhirserver.query.resources.patient;
 
+import ca.uhn.fhir.model.api.Include;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,4 +27,6 @@ public class PatientSearchQuery {
   private SearchValue<LocalDateTime> deathDate;
   private Integer count;
   private Integer offset;
+  private Set<Include> includes;
+  private Set<Include> revIncludes;
 }

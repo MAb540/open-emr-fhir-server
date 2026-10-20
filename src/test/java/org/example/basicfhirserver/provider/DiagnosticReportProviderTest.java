@@ -2,7 +2,6 @@ package org.example.basicfhirserver.provider;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -11,15 +10,11 @@ import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.TokenOrListParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import java.util.List;
-import org.example.basicfhirserver.mapper.DiagnosticReportClinicalNotesMapper;
-import org.example.basicfhirserver.mapper.DiagnosticReportProcedureMapper;
-import org.example.basicfhirserver.model.DiagnosticReportCanonical;
 import org.example.basicfhirserver.query.resources.diagnosticreport.DiagnosticReportSearchCriteria;
 import org.example.basicfhirserver.query.resources.diagnosticreport.DiagnosticReportSearchQuery;
 import org.example.basicfhirserver.query.translator.impl.DiagnosticReportSearchTranslator;
-import org.example.basicfhirserver.repository.jdbc.diagnosticreport.ClinicalNotesDBRecord;
-import org.example.basicfhirserver.repository.jdbc.procedure.ProcedureDBRecord;
 import org.example.basicfhirserver.service.DiagnosticReportService;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.r4.model.DiagnosticReport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,15 +22,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("unchecked")
 class DiagnosticReportProviderTest {
 
   @Mock private DiagnosticReportService diagnosticReportService;
-  @Mock private DiagnosticReportClinicalNotesMapper diagnosticReportClinicalNotesMapper;
-  @Mock private DiagnosticReportProcedureMapper diagnosticReportProcedureMapper;
   @Mock private DiagnosticReportSearchTranslator diagnosticReportSearchTranslator;
 
   @InjectMocks private DiagnosticReportProvider provider;
@@ -46,30 +38,17 @@ class DiagnosticReportProviderTest {
     when(diagnosticReportSearchTranslator.translate(any(DiagnosticReportSearchCriteria.class)))
         .thenReturn(query);
 
-    ClinicalNotesDBRecord noteRecord = mock(ClinicalNotesDBRecord.class);
-    Page<ClinicalNotesDBRecord> notesPage = mock(Page.class);
-    when(notesPage.getContent()).thenReturn(List.of(noteRecord));
-    when(notesPage.getTotalElements()).thenReturn(1L);
-
-    ProcedureDBRecord procedureRecord = mock(ProcedureDBRecord.class);
-    Page<ProcedureDBRecord> proceduresPage = mock(Page.class);
-    when(proceduresPage.getContent()).thenReturn(List.of(procedureRecord));
-    when(proceduresPage.getTotalElements()).thenReturn(1L);
-
-    when(diagnosticReportService.findClinicalNotes(query))
-        .thenReturn(new DiagnosticReportCanonical(notesPage, proceduresPage));
-
     DiagnosticReport noteReport = new DiagnosticReport();
-    when(diagnosticReportClinicalNotesMapper.toR4(noteRecord)).thenReturn(noteReport);
     DiagnosticReport procedureReport = new DiagnosticReport();
-    when(diagnosticReportProcedureMapper.toR4(procedureRecord)).thenReturn(procedureReport);
+    when(diagnosticReportService.search(query))
+        .thenReturn(new SearchResult(List.of(noteReport, procedureReport), List.of(), 2, 0));
 
     IBundleProvider bundle =
         provider.searchDiagnosticReport(null, null, null, null, null, null, null);
 
     assertThat(bundle.size()).isEqualTo(2);
     assertThat(bundle.getResources(0, 10)).containsExactly(noteReport, procedureReport);
-    verify(diagnosticReportService).findClinicalNotes(query);
+    verify(diagnosticReportService).search(query);
   }
 
   @Test
@@ -78,15 +57,8 @@ class DiagnosticReportProviderTest {
     when(diagnosticReportSearchTranslator.translate(any(DiagnosticReportSearchCriteria.class)))
         .thenReturn(query);
 
-    Page<ClinicalNotesDBRecord> notesPage = mock(Page.class);
-    when(notesPage.getContent()).thenReturn(List.of());
-    when(notesPage.getTotalElements()).thenReturn(0L);
-    Page<ProcedureDBRecord> proceduresPage = mock(Page.class);
-    when(proceduresPage.getContent()).thenReturn(List.of());
-    when(proceduresPage.getTotalElements()).thenReturn(0L);
-
-    when(diagnosticReportService.findClinicalNotes(query))
-        .thenReturn(new DiagnosticReportCanonical(notesPage, proceduresPage));
+    when(diagnosticReportService.search(query))
+        .thenReturn(new SearchResult(List.of(), List.of(), 0, 0));
 
     IBundleProvider bundle =
         provider.searchDiagnosticReport(null, null, null, null, null, null, null);
@@ -100,15 +72,8 @@ class DiagnosticReportProviderTest {
     DiagnosticReportSearchQuery query = DiagnosticReportSearchQuery.builder().build();
     when(diagnosticReportSearchTranslator.translate(any(DiagnosticReportSearchCriteria.class)))
         .thenReturn(query);
-
-    Page<ClinicalNotesDBRecord> notesPage = mock(Page.class);
-    when(notesPage.getContent()).thenReturn(List.of());
-    when(notesPage.getTotalElements()).thenReturn(0L);
-    Page<ProcedureDBRecord> proceduresPage = mock(Page.class);
-    when(proceduresPage.getContent()).thenReturn(List.of());
-    when(proceduresPage.getTotalElements()).thenReturn(0L);
-    when(diagnosticReportService.findClinicalNotes(query))
-        .thenReturn(new DiagnosticReportCanonical(notesPage, proceduresPage));
+    when(diagnosticReportService.search(query))
+        .thenReturn(new SearchResult(List.of(), List.of(), 0, 0));
 
     TokenParam id = new TokenParam("123");
     ReferenceParam patient = new ReferenceParam("Patient/abc");

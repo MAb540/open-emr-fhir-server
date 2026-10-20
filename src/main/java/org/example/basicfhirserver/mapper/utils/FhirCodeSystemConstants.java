@@ -155,4 +155,8 @@ public final class FhirCodeSystemConstants {
       "https://www.cdc.gov/nhsn/cdaportal/terminology/codesystem/hsloc.html";
   public static final String CMS_PLACE_OF_SERVICE =
       " https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set";
+
+  // @see http://hl7.org/fhir/R4/valueset-subscriber-relationship.html
+  public static final String SUBSCRIBER_RELATIONSHIP =
+      "http://terminology.hl7.org/CodeSystem/subscriber-relationship";
 }

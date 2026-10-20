@@ -14,9 +14,7 @@ import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.ConditionMapper;
-import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.model.ConditionCanonical;
 import org.example.basicfhirserver.query.resources.condition.ConditionSearchQuery;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
@@ -27,7 +25,6 @@ import org.example.basicfhirserver.service.EncounterService;
 import org.example.basicfhirserver.service.PatientService;
 import org.example.basicfhirserver.service.assembler.condition.ConditionAssembler;
 import org.example.basicfhirserver.service.impl.SearchResult;
-import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.Patient;
@@ -47,7 +44,6 @@ class ConditionServiceImplTest {
   @Mock private ConditionAssembler conditionAssembler;
   @Mock private ConditionMapper conditionMapper;
   @Mock private PatientService patientService;
-  @Mock private LegacyPatientMapper legacyPatientMapper;
   @Mock private EncounterService encounterService;
 
   @InjectMocks private ConditionServiceImpl service;
@@ -115,7 +111,7 @@ class ConditionServiceImplTest {
     assertThat(result.primaryResources()).containsExactly(condition);
     assertThat(result.includedResources()).isEmpty();
     assertThat(result.totalElements()).isEqualTo(1);
-    verify(patientService, never()).find(any(PatientSearchQuery.class));
+    verify(patientService, never()).search(any(PatientSearchQuery.class));
     verify(encounterService, never()).search(any(EncounterSearchQuery.class));
   }
 
@@ -137,12 +133,9 @@ class ConditionServiceImplTest {
     Condition condition = new Condition();
     when(conditionMapper.toR4(canonical)).thenReturn(condition);
 
-    LegacyPatientEntity patientEntity = mock(LegacyPatientEntity.class);
-    Page<LegacyPatientEntity> patientPage = mock(Page.class);
-    when(patientPage.getContent()).thenReturn(List.of(patientEntity));
-    when(patientService.find(any(PatientSearchQuery.class))).thenReturn(patientPage);
     Patient patient = new Patient();
-    when(legacyPatientMapper.toR4(patientEntity)).thenReturn(patient);
+    SearchResult patientSearchResult = new SearchResult(List.of(patient), List.of(), 1, 0);
+    when(patientService.search(any(PatientSearchQuery.class))).thenReturn(patientSearchResult);
 
     SearchResult result = service.search(query);
 
@@ -152,7 +145,7 @@ class ConditionServiceImplTest {
 
     ArgumentCaptor<PatientSearchQuery> queryCaptor =
         ArgumentCaptor.forClass(PatientSearchQuery.class);
-    verify(patientService).find(queryCaptor.capture());
+    verify(patientService).search(queryCaptor.capture());
     assertThat(queryCaptor.getValue().getPatientId()).containsExactly(PATIENT_UUID);
   }
 
@@ -175,7 +168,7 @@ class ConditionServiceImplTest {
     Condition condition = new Condition();
     when(conditionMapper.toR4(canonical)).thenReturn(condition);
 
-    IBaseResource encounter = new Encounter();
+    Encounter encounter = new Encounter();
     SearchResult encounterResult = new SearchResult(List.of(encounter), List.of(), 1, 0);
     when(encounterService.search(any(EncounterSearchQuery.class))).thenReturn(encounterResult);
 
@@ -208,7 +201,7 @@ class ConditionServiceImplTest {
     assertThat(result.includedResources()).isEmpty();
     assertThat(result.totalElements()).isZero();
     assertThat(result.currentOffset()).isZero();
-    verify(patientService, never()).find(any(PatientSearchQuery.class));
+    verify(patientService, never()).search(any(PatientSearchQuery.class));
     verify(encounterService, never()).search(any(EncounterSearchQuery.class));
   }
 }

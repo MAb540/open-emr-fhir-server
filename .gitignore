@@ -37,3 +37,5 @@ build/
 
 ## File Upload
 export-job-files
+
+.agents/

@@ -6,9 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.AllergyIntoleranceMapper;
-import org.example.basicfhirserver.mapper.LegacyPatientMapper;
 import org.example.basicfhirserver.query.resources.allergyintolerance.AllergyIntoleranceSearchQuery;
 import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
 import org.example.basicfhirserver.repository.jdbc.allergy.AllergyDBRecord;
@@ -27,17 +25,14 @@ public class AllergyIntoleranceServiceImpl implements AllergyIntoleranceService 
   private final AllergyRepository allergyRepository;
   private final AllergyIntoleranceMapper allergyIntoleranceMapper;
   private final PatientService patientService;
-  private final LegacyPatientMapper legacyPatientMapper;
 
   public AllergyIntoleranceServiceImpl(
       AllergyRepository allergyRepository,
       AllergyIntoleranceMapper allergyIntoleranceMapper,
-      PatientService patientService,
-      LegacyPatientMapper legacyPatientMapper) {
+      PatientService patientService) {
     this.allergyRepository = allergyRepository;
     this.allergyIntoleranceMapper = allergyIntoleranceMapper;
     this.patientService = patientService;
-    this.legacyPatientMapper = legacyPatientMapper;
   }
 
   @Override
@@ -75,10 +70,8 @@ public class AllergyIntoleranceServiceImpl implements AllergyIntoleranceService 
       PatientSearchQuery patientQuery =
           PatientSearchQuery.builder().patientId(patientUuids).build();
 
-      Page<LegacyPatientEntity> legacyPatientEntities = patientService.find(patientQuery);
-      legacyPatientEntities.getContent().stream()
-          .<IBaseResource>map(legacyPatientMapper::toR4)
-          .forEach(includedResources::add);
+      SearchResult patientSearchResult = patientService.search(patientQuery);
+      includedResources.addAll(patientSearchResult.primaryResources());
     }
 
     int currentOffset =

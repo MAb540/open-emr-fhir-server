@@ -16,7 +16,6 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.example.basicfhirserver.config.FhirContextConfig;
 import org.example.basicfhirserver.domain.entities.ExportJobFilesEntity;
-import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.*;
 import org.example.basicfhirserver.model.*;
 import org.example.basicfhirserver.query.resources.SearchValue;
@@ -26,7 +25,6 @@ import org.example.basicfhirserver.query.resources.observation.ObservationSearch
 import org.example.basicfhirserver.query.resources.organization.OrganizationSearchQuery;
 import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
 import org.example.basicfhirserver.query.resources.practitioner.PractitionerSearchQuery;
-import org.example.basicfhirserver.repository.jdbc.facility.FacilityDBRecord;
 import org.example.basicfhirserver.service.*;
 import org.example.basicfhirserver.service.assembler.condition.ConditionAssembler;
 import org.example.basicfhirserver.service.impl.SearchResult;
@@ -42,7 +40,6 @@ import org.springframework.stereotype.Service;
 public class ExportService {
 
   private final PatientService patientService;
-  private final LegacyPatientMapper legacyPatientMapper;
   private final ObservationService observationService;
   private final ObservationMapper observationMapper;
   private final EncounterService encounterService;
@@ -50,7 +47,6 @@ public class ExportService {
   private final PractitionerService practitionerService;
   private final PractitionerMapper practitionerMapper;
   private final OrganizationService organizationService;
-  private final OrganizationMapper organizationMapper;
 
   private final FhirContextConfig fhirContextConfig;
   private final ExportJobFilesService exportJobFilesService;
@@ -61,7 +57,6 @@ public class ExportService {
   private static final String EXPORT_FILE_PATH = "export-job-files";
 
   public ExportService(
-      LegacyPatientMapper legacyPatientMapper,
       PatientService patientService,
       @Qualifier("ObservationServiceImpl") ObservationService observationService,
       ObservationMapper observationMapper,
@@ -70,10 +65,8 @@ public class ExportService {
       PractitionerService practitionerService,
       PractitionerMapper practitionerMapper,
       OrganizationService organizationService,
-      OrganizationMapper organizationMapper,
       FhirContextConfig fhirContextConfig,
       ExportJobFilesService exportJobFilesService) {
-    this.legacyPatientMapper = legacyPatientMapper;
     this.patientService = patientService;
     this.observationService = observationService;
     this.observationMapper = observationMapper;
@@ -82,7 +75,6 @@ public class ExportService {
     this.practitionerService = practitionerService;
     this.practitionerMapper = practitionerMapper;
     this.organizationService = organizationService;
-    this.organizationMapper = organizationMapper;
     this.fhirContextConfig = fhirContextConfig;
     this.exportJobFilesService = exportJobFilesService;
   }
@@ -178,15 +170,13 @@ public class ExportService {
                 .offset(offset)
                 .build();
 
-        Page<LegacyPatientEntity> page = patientService.find(query);
-
-        List<LegacyPatientEntity> content = page.getContent();
+        SearchResult patientSearchResult = patientService.search(query);
+        List<IBaseResource> content = patientSearchResult.primaryResources();
         if (content.isEmpty()) {
           log.info("JobID {}: Patient export job content is empty", jobID);
           break;
         }
-        for (LegacyPatientEntity entity : content) {
-          IBaseResource patient = legacyPatientMapper.toR4(entity);
+        for (IBaseResource patient : content) {
           String jsonLine = fhirJsonParser.encodeResourceToString(patient);
           writer.write(jsonLine);
           writer.newLine();
@@ -198,7 +188,7 @@ public class ExportService {
             offset);
 
         offset += BATCH_SIZE;
-        hasMoreData = page.hasNext();
+        hasMoreData = offset < patientSearchResult.totalElements();
       }
 
       log.info(
@@ -408,15 +398,13 @@ public class ExportService {
                 .offset(offset)
                 .build();
 
-        Page<FacilityDBRecord> page = organizationService.find(query);
-
-        List<FacilityDBRecord> content = page.getContent();
+        SearchResult result = organizationService.search(query);
+        List<IBaseResource> content = result.primaryResources();
         if (content.isEmpty()) {
           log.info("JobID {}: Organization export job content is empty", jobID);
           break;
         }
-        for (FacilityDBRecord entity : content) {
-          IBaseResource organization = organizationMapper.toR4(entity);
+        for (IBaseResource organization : content) {
           String jsonLine = fhirJsonParser.encodeResourceToString(organization);
           writer.write(jsonLine);
           writer.newLine();
@@ -428,7 +416,7 @@ public class ExportService {
             offset);
 
         offset += BATCH_SIZE;
-        hasMoreData = page.hasNext();
+        hasMoreData = offset < result.totalElements();
       }
 
       log.info(
