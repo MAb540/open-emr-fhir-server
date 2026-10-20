@@ -128,9 +128,9 @@ public class ConditionMapperImpl implements ConditionMapper {
       if (conditionCanonical.getHealthConcernSubtype() != null
           && conditionCanonical.getHealthConcernSubtypeTitle() != null) {
         Coding healthConcern = new Coding();
-        coding.setSystem(getSystem(conditionCanonical));
-        coding.setCode(conditionCanonical.getHealthConcernSubtype());
-        coding.setDisplay(conditionCanonical.getHealthConcernSubtypeTitle());
+        healthConcern.setSystem(getSystem(conditionCanonical));
+        healthConcern.setCode(conditionCanonical.getHealthConcernSubtype());
+        healthConcern.setDisplay(conditionCanonical.getHealthConcernSubtypeTitle());
         codeableConcept.setText(conditionCanonical.getHealthConcernSubtypeTitle());
         codeableConcept.addCoding(healthConcern);
       }
