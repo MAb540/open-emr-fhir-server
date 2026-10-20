@@ -18,6 +18,11 @@ Always use the Maven wrapper — never bare `mvn`.
 `spotless:check` runs in the `verify` phase, so `./mvnw verify` fails on unformatted
 code. Format before you commit.
 
+The Maven local repository (`~/.m2/repository`) is shared by every worktree. To keep it
+inside the project instead, use `-Dmaven.repo.local=.m2repo` from the main checkout and
+`-Dmaven.repo.local=../../.m2repo` from a worktree — it costs a one-time full
+re-download.
+
 ## Code style
 
 - 2-space indent, Google Java Format (enforced by Spotless).
@@ -89,10 +94,10 @@ human's tool — do not run it, and do not run it from inside a worktree.
 
 ## Shared services
 
-`src/test/resources/application.yaml` disables JobRunr and points the datasource
-at a throwaway database, so `mvn test` is safe to run concurrently in several
-worktrees. The Testcontainers integration test spins up its own MariaDB
-container per worktree and is likewise isolated.
+`src/test/resources/application.yaml` disables JobRunr for test runs, so
+concurrent `mvn test` in several worktrees cannot bind port 8000 or compete for
+jobs on the shared database. The Testcontainers integration test spins up its
+own MariaDB container per worktree and is likewise isolated.
 
 If you need to boot the actual app (not just the tests), you must isolate
 yourself explicitly — the defaults in `src/main/resources/application.yaml` point
@@ -107,3 +112,15 @@ JOBRUNR_DASHBOARD_PORT=8001 \
 
 Leave `jobrunr.background-job-server` disabled in a worktree unless you are
 specifically working on `jobs/export/`.
+
+## Known test gaps (pre-existing, not yours)
+
+- `PatientResourceProviderIntegrationTest` fails with
+  `Table 'test.patient_data' doesn't exist`. The Testcontainers container gets
+  an empty database — no `schema.sql` and no structure dump is provisioned
+  anywhere in the repo. Fixing that is a separate task; do not chase it while
+  working on something else.
+- `BasicFhirServerApplicationTests` needs a reachable MariaDB at
+  `localhost:8320` (Hikari validates on startup and Hibernate resolves the
+  dialect from JDBC metadata). It only reads — no DDL, no DML.
+

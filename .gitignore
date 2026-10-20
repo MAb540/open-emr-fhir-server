@@ -38,6 +38,9 @@ build/
 ## Git worktrees for parallel agent sessions ###
 .worktrees/
 
+## Optional in-project Maven local repository ###
+.m2repo/
+
 ## File Upload
 export-job-files
 
