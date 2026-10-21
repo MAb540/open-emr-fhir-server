@@ -7,18 +7,13 @@ import ca.uhn.fhir.rest.param.DateParam;
 import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.TokenOrListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
-import java.util.*;
-import org.example.basicfhirserver.mapper.ObservationMapper;
+import java.util.Set;
+import java.util.UUID;
 import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
-import org.example.basicfhirserver.model.CanonicalObservation;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
-import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
 import org.example.basicfhirserver.query.resources.observation.ObservationSearchCriteria;
-import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
 import org.example.basicfhirserver.query.translator.impl.ObservationSearchTranslator;
-import org.example.basicfhirserver.service.EncounterService;
 import org.example.basicfhirserver.service.ObservationService;
-import org.example.basicfhirserver.service.PatientService;
 import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.IdType;
@@ -39,22 +34,13 @@ import org.springframework.stereotype.Component;
 public class ObservationResourceProvider implements IResourceProvider {
 
   private final ObservationService observationService;
-  private final ObservationMapper observationMapper;
   private final ObservationSearchTranslator observationSearchTranslator;
-  private final PatientService patientService;
-  private final EncounterService encounterService;
 
   public ObservationResourceProvider(
       @Qualifier("ObservationServiceImpl") ObservationService observationService,
-      ObservationMapper observationMapper,
-      ObservationSearchTranslator observationSearchTranslator,
-      PatientService patientService,
-      EncounterService encounterService) {
+      ObservationSearchTranslator observationSearchTranslator) {
     this.observationService = observationService;
-    this.observationMapper = observationMapper;
     this.observationSearchTranslator = observationSearchTranslator;
-    this.patientService = patientService;
-    this.encounterService = encounterService;
   }
 
   @Override
@@ -64,14 +50,7 @@ public class ObservationResourceProvider implements IResourceProvider {
 
   @Read()
   public Observation getResourceById(@IdParam IdType theId) {
-    UUID uuid = UUID.fromString(theId.getIdPart());
-    Optional<CanonicalObservation> canonicalObservation = observationService.findById(uuid);
-
-    if (canonicalObservation.isEmpty()) {
-      throw new org.hl7.fhir.exceptions.FHIRException(
-          "Observation not found with ID: " + theId.getIdPart());
-    }
-    return observationMapper.toR4(canonicalObservation.get());
+    return observationService.findById(UUID.fromString(theId.getIdPart()));
   }
 
   @Search()
@@ -85,7 +64,6 @@ public class ObservationResourceProvider implements IResourceProvider {
           Set<Include> theIncludes,
       @Count Integer count,
       @Offset Integer offset) {
-
     ObservationSearchCriteria criteria =
         ObservationSearchCriteria.builder()
             .patient(patient)
@@ -93,56 +71,19 @@ public class ObservationResourceProvider implements IResourceProvider {
             .codes(codes)
             .date(date)
             .lastUpdated(lastUpdated)
+            .includes(theIncludes)
             .count(count)
             .offset(offset)
             .build();
 
     var observationSearchQuery = observationSearchTranslator.translate(criteria);
-
-    List<CanonicalObservation> observations = observationService.find(observationSearchQuery);
-
-    List<IBaseResource> primaryObservations =
-        observations.stream().<IBaseResource>map(observationMapper::toR4).toList();
-
-    boolean includeSubjects =
-        theIncludes != null
-            && theIncludes.stream()
-                .anyMatch(
-                    inc ->
-                        "Observation:subject".equals(inc.getValue())
-                            || "Observation:patient".equals(inc.getValue()));
-
-    boolean includeEncounters =
-        theIncludes != null
-            && theIncludes.stream().anyMatch(inc -> "Observation:encounter".equals(inc.getValue()));
-
-    List<IBaseResource> includedResources = new ArrayList<>();
-
-    if (!observations.isEmpty()) {
-
-      if (includeSubjects) {
-        List<String> patientUuids =
-            observations.stream().map(CanonicalObservation::getPatientUuid).toList();
-        PatientSearchQuery query = PatientSearchQuery.builder().patientId(patientUuids).build();
-
-        SearchResult patientSearchResult = patientService.search(query);
-        includedResources.addAll(patientSearchResult.primaryResources());
-      }
-
-      if (includeEncounters) {
-        List<String> encounterUuids =
-            observations.stream().map(CanonicalObservation::getEncounterUuid).toList();
-        EncounterSearchQuery query =
-            EncounterSearchQuery.builder().encounterId(encounterUuids).build();
-        SearchResult encounterSearchResult = encounterService.search(query);
-        includedResources.addAll(encounterSearchResult.primaryResources());
-      }
-    }
-
-    int currentOffset = offset != null ? offset : 0;
-    int currentPageSize = primaryObservations.size();
+    SearchResult searchResult = observationService.search(observationSearchQuery);
 
     return new BundleProvider(
-        primaryObservations, includedResources, 100, currentOffset, currentPageSize);
+        searchResult.primaryResources(),
+        searchResult.includedResources(),
+        searchResult.totalElements(),
+        searchResult.currentOffset(),
+        searchResult.primaryResources().size());
   }
 }

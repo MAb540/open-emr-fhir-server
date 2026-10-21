@@ -16,8 +16,6 @@ import java.util.Set;
 import java.util.UUID;
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
-import org.example.basicfhirserver.mapper.ObservationMapper;
-import org.example.basicfhirserver.model.CanonicalObservation;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
 import org.example.basicfhirserver.query.resources.observation.ObservationSearchQuery;
 import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
@@ -44,7 +42,6 @@ class PatientServiceImplTest {
   @Mock private PatientRepository patientRepository;
   @Mock private LegacyPatientMapper legacyPatientMapper;
   @Mock private ObservationService observationService;
-  @Mock private ObservationMapper observationMapper;
   @Mock private EncounterService encounterService;
 
   @InjectMocks private PatientServiceImpl service;
@@ -91,7 +88,7 @@ class PatientServiceImplTest {
     assertThat(result.includedResources()).isEmpty();
     assertThat(result.totalElements()).isEqualTo(1);
     assertThat(result.currentOffset()).isZero();
-    verify(observationService, never()).find(any(ObservationSearchQuery.class));
+    verify(observationService, never()).search(any(ObservationSearchQuery.class));
     verify(encounterService, never()).search(any(EncounterSearchQuery.class));
   }
 
@@ -110,17 +107,15 @@ class PatientServiceImplTest {
     Patient patient = new Patient();
     when(legacyPatientMapper.toR4(entity)).thenReturn(patient);
 
-    CanonicalObservation canonicalObservation = mock(CanonicalObservation.class);
-    when(observationService.find(any(ObservationSearchQuery.class)))
-        .thenReturn(List.of(canonicalObservation));
     Observation observation = new Observation();
-    when(observationMapper.toR4(canonicalObservation)).thenReturn(observation);
+    when(observationService.search(any(ObservationSearchQuery.class)))
+        .thenReturn(new SearchResult(List.of(observation), List.of(), 1, 0));
 
     SearchResult result = service.search(query);
 
     assertThat(result.primaryResources()).containsExactly(patient);
     assertThat(result.includedResources()).containsExactly(observation);
-    verify(observationService).find(any(ObservationSearchQuery.class));
+    verify(observationService).search(any(ObservationSearchQuery.class));
   }
 
   @Test

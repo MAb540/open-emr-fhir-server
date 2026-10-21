@@ -1,8 +1,10 @@
 package org.example.basicfhirserver.query.resources.observation;
 
+import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.param.DateParam;
 import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.TokenOrListParam;
+import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,4 +23,5 @@ public class ObservationSearchCriteria {
   private DateParam lastUpdated;
   private Integer count;
   private Integer offset;
+  private Set<Include> includes;
 }

@@ -28,10 +28,14 @@ public class VitalObservationProvider implements ObservationProvider {
 
   public Optional<CanonicalObservation> fetchById(UUID uuid) {
     List<VitalsUuidMappingDBRecord> mappings = vitalService.findVitalsUuidMappingsById(uuid);
+    if (mappings.isEmpty()) {
+      throw new ResourceNotFoundException("Observation with given ID " + uuid + " not found.");
+    }
+
     VitalsUuidMappingDBRecord mapping = mappings.get(0);
     List<VitalsDBRecord> vitalRows = vitalService.findVitalsById(mapping.getTargetUuid());
 
-    if (mappings.isEmpty() || vitalRows.isEmpty()) {
+    if (vitalRows.isEmpty()) {
       throw new ResourceNotFoundException("Observation with given ID " + uuid + " not found.");
     }
 
