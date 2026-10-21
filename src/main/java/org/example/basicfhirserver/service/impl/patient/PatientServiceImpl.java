@@ -9,8 +9,6 @@ import java.util.Set;
 import java.util.UUID;
 import org.example.basicfhirserver.domain.entities.LegacyPatientEntity;
 import org.example.basicfhirserver.mapper.LegacyPatientMapper;
-import org.example.basicfhirserver.mapper.ObservationMapper;
-import org.example.basicfhirserver.model.CanonicalObservation;
 import org.example.basicfhirserver.query.resources.encounter.EncounterSearchQuery;
 import org.example.basicfhirserver.query.resources.observation.ObservationSearchQuery;
 import org.example.basicfhirserver.query.resources.patient.PatientSearchQuery;
@@ -36,19 +34,16 @@ public class PatientServiceImpl implements PatientService {
   private final PatientRepository patientRepository;
   private final LegacyPatientMapper legacyPatientMapper;
   private final ObservationService observationService;
-  private final ObservationMapper observationMapper;
   private final EncounterService encounterService;
 
   public PatientServiceImpl(
       PatientRepository patientRepository,
       LegacyPatientMapper legacyPatientMapper,
       ObservationService observationService,
-      ObservationMapper observationMapper,
       EncounterService encounterService) {
     this.patientRepository = patientRepository;
     this.legacyPatientMapper = legacyPatientMapper;
     this.observationService = observationService;
-    this.observationMapper = observationMapper;
     this.encounterService = encounterService;
   }
 
@@ -114,10 +109,8 @@ public class PatientServiceImpl implements PatientService {
       if (includeObservations && !patientUuids.isEmpty()) {
         ObservationSearchQuery query =
             ObservationSearchQuery.builder().patientId(patientUuids).build();
-        List<CanonicalObservation> observations = observationService.find(query);
-        observations.stream()
-            .<IBaseResource>map(observationMapper::toR4)
-            .forEach(includedResources::add);
+        SearchResult observationSearchResult = observationService.search(query);
+        includedResources.addAll(observationSearchResult.primaryResources());
       }
 
       if (includeEncounters && !patientUuids.isEmpty()) {

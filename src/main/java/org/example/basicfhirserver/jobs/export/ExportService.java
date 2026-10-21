@@ -40,7 +40,6 @@ public class ExportService {
 
   private final PatientService patientService;
   private final ObservationService observationService;
-  private final ObservationMapper observationMapper;
   private final EncounterService encounterService;
   private final ConditionService conditionService;
   private final PractitionerService practitionerService;
@@ -57,7 +56,6 @@ public class ExportService {
   public ExportService(
       PatientService patientService,
       @Qualifier("ObservationServiceImpl") ObservationService observationService,
-      ObservationMapper observationMapper,
       EncounterService encounterService,
       ConditionService conditionService,
       PractitionerService practitionerService,
@@ -66,7 +64,6 @@ public class ExportService {
       ExportJobFilesService exportJobFilesService) {
     this.patientService = patientService;
     this.observationService = observationService;
-    this.observationMapper = observationMapper;
     this.encounterService = encounterService;
     this.conditionService = conditionService;
     this.practitionerService = practitionerService;
@@ -220,34 +217,35 @@ public class ExportService {
 
     try (BufferedWriter writer =
         new BufferedWriter(new FileWriter(filePath.toFile()), FILE_BUFFER_SIZE)) {
-      //            while (hasMoreData) {
-      ObservationSearchQuery query =
-          ObservationSearchQuery.builder()
-              .lastUpdated(since)
-              .count(BATCH_SIZE)
-              .offset(offset)
-              .build();
+      while (hasMoreData) {
+        ObservationSearchQuery query =
+            ObservationSearchQuery.builder()
+                .lastUpdated(since)
+                .count(BATCH_SIZE)
+                .offset(offset)
+                .build();
 
-      List<CanonicalObservation> observations = observationService.find(query);
-      if (observations.isEmpty()) {
-        log.info("JobID {}: Observation export job records are {}.", jobID, 0);
-        return;
+        SearchResult result = observationService.search(query);
+        List<IBaseResource> content = result.primaryResources();
+        if (content.isEmpty()) {
+          log.info("JobID {}: Observation export job content is empty", jobID);
+          break;
+        }
+
+        for (IBaseResource observation : content) {
+          String jsonLine = fhirJsonParser.encodeResourceToString(observation);
+          writer.write(jsonLine);
+          writer.newLine();
+        }
+        log.debug(
+            "JobID {}: Observation export job exported {} records (Current offset: {})",
+            jobID,
+            content.size(),
+            offset);
+
+        offset += BATCH_SIZE;
+        hasMoreData = offset < result.totalElements();
       }
-
-      for (CanonicalObservation entity : observations) {
-        IBaseResource observation = observationMapper.toR4(entity);
-        String jsonLine = fhirJsonParser.encodeResourceToString(observation);
-        writer.write(jsonLine);
-        writer.newLine();
-      }
-      log.debug(
-          "JobID {}: Observation export job exported {} records (Current offset: {})",
-          jobID,
-          observations.size(),
-          offset);
-      offset += BATCH_SIZE;
-
-      //            }
       log.info(
           "JobID {}: Observation export job NDJSON file written successfully to {}",
           jobID,

@@ -1,14 +1,13 @@
 package org.example.basicfhirserver.service;
 
-import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
-import org.example.basicfhirserver.model.CanonicalObservation;
 import org.example.basicfhirserver.query.resources.observation.ObservationSearchQuery;
+import org.example.basicfhirserver.service.impl.SearchResult;
+import org.hl7.fhir.r4.model.Observation;
 
 public interface ObservationService {
 
-  Optional<CanonicalObservation> findById(UUID uuid);
+  Observation findById(UUID uuid);
 
-  List<CanonicalObservation> find(ObservationSearchQuery observationSearchQuery);
+  SearchResult search(ObservationSearchQuery observationSearchQuery);
 }
