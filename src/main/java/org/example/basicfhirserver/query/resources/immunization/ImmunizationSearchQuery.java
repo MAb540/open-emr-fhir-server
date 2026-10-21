@@ -1,0 +1,21 @@
+package org.example.basicfhirserver.query.resources.immunization;
+
+import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.example.basicfhirserver.query.resources.SearchValue;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class ImmunizationSearchQuery {
+  private String id;
+  private String patientId;
+  private SearchValue<LocalDateTime> date;
+  private SearchValue<LocalDateTime> lastUpdated;
+  private Integer count;
+  private Integer offset;
+}

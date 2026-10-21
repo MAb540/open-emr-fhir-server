@@ -167,4 +167,10 @@ public final class FhirCodeSystemConstants {
   // @see http://hl7.org/fhir/R4/valueset-coverage-copay-type.html
   public static final String COVERAGE_COPAY_TYPE =
       "http://terminology.hl7.org/CodeSystem/coverage-copay-type";
+
+  // @see http://hl7.org/fhir/R4/valueset-immunization-vaccine-codes.html
+  public static final String CVX = "http://hl7.org/fhir/sid/cvx";
+
+  // @see http://terminology.hl7.org/CodeSystem/v3-ActSite
+  public static final String HL7_V3_ACT_SITE = "http://terminology.hl7.org/CodeSystem/v3-ActSite";
 }

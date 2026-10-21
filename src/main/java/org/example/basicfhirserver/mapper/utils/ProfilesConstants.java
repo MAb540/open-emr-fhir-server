@@ -47,4 +47,7 @@ public class ProfilesConstants {
 
   public static final String HL7_US_CORE_COVERAGE =
       "http://hl7.org/fhir/us/core/StructureDefinition/us-core-coverage";
+
+  public static final String HL7_US_CORE_IMMUNIZATION =
+          "http://hl7.org/fhir/us/core/StructureDefinition/us-core-immunization";
 }
