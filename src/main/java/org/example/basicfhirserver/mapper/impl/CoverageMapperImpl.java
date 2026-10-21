@@ -294,7 +294,7 @@ public class CoverageMapperImpl implements CoverageMapper {
   }
 
   private void populateCostToBeneficiary(Coverage coverage, CoverageDBRecord coverageDBRecord) {
-    BigDecimal copay = coverageDBRecord.getCopay();
+    BigDecimal copay = parseCopay(coverageDBRecord.getCopay());
     if (copay == null || copay.compareTo(MINIMUM_COPAY) < 0) {
       return;
     }
@@ -314,6 +314,17 @@ public class CoverageMapperImpl implements CoverageMapper {
     costToBeneficiary.setValue(value);
 
     coverage.addCostToBeneficiary(costToBeneficiary);
+  }
+
+  private BigDecimal parseCopay(String rawCopay) {
+    if (rawCopay == null || rawCopay.isBlank()) {
+      return null;
+    }
+    try {
+      return new BigDecimal(rawCopay.trim());
+    } catch (NumberFormatException e) {
+      return null;
+    }
   }
 
   private Date toDate(LocalDateTime dateTime) {

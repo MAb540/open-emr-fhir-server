@@ -1,6 +1,5 @@
 package org.example.basicfhirserver.repository.jdbc.insurance;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.Builder;
@@ -11,7 +10,7 @@ import lombok.Value;
 public class CoverageDBRecord {
   Long id;
   String type;
-  Long provider;
+  String provider;
   String planName;
   String policyNumber;
   String policyType;
@@ -35,13 +34,11 @@ public class CoverageDBRecord {
   String subscriberEmployerState;
   String subscriberEmployerPostalCode;
   String subscriberEmployerCountry;
-  String subscriberEmployerPhone;
   LocalDateTime date;
   LocalDateTime dateEnd;
   Long pid;
   String acceptAssignment;
-  Integer subNo;
-  BigDecimal copay;
+  String copay;
   UUID uuid;
 
   UUID puuid;

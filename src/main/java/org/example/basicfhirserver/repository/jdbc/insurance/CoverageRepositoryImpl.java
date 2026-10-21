@@ -85,6 +85,7 @@ public class CoverageRepositoryImpl implements CoverageRepository {
     return new StringBuilder(
         """
                 SELECT `insurance_data`.*,
+                       `ins_type_code`,
                        `puuid`,
                        `insureruuid`
                 FROM `insurance_data`
@@ -125,7 +126,7 @@ public class CoverageRepositoryImpl implements CoverageRepository {
         CoverageDBRecord.builder()
             .id(rs.getLong("id"))
             .type(rs.getString("type"))
-            .provider(rs.getObject("provider") != null ? rs.getLong("provider") : null)
+            .provider(rs.getString("provider"))
             .planName(rs.getString("plan_name"))
             .policyNumber(rs.getString("policy_number"))
             .policyType(rs.getString("policy_type"))
@@ -134,7 +135,7 @@ public class CoverageRepositoryImpl implements CoverageRepository {
             .subscriberFname(rs.getString("subscriber_fname"))
             .subscriberMname(rs.getString("subscriber_mname"))
             .subscriberDob(toLocalDateTime(rs.getTimestamp("subscriber_dob")))
-            .subscriberSsn(rs.getString("subscriber_ssn"))
+            .subscriberSsn(rs.getString("subscriber_ss"))
             .subscriberSex(rs.getString("subscriber_sex"))
             .subscriberStreet(rs.getString("subscriber_street"))
             .subscriberCity(rs.getString("subscriber_city"))
@@ -149,13 +150,11 @@ public class CoverageRepositoryImpl implements CoverageRepository {
             .subscriberEmployerState(rs.getString("subscriber_employer_state"))
             .subscriberEmployerPostalCode(rs.getString("subscriber_employer_postal_code"))
             .subscriberEmployerCountry(rs.getString("subscriber_employer_country"))
-            .subscriberEmployerPhone(rs.getString("subscriber_employer_phone"))
             .date(toLocalDateTime(rs.getTimestamp("date")))
             .dateEnd(toLocalDateTime(rs.getTimestamp("date_end")))
             .pid(rs.getObject("pid") != null ? rs.getLong("pid") : null)
             .acceptAssignment(rs.getString("accept_assignment"))
-            .subNo(rs.getObject("sub_no") != null ? rs.getInt("sub_no") : null)
-            .copay(rs.getBigDecimal("copay"))
+            .copay(rs.getString("copay"))
             .uuid(toUuid(rs.getBytes("uuid")))
             .puuid(toUuid(rs.getBytes("puuid")))
             .insureruuid(toUuid(rs.getBytes("insureruuid")))
