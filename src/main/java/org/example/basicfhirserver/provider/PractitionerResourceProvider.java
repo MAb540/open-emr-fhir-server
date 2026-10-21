@@ -5,18 +5,16 @@ import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.StringParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
-import java.util.List;
 import java.util.UUID;
-import org.example.basicfhirserver.mapper.PractitionerMapper;
 import org.example.basicfhirserver.mapper.utils.ProfilesConstants;
 import org.example.basicfhirserver.provider.utils.BundleProvider;
 import org.example.basicfhirserver.query.resources.practitioner.PractitionerSearchCriteria;
 import org.example.basicfhirserver.query.translator.impl.PractitionerSearchTranslator;
 import org.example.basicfhirserver.service.PractitionerService;
+import org.example.basicfhirserver.service.impl.SearchResult;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Practitioner;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -26,15 +24,12 @@ import org.springframework.stereotype.Component;
 public class PractitionerResourceProvider implements IResourceProvider {
 
   private final PractitionerService practitionerService;
-  private final PractitionerMapper practitionerMapper;
   private final PractitionerSearchTranslator practitionerSearchTranslator;
 
   public PractitionerResourceProvider(
       PractitionerService practitionerService,
-      PractitionerMapper practitionerMapper,
       PractitionerSearchTranslator practitionerSearchTranslator) {
     this.practitionerService = practitionerService;
-    this.practitionerMapper = practitionerMapper;
     this.practitionerSearchTranslator = practitionerSearchTranslator;
   }
 
@@ -45,9 +40,7 @@ public class PractitionerResourceProvider implements IResourceProvider {
 
   @Read()
   public Practitioner getResourceById(@IdParam IdType theId) {
-    org.example.basicfhirserver.model.Practitioner formEncounter =
-        practitionerService.findById(UUID.fromString(theId.getIdPart()));
-    return practitionerMapper.toR4(formEncounter);
+    return practitionerService.findById(UUID.fromString(theId.getIdPart()));
   }
 
   @Search()
@@ -67,20 +60,13 @@ public class PractitionerResourceProvider implements IResourceProvider {
             .build();
 
     var practitionerSearchQuery = practitionerSearchTranslator.translate(criteria);
-    Page<org.example.basicfhirserver.model.Practitioner> practitioners =
-        practitionerService.find(practitionerSearchQuery);
-
-    List<IBaseResource> primaryPractitioners =
-        practitioners.getContent().stream().<IBaseResource>map(practitionerMapper::toR4).toList();
-
-    int currentOffset = offset != null ? offset : 0;
-    int currentPageSize = practitioners.getContent().size();
+    SearchResult searchResult = practitionerService.search(practitionerSearchQuery);
 
     return new BundleProvider(
-        primaryPractitioners,
-        List.of(),
-        Math.toIntExact(practitioners.getTotalElements()),
-        currentOffset,
-        currentPageSize);
+        searchResult.primaryResources(),
+        searchResult.includedResources(),
+        searchResult.totalElements(),
+        searchResult.currentOffset(),
+        searchResult.primaryResources().size());
   }
 }
