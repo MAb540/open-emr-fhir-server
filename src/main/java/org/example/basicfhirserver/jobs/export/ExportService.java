@@ -32,7 +32,6 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.jobrunr.jobs.annotations.Job;
 import org.jobrunr.jobs.context.JobContext;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -45,7 +44,6 @@ public class ExportService {
   private final EncounterService encounterService;
   private final ConditionService conditionService;
   private final PractitionerService practitionerService;
-  private final PractitionerMapper practitionerMapper;
   private final OrganizationService organizationService;
 
   private final FhirContextConfig fhirContextConfig;
@@ -63,7 +61,6 @@ public class ExportService {
       EncounterService encounterService,
       ConditionService conditionService,
       PractitionerService practitionerService,
-      PractitionerMapper practitionerMapper,
       OrganizationService organizationService,
       FhirContextConfig fhirContextConfig,
       ExportJobFilesService exportJobFilesService) {
@@ -73,7 +70,6 @@ public class ExportService {
     this.encounterService = encounterService;
     this.conditionService = conditionService;
     this.practitionerService = practitionerService;
-    this.practitionerMapper = practitionerMapper;
     this.organizationService = organizationService;
     this.fhirContextConfig = fhirContextConfig;
     this.exportJobFilesService = exportJobFilesService;
@@ -458,15 +454,14 @@ public class ExportService {
         PractitionerSearchQuery query =
             PractitionerSearchQuery.builder().count(BATCH_SIZE).offset(offset).build();
 
-        Page<Practitioner> page = practitionerService.find(query);
-
-        List<Practitioner> content = page.getContent();
+        SearchResult result = practitionerService.search(query);
+        List<IBaseResource> content = result.primaryResources();
         if (content.isEmpty()) {
           log.info("JobID {}: Practitioner export job content is empty", jobID);
           break;
         }
-        for (Practitioner entity : content) {
-          IBaseResource practitioner = practitionerMapper.toR4(entity);
+
+        for (IBaseResource practitioner : content) {
           String jsonLine = fhirJsonParser.encodeResourceToString(practitioner);
           writer.write(jsonLine);
           writer.newLine();
@@ -478,7 +473,7 @@ public class ExportService {
             offset);
 
         offset += BATCH_SIZE;
-        hasMoreData = page.hasNext();
+        hasMoreData = offset < result.totalElements();
       }
 
       log.info(
