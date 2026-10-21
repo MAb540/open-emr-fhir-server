@@ -72,10 +72,13 @@ seed_worktree() {
 
   mkdir -p "$wt/export-job-files"
 
+  # Symlink rather than copy: taste learned in any session (main or worktree) is
+  # then visible everywhere immediately. A copy goes stale until the next sync,
+  # and taste learned inside a worktree never makes it back out.
   if [ -d "$REPO_ROOT/.commandcode/taste" ]; then
     mkdir -p "$wt/.commandcode"
     rm -rf "$wt/.commandcode/taste"
-    cp -R "$REPO_ROOT/.commandcode/taste" "$wt/.commandcode/taste"
+    ln -s "$REPO_ROOT/.commandcode/taste" "$wt/.commandcode/taste"
   fi
 
   if [ -f "$REPO_ROOT/.commandcode/settings.json" ]; then

@@ -58,15 +58,20 @@ provider -> <Resource>SearchCriteria -> <Resource>SearchTranslator
   translator) and exercising only the provider's own branching. Integration
   tests drive the real Spring bean through its public methods and assert only on
   the returned FHIR resource.
-- Do not read, grep, or modify the OpenEMR SQL dump. Learn the table/column
-  shape from the repository classes.
+- Do not read, grep, or modify the OpenEMR SQL dump. The `*DBRecord` types (and
+  their repository row mappers) are the single source of truth for columns — do
+  not query, inspect, or ask about a table's shape. If a mapping needs a column
+  that isn't already on the record, add it to the `*DBRecord` and map it in the
+  repository.
 
 ## Parallel agents — worktree rules
 
-You are running inside a **git worktree**, not the main checkout. Your branch is
-`agent/<name>`. The worktree directory is your sandbox: other agents have their
-own directory, their own index and their own branch, so your edits cannot
-collide with theirs.
+First check where you are — `git rev-parse --absolute-git-dir`. If it ends in
+`/.git` you are in the **main checkout**: treat the repo as read-only, do not
+commit, and hand any change back to the human. Otherwise you are inside a linked
+**git worktree**, not the main checkout. Your branch is `agent/<name>`, and the
+worktree directory is your sandbox: other agents have their own directory, their
+own index and their own branch, so your edits cannot collide with theirs.
 
 Worktrees live in `<repo>/.worktrees/<name>` and are created with
 `./scripts/worktree.sh add <name>` from the main checkout. That script is the
@@ -75,6 +80,10 @@ human's tool — do not run it, and do not run it from inside a worktree.
 **Do**
 
 - Commit to your own branch, early and often. Your branch is yours alone.
+- When you are done, push your branch and open a PR against `main`:
+  `git push -u origin agent/<name>`, then `gh pr create --base main`. Use the
+  repo's commit-message style for the title, and put what changed plus the
+  verification you ran in the body.
 - Run only the tests for the area you are working on.
 - Keep changes inside your assigned resource/area. If you must touch a shared
   file (for example `ProfilesConstants`), keep the change additive and call it
@@ -85,8 +94,8 @@ human's tool — do not run it, and do not run it from inside a worktree.
 
 - `git stash` — the stash stack is **repo-global** and shared by every worktree.
   You would be popping another agent's work. Commit instead.
-- `git checkout` / `git switch` to another branch, or touch `main`. Merging into
-  `main` is the human's job, not yours.
+- `git checkout` / `git switch` to another branch, or push to / merge `main`.
+  Push only your own `agent/<name>` branch; merging the PR is the human's job.
 - `git branch -D`, `git worktree add`, `git worktree remove`, `git worktree prune`
   — creating and destroying worktrees is the human's job.
 - Modify `scripts/worktree.sh`, `AGENTS.md`, or `src/test/resources/application.yaml`.
