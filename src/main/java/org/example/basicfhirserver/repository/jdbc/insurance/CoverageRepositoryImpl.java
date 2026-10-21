@@ -91,7 +91,8 @@ public class CoverageRepositoryImpl implements CoverageRepository {
                 LEFT JOIN (
                         SELECT
                             `uuid` AS `insureruuid`,
-                            `id` AS `insurerid`
+                            `id` AS `insurerid`,
+                            `ins_type_code`
                         FROM `insurance_companies`
                 ) `insurance_company_data` ON `insurance_data`.`provider` = `insurance_company_data`.`insurerid`
                 LEFT JOIN (
@@ -122,12 +123,12 @@ public class CoverageRepositoryImpl implements CoverageRepository {
   private RowMapper<CoverageDBRecord> coverageDBRecordRowMapper() {
     return (rs, rowNum) ->
         CoverageDBRecord.builder()
-            // Core insurance_data fields
             .id(rs.getLong("id"))
             .type(rs.getString("type"))
             .provider(rs.getObject("provider") != null ? rs.getLong("provider") : null)
             .planName(rs.getString("plan_name"))
             .policyNumber(rs.getString("policy_number"))
+            .policyType(rs.getString("policy_type"))
             .groupNumber(rs.getString("group_number"))
             .subscriberLname(rs.getString("subscriber_lname"))
             .subscriberFname(rs.getString("subscriber_fname"))
@@ -154,10 +155,11 @@ public class CoverageRepositoryImpl implements CoverageRepository {
             .pid(rs.getObject("pid") != null ? rs.getLong("pid") : null)
             .acceptAssignment(rs.getString("accept_assignment"))
             .subNo(rs.getObject("sub_no") != null ? rs.getInt("sub_no") : null)
+            .copay(rs.getBigDecimal("copay"))
             .uuid(toUuid(rs.getBytes("uuid")))
-            // Joined Fields / Aliases from Query
             .puuid(toUuid(rs.getBytes("puuid")))
             .insureruuid(toUuid(rs.getBytes("insureruuid")))
+            .insTypeCode(rs.getObject("ins_type_code") != null ? rs.getInt("ins_type_code") : null)
             .build();
   }
 }

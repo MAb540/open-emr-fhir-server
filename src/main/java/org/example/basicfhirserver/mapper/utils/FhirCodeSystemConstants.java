@@ -159,4 +159,12 @@ public final class FhirCodeSystemConstants {
   // @see http://hl7.org/fhir/R4/valueset-subscriber-relationship.html
   public static final String SUBSCRIBER_RELATIONSHIP =
       "http://terminology.hl7.org/CodeSystem/subscriber-relationship";
+
+  // @see http://hl7.org/fhir/R4/valueset-coverage-class.html
+  public static final String COVERAGE_CLASS =
+      "http://terminology.hl7.org/CodeSystem/coverage-class";
+
+  // @see http://hl7.org/fhir/R4/valueset-coverage-copay-type.html
+  public static final String COVERAGE_COPAY_TYPE =
+      "http://terminology.hl7.org/CodeSystem/coverage-copay-type";
 }
