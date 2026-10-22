@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
@@ -69,7 +68,7 @@ class CoverageServiceImplTest {
         .date(date)
         .dateEnd(dateEnd)
         .insTypeCode(3)
-        .copay(new BigDecimal("25.00"))
+        .copay("25.00")
         .build();
   }
 

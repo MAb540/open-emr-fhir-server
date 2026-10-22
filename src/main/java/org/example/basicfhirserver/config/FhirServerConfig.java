@@ -34,6 +34,7 @@ public class FhirServerConfig {
       BulkExportPollProvider bulkExportPollProvider,
       CoverageProvider coverageProvider,
       ImmunizationProvider immunizationProvider,
+      LocationProvider locationProvider,
       FhirContextConfig fhirContextConfig,
       RequestValidatingInterceptor validatingInterceptor) {
 
@@ -53,6 +54,7 @@ public class FhirServerConfig {
             organizationProvider,
             personResourceProvider,
             diagnosticReportProvider,
+            locationProvider,
             coverageProvider,
             immunizationProvider));
     servlet.registerProvider(bulkExportPollProvider);
