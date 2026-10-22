@@ -33,6 +33,7 @@ public class FhirServerConfig {
       DiagnosticReportProvider diagnosticReportProvider,
       BulkExportPollProvider bulkExportPollProvider,
       CoverageProvider coverageProvider,
+      ImmunizationProvider immunizationProvider,
       FhirContextConfig fhirContextConfig,
       RequestValidatingInterceptor validatingInterceptor) {
 
@@ -52,7 +53,8 @@ public class FhirServerConfig {
             organizationProvider,
             personResourceProvider,
             diagnosticReportProvider,
-            coverageProvider));
+            coverageProvider,
+            immunizationProvider));
     servlet.registerProvider(bulkExportPollProvider);
 
     CustomSecurityInterceptor customSecurityInterceptor = new CustomSecurityInterceptor();
